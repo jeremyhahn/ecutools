@@ -6,7 +6,7 @@ the present time, only Controller Area Network (CAN bus) protocol is supported.
 This project includes information needed to create a pass-through device and includes the supporting software needed to perform
 diagnostics and programming of an ECU.
 
-ecutools is currently in an early development state and is not usable. Join the project and contribute to best open source vehicle 
+ecutools is currently in an early development state and is not usable. Join the project and start contributing!
 
 Successful tests have been conducted on the following architectures:
 
