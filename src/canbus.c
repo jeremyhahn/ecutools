@@ -27,7 +27,6 @@ void canbus_framecpy(struct can_frame * frame, char *buf) {
 	}
 }
 
-
 int canbus_framecmp(struct can_frame *frame1, struct can_frame *frame2) {
 
 	if(frame1->can_id != frame2->can_id)
@@ -144,21 +143,17 @@ int canbus_write(canbus_client *canbus, struct can_frame *frame) {
 		return -1;
 	}
 
-	syslog(LOG_DEBUG, "canbus_write: reached lock\n");
-
 #ifdef THREADED
 	pthread_mutex_lock(&canbus->rwlock);
-
-	syslog(LOG_DEBUG, "canbus_write: lock acquired\n");
 #endif
 
 	int bytes = write(canbus->socket, frame, sizeof(struct can_frame));
+	if(bytes == -1) {
+		syslog(LOG_ERR, "canbus_write: %s", strerror(errno));
+	}
 
 #ifdef THREADED
 	pthread_mutex_unlock(&canbus->rwlock);
-
-
-	syslog(LOG_DEBUG, "canbus_write: lock released\n");
 #endif
 
 	syslog(LOG_DEBUG, "canbus_write: wrote %d bytes\n", bytes);
@@ -178,6 +173,7 @@ void canbus_close(canbus_client *canbus) {
 		if(close(canbus->socket) == -1) {
 			syslog(LOG_ERR, "canbus_close: error closing socket: %s\n", strerror(errno));
 		}
+	    canbus->socket = 0;
 	}
 	syslog(LOG_DEBUG, "canbus_close: connection closed\n");
 #ifdef THREADED

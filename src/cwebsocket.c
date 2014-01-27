@@ -811,6 +811,7 @@ void cwebsocket_close(cwebsocket_client *websocket, const char *message) {
 		if(close(websocket->socket) == -1) {
 			syslog(LOG_ERR, "cwebsocket_close: error closing websocket: %s\n", strerror(errno));
 		}
+		websocket->socket = 0;
 	}
 
 #ifdef USESSL

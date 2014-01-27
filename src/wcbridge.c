@@ -7,13 +7,13 @@ void wcbridge_websocket_onopen(cwebsocket_client *websocket) {
 void wcbridge_websocket_onmessage(cwebsocket_client *websocket, cwebsocket_message *message) {
 
 	while((bridge->canbus->state & CANBUS_STATE_CONNECTED) == 0) {
-		syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: waiting for canbus to connect\n");
+		syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: waiting for CAN connection\n");
 		sleep(1);
 	}
 
 	if(message == NULL || message->payload == NULL || message->payload_len <= 0) return;
 
-	if(strcmp(message->payload, "log") == 0) {
+	if(strcmp(message->payload, "cmd:log") == 0) {
 		if(pthread_create(&bridge->canbus_thread, NULL, wcbridge_canbus_logger_thread, (void *)bridge) == -1) {
 			syslog(LOG_ERR, "wcbridge_websocket_onmessage: %s", strerror(errno));
 			return;
@@ -21,43 +21,45 @@ void wcbridge_websocket_onmessage(cwebsocket_client *websocket, cwebsocket_messa
 		syslog(LOG_DEBUG, "thread created\n");
 		return;
 	}
-	else if(strcmp(message->payload, "nolog") == 0) {
+	else if(strcmp(message->payload, "cmd:nolog") == 0) {
 		if(pthread_cancel(bridge->canbus_thread) == -1) {
 			syslog(LOG_ERR, "wcbridge_websocket_onmessage: %s", strerror(errno));
 			return;
 		}
 		return;
 	}
-	else if(strcmp(message->payload, "filter") == 0) {
-
+	else if(strstr(message->payload, "cmd:filter:") != NULL) {
+		strtok(message->payload, ":");
+		strtok(NULL, ":");
+		char *pch2 = strtok(NULL, ":");
+		unsigned hex = (int)strtol(pch2, NULL, 16);
 		struct can_filter filter[1];
-		filter[0].can_id = 0x411;
+		filter[0].can_id = hex;
 		filter[0].can_mask = 0x000007FF;
 		if(setsockopt(bridge->canbus->socket, SOL_CAN_RAW, CAN_RAW_FILTER, &filter, sizeof(filter)) == -1) {
 			syslog(LOG_ERR, "wcbridge_websocket_onmessage: %s", strerror(errno));
 			return;
 		}
-		syslog(LOG_DEBUG, "---------------->filter hit");
+		syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: filter applied");
 		return;
 	}
-	else if(strcmp(message->payload, "nofilter") == 0) {
-
-		/*
-		struct can_filter filter[0];
-		if(setsockopt(bridge->canbus->socket, SOL_CAN_RAW, CAN_RAW_FILTER, &filter, sizeof(filter)) == -1) {
-			syslog(LOG_ERR, "wcbridge_websocket_onmessage: %s", strerror(errno));
+	else if(strcmp(message->payload, "cmd:nofilter") == 0) {
+		canbus_close(bridge->canbus);
+		if(canbus_connect(bridge->canbus) != 0) {
+			syslog(LOG_CRIT, "wcbridge_websocket_onmessage: unable to connect to CAN\n");
 			return;
 		}
-		return;
-		*/
-		pthread_cancel(bridge->canbus_thread);
-		pthread_create(&bridge->canbus_thread, NULL, wcbridge_canbus_connect_thread, (void *)bridge);
-		syslog(LOG_DEBUG, "---------------->nofilter hit");
+		syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: filter cleared");
 		return;
 	}
 	else {
 
-		syslog(LOG_DEBUG, "payload: %s\n", message->payload);
+		syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: processing raw CAN p: %s\n", message->payload);
+
+		if(strstr(message->payload, "#") == NULL) {
+			syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: invalid raw CAN payload");
+			return;
+		}
 
 		char *can_id = strsep(&message->payload, "#");
 		char *can_message = strsep(&message->payload, "#");
@@ -73,10 +75,13 @@ void wcbridge_websocket_onmessage(cwebsocket_client *websocket, cwebsocket_messa
 			can_message += 2 * sizeof(char);
 		}
 
+		/*
 		int i;
 		for(i=0; i<sizeof(bridge->filters); i++) {
-			wcbridge_process_filter(bridge, frame);
-		}
+			if(bridge->filters[i] != NULL) {
+				wcbridge_process_filter(bridge, frame);
+			}
+		}*/
 
 		if(canbus_write(bridge->canbus, frame) == -1) {
 			syslog(LOG_ERR, "wcbridge_websocket_onmessage: unable to forward frame: %s", strerror(errno));
@@ -134,7 +139,7 @@ void *wcbridge_websocket_thread(void *ptr) {
 void *wcbridge_canbus_connect_thread(void *ptr) {
 
 	if(canbus_connect(bridge->canbus) != 0) {
-		syslog(LOG_CRIT, "wcbridge_run: unable to connect to CAN\n");
+		syslog(LOG_CRIT, "wcbridge_canbus_connect_thread: unable to connect to CAN\n");
 		return NULL;
 	}
 
@@ -161,47 +166,17 @@ void *wcbridge_canbus_logger_thread(void *ptr) {
 		sleep(1);
 	}*/
 
-	struct can_frame lastframe1, lastframe2, lastframe3, lastframe4, lastframe5;
-	memset(&lastframe1, 0, sizeof(lastframe1));
-	memset(&lastframe2, 0, sizeof(lastframe2));
-	memset(&lastframe3, 0, sizeof(lastframe3));
-	memset(&lastframe4, 0, sizeof(lastframe4));
-	memset(&lastframe5, 0, sizeof(lastframe5));
-
 	while((bridge->canbus->state & CANBUS_STATE_CONNECTED) &&
 			(bridge->websocket->state & WEBSOCKET_STATE_OPEN) &&
 			canbus_read(bridge->canbus, &frame) > 0) {
 
-		// Discard the frame if it's been broadcast in the last 5 frames -- reduce noise
-		if(canbus_framecmp(&frame, &lastframe1) == 0) {
-			syslog(LOG_DEBUG, "wcbridge_canbus_thread: discarding noisy frame\n");
-			continue;
-		}
-		if(canbus_framecmp(&frame, &lastframe2) == 0) {
-			syslog(LOG_DEBUG, "wcbridge_canbus_thread: discarding noisy frame\n");
-			continue;
-		}
-		if(canbus_framecmp(&frame, &lastframe3) == 0) {
-			syslog(LOG_DEBUG, "wcbridge_canbus_thread: discarding noisy frame\n");
-			continue;
-		}
-		if(canbus_framecmp(&frame, &lastframe4) == 0) {
-			syslog(LOG_DEBUG, "wcbridge_canbus_thread: discarding noisy frame\n");
-			continue;
-		}
-		if(canbus_framecmp(&frame, &lastframe5) == 0) {
-			syslog(LOG_DEBUG, "wcbridge_canbus_thread: discarding noisy frame\n");
-			continue;
-		}
-
-		memcpy(&lastframe5, &lastframe4, sizeof(lastframe4));
-		memcpy(&lastframe4, &lastframe3, sizeof(lastframe3));
-		memcpy(&lastframe3, &lastframe2, sizeof(lastframe2));
-		memcpy(&lastframe2, &lastframe1, sizeof(lastframe1));
-		memcpy(&lastframe1, &frame, sizeof(frame));
-
 		memset(data, 0, data_len);
 		canbus_framecpy(&frame, data);
+
+		if(frame.can_id & CAN_ERR_FLAG) {
+			syslog(LOG_ERR, "wcbridge_canbus_logger_thread: CAN ERROR: %s", data);
+			continue;
+		}
 
 		if(cwebsocket_write_data(bridge->websocket, data, strlen(data)) == -1) {
 			syslog(LOG_ERR, "wcbridge_canbus_thread: unable to forward CAN frame to websocket");
