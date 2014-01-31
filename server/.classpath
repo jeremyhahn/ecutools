@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="test"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="lib" path="lib/testng.jar"/>
+	<classpathentry kind="lib" path="lib/vertx-core-2.1M2.jar"/>
+	<classpathentry kind="lib" path="lib/vertx-platform-2.1M2.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-annotations-2.0.6.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-core-2.0.6.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-databind-2.0.6.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-dataformat-csv-2.1.4.jar"/>
+	<classpathentry kind="lib" path="lib/aws-java-sdk-1.6.8.jar"/>
+	<classpathentry kind="lib" path="lib/dozer-5.3.2.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-api-1.7.2.jar"/>
+	<classpathentry kind="lib" path="lib/commons-lang-2.6.jar"/>
+	<classpathentry kind="lib" path="lib/commons-beanutils-1.6.jar"/>
+	<classpathentry kind="lib" path="lib/commons-collections-2.1.jar"/>
+	<classpathentry kind="output" path="build"/>
+</classpath>

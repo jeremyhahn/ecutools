@@ -1,0 +1,4 @@
+{
+  "main": "vertx.WebSocketVerticle",
+  "worker": true
+}
