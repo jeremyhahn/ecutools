@@ -33,9 +33,10 @@ There are several open source CAN schematics floating around. Google Images is a
 ##### DIY
 
 1. [http://lnxpps.de/rpie](http://lnxpps.de/rpie)
-2. [http://lnxpps.de/can2udpe/openwrt](http://lnxpps.de/can2udpe/openwrt/)
-3. [http://hackaday.com/2011/03/08/can-sniffing-for-steering-wheel-button-presses/](http://hackaday.com/2011/03/08/can-sniffing-for-steering-wheel-button-presses)
-4. [http://en.pudn.com/downloads167/sourcecode/embed/detail766529_en.html](http://en.pudn.com/downloads167/sourcecode/embed/detail766529_en.html)
+2. [http://www.raspberrypi.org/phpBB3/viewtopic.php?p=193527#p193527](http://www.raspberrypi.org/phpBB3/viewtopic.php?p=193527#p193527)
+3. [http://lnxpps.de/can2udpe/openwrt](http://lnxpps.de/can2udpe/openwrt/)
+4. [http://hackaday.com/2011/03/08/can-sniffing-for-steering-wheel-button-presses/](http://hackaday.com/2011/03/08/can-sniffing-for-steering-wheel-button-presses)
+5. [http://en.pudn.com/downloads167/sourcecode/embed/detail766529_en.html](http://en.pudn.com/downloads167/sourcecode/embed/detail766529_en.html)
 
 ##### Commercial
 

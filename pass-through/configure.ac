@@ -32,6 +32,10 @@ AC_CHECK_LIB([pthread], [main],, AC_MSG_ERROR($missing_library))
 PKG_CHECK_MODULES([pthread], [pthread], [have_libpthread=yes], [have_libpthread=no])
 AM_CONDITIONAL([PTHREAD],  [test "$have_libpthread" = "yes"])
 
+#AC_CHECK_LIB([wsclient], [main],, AC_MSG_ERROR($missing_library))
+#PKG_CHECK_MODULES([wsclient], [wsclient], [have_libwsclient=yes], [have_libwsclient=no])
+#AM_CONDITIONAL([WSCLIENT],  [test "$have_libwsclient" = "yes"])
+
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
 

@@ -38,6 +38,7 @@
 									<listOptionValue builtIn="false" value="crypto"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 								</option>
+								<option id="gnu.c.link.option.paths.1727313711" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.901832069" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>

@@ -1,5 +1,25 @@
 ###### Open Source ECU Tuning and Diagnostics
 
-The goal of ecutools server is to provde a real-time centralized hub to carry out one or more "tuning sessions". 
+The ecutools server acts as a centralized hub for real-time communications between pass-through devices and client web browsers.
 
-The server communicates with pass-through device and web browser clients using HTML WebSockets (RFC 6455) and a JSON based sub-protocol which is still under development.
+The server is based on Maven and Eclipse Jetty.
+
+### Build Dependencies
+
+1. Maven 3.0
+
+### Build
+
+	mvn package
+
+#### Project Dependencies
+
+To following command will download all project dependencies to target/dependency:
+
+	mvn dependency:copy-dependencies
+
+### Run
+
+To following command will start the ecutools.io server in development mode:
+
+	mvn jetty:run

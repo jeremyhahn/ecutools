@@ -4,8 +4,9 @@
 #include <stdio.h>
 #include <signal.h>
 #include <pthread.h>
-#include "cwebsocket.h"
 #include "canbus.h"
+#include "cwebsocket/client.h"
+#include "cwebsocket/subprotocol/echo/echo_client.h"
 
 #define WCBRIDGE_WEBSOCKET_ENDPOINT ((const char *)"ws://ecutools.io:8080/ecutune")
 
@@ -18,7 +19,7 @@ typedef struct _wcbridge {
 	pthread_t websocket_thread;
 	pthread_attr_t websocket_thread_attr;
 	pthread_t canbus_thread;
-	cwebsocket_client *websocket;
+	cwebsocket_client *wsclient;
 	canbus_client *canbus;
 	uint8_t canbus_flags;
 	void (*onmessage)(struct _wcbridge *, struct can_frame *frame);

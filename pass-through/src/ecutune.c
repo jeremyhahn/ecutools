@@ -82,7 +82,7 @@ void run_send_metrics(cwebsocket_client *websocket) {
 	do {
 		create_mock_metrics(metrics);
 		//printf("Metrics: %s\n", metrics);
-		cwebsocket_write_data(websocket, metrics, strlen(metrics));
+		cwebsocket_client_write_data(websocket, metrics, strlen(metrics), TEXT_FRAME);
 		sleep(1);
 		messages_sent++;
 	}
