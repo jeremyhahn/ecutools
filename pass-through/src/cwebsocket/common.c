@@ -41,7 +41,7 @@ char* cwebsocket_base64_encode(const unsigned char *input, int length) {
 }
 
 void cwebsocket_print_frame(cwebsocket_frame *frame) {
-	syslog(LOG_DEBUG, "cwebsocket_print_frame: fin=%i, rsv1=%i, rsv2=%i, rsv3=%i, opcode=%#04x, mask=%i, payload_len=%zu\n",
+	syslog(LOG_DEBUG, "cwebsocket_print_frame: fin=%i, rsv1=%i, rsv2=%i, rsv3=%i, opcode=%#04x, mask=%i, payload_len=%lld\n",
 			frame->fin, frame->rsv1, frame->rsv2, frame->rsv3, frame->opcode, frame->mask, frame->payload_len);
 }
 

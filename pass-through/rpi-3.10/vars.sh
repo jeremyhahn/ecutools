@@ -3,7 +3,7 @@ function error {
     exit 1
 }
 
-RPIHOME=/storage/sources/raspberrypi
+RPIHOME=/storage/workspaces/polygot/ecutools/pass-through/rpi-3.10
 VERSION=3.10
 THREADS=8
 ROOTFS=${RPIHOME}/rootfs
@@ -15,7 +15,7 @@ RPICONF=${RPIHOME}/rpi-${VERSION}-can-pps.config
 #export CCPREFIX=${RPIHOME}/tools/arm-bcm2708/arm-bcm2708hardfp-linux-gnueabi/bin/arm-bcm2708hardfp-linux-gnueabi-
 #export CCPREFIX=/usr/bin/arm-linux-gnueabihf-
 
-export CCPREFIX=/usr/bin/arm-linux-gnueabi-
+export CCPREFIX=/storage/sources/rpi/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-4.8-2014.03_linux/bin/arm-linux-gnueabihf-
 export KERNEL_SRC=${RPIHOME}/linux-rpi-${VERSION}.y
 export KERNEL_BIN=${RPIHOME}/kernel-${VERSION}
 export MODULES_BIN=${RPIHOME}/modules

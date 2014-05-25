@@ -58,47 +58,37 @@ AC_OUTPUT
 
 # Conditionals
 AC_ARG_ENABLE(debug,
-  AS_HELP_STRING(
-    [--enable-debug],
-    [enable debug logging, default: enabled]),
-    [case "${enableval}" in
-      yes) debug=true ;;
-      no)  debug=false ;;
-      *)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
-    esac],
-    [debug=true])
-AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
-AM_COND_IF(DEBUG,
-    AC_DEFINE(DEBUG, 1, [Define to 0 if this is a release build]),
-    AC_DEFINE(DEBUG, 0, [Define to 1 or higher if this is a debug build]))
+[--enable-debug    Turn on debugging],
+[case "${enableval}" in
+  yes) debug=true ;;
+  no)  debug=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-debug) ;;
+esac],[debug=false])
+if test "$debug" = true; then
+    AC_DEFINE(ENABLE_DEBUG, [1], ["Compile with GDB support"])
+    CFLAGS='-g'
+fi
 
 AC_ARG_ENABLE(ssl,
-  AS_HELP_STRING(
-    [--enable-ssl],
-    [enable ssl, default: enabled]),
-    [case "${enableval}" in
-      yes) ssl=true ;;
-      no)  ssl=false ;;
-      *)   AC_MSG_ERROR([bad value ${enableval} for --enable-ssl]) ;;
-    esac],
-    [ssl=true])
-AM_CONDITIONAL(USESSL, test x"$ssl" = x"true")
-AM_COND_IF(USESSL,
-    AC_DEFINE(USESSL, 1, [Set to 1 to enable SSL support]),
-    AC_DEFINE(USESSL, 0, [Set to 0 to disable SSL support]))
+[--enable-ssl Enable ssl, default: enabled],
+[case "${enableval}" in
+  yes) ssl=true ;;
+  no)  ssl=false ;;
+  *)   AC_MSG_ERROR([bad value ${enableval} for --enable-ssl]) ;;
+esac], [ssl=true])
+if test "$ssl" = true; then
+    AC_DEFINE(ENABLE_SSL, [1], ["Compile with SSL support"])
+fi
 
 AC_ARG_ENABLE(threads,
-  AS_HELP_STRING(
-    [--enable-threads],
-    [enable multi-threading, default: enabled]),
-    [case "${enableval}" in
-      yes) threads=true ;;
-      no)  threads=false ;;
-      *)   AC_MSG_ERROR([bad value ${enableval} for --enable-threads]) ;;
-    esac],
-    [threads=true])
-AM_CONDITIONAL(THREADED, test x"$threads" = x"true")
-AM_COND_IF(THREADED,
-    AC_DEFINE(THREADED, 1, [Set to 1 to enable pthread support]),
-    AC_DEFINE(THREADED, 0, [Set to 0 to disable pthread support]))
+[--enable-threads    Enable multi-threading],
+[case "${enableval}" in
+  yes) threads=true ;;
+  no)  threads=false ;;
+  *) AC_MSG_ERROR(bad value ${enableval} for --enable-threads) ;;
+esac],[threads=true])
+if test "$threads" = true; then
+    AC_DEFINE(ENABLE_THREADS, [1], ["Compile with client multi-threading support"])
+fi
 
+AC_OUTPUT

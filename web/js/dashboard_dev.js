@@ -1,6 +1,7 @@
 var websocket = null;
 var dashboard = {}
 var total_messages_received = 0;
+var websocket_endpoint = "ws://ecutools.io:8080/logger/ecutune";
 
 dashboard.setWebsocketState = function(state) {
 	document.getElementById('websocket_state').innerHTML = '<b>' + state + '</b>';
@@ -30,6 +31,14 @@ dashboard.clearFilter = function() {
 	dashboard.send('cmd:nofilter');
 }
 
+dashboard.diagnosticMode = function() {
+	dashboard.send('cmd:diagnosticMode');
+}
+
+dashboard.requestSeed = function() {
+	dashboard.send('cmd:requestSeed');
+}
+
 dashboard.disconnect = function() {
 	if(websocket == null) {
 	   console.error('websocket already closed!');
@@ -47,7 +56,7 @@ dashboard.connect = function() {
 		return false;
 	}
 
-	websocket = new WebSocket("ws://localhost:8080/ecutune");
+	websocket = new WebSocket(websocket_endpoint);
 
 	websocket.onopen = function() {
 		dashboard.setWebsocketState('OPEN');

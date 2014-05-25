@@ -63,9 +63,18 @@ void wcbridge_websocket_onmessage(void *websocket, cwebsocket_message *message) 
 		syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: filter cleared");
 		return;
 	}
+	else if(strcmp(message->payload, "cmd:diagnosticMode") == 0) {
+		struct can_frame *frame = malloc(sizeof(struct can_frame));
+		memset(frame, 0, sizeof(struct can_frame));
+		frame->can_id = strtol("7E0", NULL, 16);
+		frame->can_dlc = 8;
+	}
+	else if(strcmp(message->payload, "cmd:requestSeed") == 0) {
+
+	}
 	else {
 
-		syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: processing raw CAN p: %s\n", message->payload);
+		syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: processing raw CAN message: %s\n", message->payload);
 
 		if(strstr(message->payload, "#") == NULL) {
 			syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: invalid raw CAN payload");
@@ -151,12 +160,10 @@ void *wcbridge_websocket_thread(void *ptr) {
 }
 
 void *wcbridge_canbus_connect_thread(void *ptr) {
-
 	if(canbus_connect(bridge->canbus) != 0) {
 		syslog(LOG_CRIT, "wcbridge_canbus_connect_thread: unable to connect to CAN\n");
 		return NULL;
 	}
-
 	return NULL;
 }
 
@@ -213,15 +220,12 @@ wcbridge *wcbridge_new() {
 }
 
 int wcbridge_run(wcbridge *bridge) {
-
 	//pthread_attr_init(&bridge->websocket_thread_attr);
 	//pthread_attr_setstacksize(&bridge->websocket_thread_attr, STACK_SIZE_MIN);
 	pthread_create(&bridge->websocket_thread, NULL, wcbridge_websocket_thread, (void *)bridge);
 	pthread_create(&bridge->canbus_thread, NULL, wcbridge_canbus_connect_thread, (void *)bridge);
 	pthread_join(bridge->websocket_thread, NULL);
-
 	syslog(LOG_DEBUG, "wcbridge_run: bridge closed\n");
-
 	return 0;
 }
 

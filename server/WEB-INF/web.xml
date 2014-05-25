@@ -6,7 +6,7 @@
 
     <servlet>
         <servlet-name>LoggerServlet</servlet-name>
-        <servlet-class>io.ecutools.LoggerServlet</servlet-class>
+        <servlet-class>io.ecutools.websocket.LoggerServlet</servlet-class>
     </servlet>
     <servlet-mapping>
         <servlet-name>LoggerServlet</servlet-name>

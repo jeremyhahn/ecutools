@@ -1,5 +1,7 @@
 package io.ecutools;
 
+import io.ecutools.websocket.LoggerSocket;
+
 import java.net.URI;
 import java.util.concurrent.Future;
 

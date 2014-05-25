@@ -8,7 +8,7 @@
 #include "cwebsocket/client.h"
 #include "cwebsocket/subprotocol/echo/echo_client.h"
 
-#define WCBRIDGE_WEBSOCKET_ENDPOINT ((const char *)"ws://ecutools.io:8080/ecutune")
+#define WCBRIDGE_WEBSOCKET_ENDPOINT ((const char *)"ws://ecutools.io:8080/logger/ecutune")
 
 //#define WCBRIDGE_FLAG_MODE_LOGGING (1 << 0);
 

@@ -63,6 +63,9 @@
 	  <plugin>
 		<groupId>org.eclipse.jetty</groupId>
 		<artifactId>jetty-maven-plugin</artifactId>
+		<configuration>
+			<tmpDir>target/jetty-tmp/ecutools</tmpDir>
+		</configuration>
 	  </plugin>
 	  <plugin>
         <groupId>org.codehaus.mojo</groupId>

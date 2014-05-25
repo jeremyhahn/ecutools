@@ -2,6 +2,10 @@
 
 . ./vars.sh
 
+if [[ -z "$RPIHOME" ]]; then
+   error "RPIHOME is not set"
+fi
+
 if [[ -z "$KERNEL_BIN" ]]; then
    error "KERNEL_BIN is not set"
 fi

@@ -45,9 +45,11 @@
 #include <openssl/buffer.h>
 #include "utf8.h"
 
-#include <limits.h>
+#ifdef HAVE_CONFIG_H
+    #include "../../config.h"
+#endif
 
-#ifdef USESSL
+#ifdef ENABLE_SSL
 	#include <openssl/rand.h>
 	#include <openssl/ssl.h>
 	#include <openssl/err.h>

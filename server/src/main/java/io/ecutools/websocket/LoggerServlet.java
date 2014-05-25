@@ -1,4 +1,4 @@
-package io.ecutools;
+package io.ecutools.websocket;
 
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
