@@ -15,19 +15,19 @@
  */
 int uds_set_diagnostic_session_control(int session) {
 
-	if(session != UDS_DSC_TYPE_DEFAULT_SESSION &&
-			session != UDS_DSC_TYPE_EXTENDED_SESSION &&
-			session != UDS_DSC_TYPE_PROGRAMMING_SESSION) {
+  if(session != UDS_DSC_TYPE_DEFAULT_SESSION &&
+	session != UDS_DSC_TYPE_EXTENDED_SESSION &&
+	session != UDS_DSC_TYPE_PROGRAMMING_SESSION) {
 
-		return UDS_RESPONSE_subFunctionNotSupported;
-	}
+	return UDS_RESPONSE_subFunctionNotSupported;
+  }
 
-	// Send ECU command
-	printf("uds_set_diagnostic_session_control invoked!\n");
-	//log_info("uds_set_diagnostic_session_control invoked!");
-	//log_close();
+  // Send ECU command
+  printf("uds_set_diagnostic_session_control invoked!\n");
+  //log_info("uds_set_diagnostic_session_control invoked!");
+  //log_close();
 
-	return session;
+  return session;
 }
 
 /**
@@ -43,12 +43,12 @@ int uds_set_diagnostic_session_control(int session) {
  */
 int uds_set_diagnostic_trouble_code_setting(int setting) {
 
-	if(setting != UDS_DTC_TYPE_ON && setting != UDS_DTC_TYPE_OFF) {
-		return UDS_RESPONSE_subFunctionNotSupported;
-	}
+  if(setting != UDS_DTC_TYPE_ON && setting != UDS_DTC_TYPE_OFF) {
+	return UDS_RESPONSE_subFunctionNotSupported;
+  }
 
-	// Send ECU command
-	return setting;
+  // Send ECU command
+  return setting;
 }
 
 /**
@@ -64,8 +64,8 @@ int uds_set_diagnostic_trouble_code_setting(int setting) {
  */
 int* uds_set_communication_control(int communicationType, int controlType) {
 
-	// Send ECU command
-	return (int *)1;
+  // Send ECU command
+  return (int *)1;
 }
 
 /**
@@ -91,9 +91,9 @@ int* uds_set_communication_control(int communicationType, int controlType) {
  */
 int uds_request_seed() {
 
-	// Send ECU command
-	int seed = 1;
-	return seed;
+  // Send ECU command
+  int seed = 1;
+  return seed;
 }
 
 /**
@@ -121,8 +121,8 @@ int uds_request_seed() {
  * 		size with the total amount of data transferred during the TransferData service.
  */
 int uds_request_download(int dataFormatIdentifier, int addressAndLengthFormatIdentifier, int memoryAddress, int memorySize) {
-	// Send ECU command
-	return 1;
+  // Send ECU command
+  return 1;
 }
 
 /**
@@ -138,15 +138,15 @@ int uds_request_download(int dataFormatIdentifier, int addressAndLengthFormatIde
  */
 int uds_transfer_data(int address, unsigned char *data) {
 
-	//uds_increment_block_sequence_counter();
+  //uds_increment_block_sequence_counter();
 
-	// Send ECU command
-	int blockSequenceCounter = 1;  // replace w/ response from ecu
+  // Send ECU command
+  int blockSequenceCounter = 1;  // replace w/ response from ecu
 
-	//char text[8];
-	//sprintf(text, "0x%d", blockSequenceCounter);
+  //char text[8];
+  //sprintf(text, "0x%d", blockSequenceCounter);
 
-	return blockSequenceCounter;
+  return blockSequenceCounter;
 }
 
 /**
@@ -155,8 +155,8 @@ int uds_transfer_data(int address, unsigned char *data) {
  */
 int uds_request_transfer_exit() {
 
-	// Send ECU command
-	return 1;
+  // Send ECU command
+  return 1;
 }
 
 /**
@@ -164,8 +164,8 @@ int uds_request_transfer_exit() {
  */
 int uds_set_routine_control(int controlType) {
 
-	// Send ECU command
-	return controlType;
+  // Send ECU command
+  return controlType;
 }
 
 /**
@@ -177,8 +177,8 @@ int uds_set_routine_control(int controlType) {
  */
 int uds_ecu_reset(int resetType) {
 
-	// Send ECU command
-	return resetType;
+  // Send ECU command
+  return resetType;
 }
 
 /**
@@ -188,10 +188,10 @@ int uds_ecu_reset(int resetType) {
  * at 00 hex with the next TransferData request message.
  */
 void uds_increment_block_sequence_counter() {
-	blockSequenceNumber = blockSequenceNumber + 1;
-	if(blockSequenceNumber == 256) {
-		blockSequenceNumber = 0;
-	}
+  blockSequenceNumber = blockSequenceNumber + 1;
+  if(blockSequenceNumber == 256) {
+	blockSequenceNumber = 0;
+  }
 }
 
 /**

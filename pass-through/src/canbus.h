@@ -16,11 +16,11 @@
 #include <linux/can/raw.h>
 
 #ifdef THREADED
-	#include <pthread.h>
+#include <pthread.h>
 #endif
 
 #ifndef CAN_IFNAME
-	#define CAN_IFACE "can0"
+  #define CAN_IFACE "vcan0"
 #endif
 
 #define CANBUS_STATE_CONNECTING (1 << 0)
@@ -31,13 +31,13 @@
 #define CANBUS_FLAG_RECV_OWN_MSGS 0     // 0 = disable, 1 = enable
 
 typedef struct {
-	int socket;
-	uint8_t state;
-	uint8_t flags;
+  int socket;
+  uint8_t state;
+  uint8_t flags;
 #if THREADED
-	pthread_t thread;
-	pthread_mutex_t lock;
-	pthread_mutex_t rwlock;
+  pthread_t thread;
+  pthread_mutex_t lock;
+  pthread_mutex_t rwlock;
 #endif
 } canbus_client;
 

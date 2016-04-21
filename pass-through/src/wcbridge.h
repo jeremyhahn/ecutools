@@ -4,29 +4,28 @@
 #include <stdio.h>
 #include <signal.h>
 #include <pthread.h>
+#include "cwebsocket.h"
 #include "canbus.h"
-#include "cwebsocket/client.h"
-#include "cwebsocket/subprotocol/echo/echo_client.h"
 
-#define WCBRIDGE_WEBSOCKET_ENDPOINT ((const char *)"ws://ecutools.io:8080/logger/ecutune")
+#define WCBRIDGE_WEBSOCKET_ENDPOINT ((const char *)"ws://ecutools.io:8080/ecutune")
 
 //#define WCBRIDGE_FLAG_MODE_LOGGING (1 << 0);
 
 struct wcbridge_filter;
 
 typedef struct _wcbridge {
-	struct wcbridge_filter *filters[10];
-	pthread_t websocket_thread;
-	pthread_attr_t websocket_thread_attr;
-	pthread_t canbus_thread;
-	cwebsocket_client *wsclient;
-	canbus_client *canbus;
-	uint8_t canbus_flags;
-	void (*onmessage)(struct _wcbridge *, struct can_frame *frame);
+  struct wcbridge_filter *filters[10];
+  pthread_t websocket_thread;
+  pthread_attr_t websocket_thread_attr;
+  pthread_t canbus_thread;
+  cwebsocket_client *websocket;
+  canbus_client *canbus;
+  uint8_t canbus_flags;
+  void (*onmessage)(struct _wcbridge *, struct can_frame *frame);
 } wcbridge;
 
 typedef struct {
-	void (*onframe)(wcbridge *bridge, struct can_frame *frame);
+  void (*onframe)(wcbridge *bridge, struct can_frame *frame);
 } wcbridge_filter;
 
 wcbridge *bridge;
