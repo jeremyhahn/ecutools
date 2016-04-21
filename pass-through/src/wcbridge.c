@@ -51,58 +51,58 @@ void wcbridge_websocket_onmessage(cwebsocket_client *websocket, cwebsocket_messa
       return;
     }
     syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: filter applied");
+    return;
+  }
+  else if(strcmp(message->payload, "cmd:nofilter") == 0) {
+	canbus_close(bridge->canbus);
+    if(canbus_connect(bridge->canbus) != 0) {
+      syslog(LOG_CRIT, "wcbridge_websocket_onmessage: unable to connect to CAN\n");
       return;
-	}
-	else if(strcmp(message->payload, "cmd:nofilter") == 0) {
-	  canbus_close(bridge->canbus);
-      if(canbus_connect(bridge->canbus) != 0) {
-        syslog(LOG_CRIT, "wcbridge_websocket_onmessage: unable to connect to CAN\n");
-        return;
+    }
+    syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: filter cleared");
+    return;
+  }
+  else {
+
+    syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: processing raw CAN p: %s\n", message->payload);
+
+    if(strstr(message->payload, "#") == NULL) {
+      syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: invalid raw CAN payload");
+	  return;
+    }
+
+    char *can_id = strsep(&message->payload, "#");
+    char *can_message = strsep(&message->payload, "#");
+
+    struct can_frame *frame = malloc(sizeof(struct can_frame));
+    memset(frame, 0, sizeof(struct can_frame));
+    frame->can_id = strtol(can_id, NULL, 16);
+    frame->can_dlc = 8;
+
+    size_t count = 0;
+    for(count = 0; count < sizeof(frame->data)/sizeof(frame->data[0]); count++) {
+      sscanf(can_message, "%2hhx", &frame->data[count]);
+	  can_message += 2 * sizeof(char);
+    }
+
+    /*
+	int i;
+	for(i=0; i<sizeof(bridge->filters); i++) {
+	  if(bridge->filters[i] != NULL) {
+        wcbridge_process_filter(bridge, frame);
       }
-      syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: filter cleared");
-      return;
-	}
-	else {
+	}*/
 
-      syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: processing raw CAN p: %s\n", message->payload);
+    if(canbus_write(bridge->canbus, frame) == -1) {
+      syslog(LOG_ERR, "wcbridge_websocket_onmessage: unable to forward frame: %s", strerror(errno));
+    }
 
-      if(strstr(message->payload, "#") == NULL) {
-        syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: invalid raw CAN payload");
-		return;
-      }
+    if(bridge->onmessage != NULL) {
+      bridge->onmessage(bridge, frame);
+    }
 
-      char *can_id = strsep(&message->payload, "#");
-      char *can_message = strsep(&message->payload, "#");
-
-      struct can_frame *frame = malloc(sizeof(struct can_frame));
-      memset(frame, 0, sizeof(struct can_frame));
-      frame->can_id = strtol(can_id, NULL, 16);
-      frame->can_dlc = 8;
-
-      size_t count = 0;
-      for(count = 0; count < sizeof(frame->data)/sizeof(frame->data[0]); count++) {
-        sscanf(can_message, "%2hhx", &frame->data[count]);
-		can_message += 2 * sizeof(char);
-      }
-
-      /*
-	  int i;
-	  for(i=0; i<sizeof(bridge->filters); i++) {
-		if(bridge->filters[i] != NULL) {
-		  wcbridge_process_filter(bridge, frame);
-		}
-	  }*/
-
-      if(canbus_write(bridge->canbus, frame) == -1) {
-		syslog(LOG_ERR, "wcbridge_websocket_onmessage: unable to forward frame: %s", strerror(errno));
-	  }
-
-      if(bridge->onmessage != NULL) {
-		bridge->onmessage(bridge, frame);
-      }
-
-	  free(frame);
-	}
+	free(frame);
+  }
 }
 
 void wcbridge_process_filter(wcbridge *bridge, struct can_frame *frame) {
@@ -176,19 +176,19 @@ void *wcbridge_canbus_logger_thread(void *ptr) {
 
   while((bridge->canbus->state & CANBUS_STATE_CONNECTED) &&
 	(bridge->websocket->state & WEBSOCKET_STATE_OPEN) &&
-	canbus_read(bridge->canbus, &frame) > 0) {
+    canbus_read(bridge->canbus, &frame) > 0) {
 
-	memset(data, 0, data_len);
-	canbus_framecpy(&frame, data);
+    memset(data, 0, data_len);
+    canbus_framecpy(&frame, data);
 
-	if(frame.can_id & CAN_ERR_FLAG) {
-	  syslog(LOG_ERR, "wcbridge_canbus_logger_thread: CAN ERROR: %s", data);
-	  continue;
-	}
+    if(frame.can_id & CAN_ERR_FLAG) {
+      syslog(LOG_ERR, "wcbridge_canbus_logger_thread: CAN ERROR: %s", data);
+      continue;
+    }
 
-	if(cwebsocket_write_data(bridge->websocket, data, strlen(data)) == -1) {
-	  syslog(LOG_ERR, "wcbridge_canbus_thread: unable to forward CAN frame to websocket");
-	}
+    if(cwebsocket_write_data(bridge->websocket, data, strlen(data)) == -1) {
+      syslog(LOG_ERR, "wcbridge_canbus_thread: unable to forward CAN frame to websocket");
+    }
   }
 
   syslog(LOG_DEBUG, "wcbridge_canbus_thread: stopping\n");

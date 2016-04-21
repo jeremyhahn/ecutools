@@ -18,11 +18,10 @@ void signal_handler(int sig) {
 	  wcbridge_close(bridge, "SIGINT/SIGTERM");
 	  main_exit(EXIT_SUCCESS);
 	  exit(0);
-	break;
-	  default:
-		syslog(LOG_WARNING, "Unhandled signal %s\n", strsignal(sig));
-		break;
-	}
+	default:
+	  syslog(LOG_WARNING, "Unhandled signal %s\n", strsignal(sig));
+	  break;
+  }
 }
 
 void print_program_header() {
