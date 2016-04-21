@@ -1,0 +1,96 @@
+<html>
+  <head>
+    <link href="style.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="js/dashboard_dev.js"></script>
+    <title>ecutools :: Development Dashboard</title>
+    <style type="text/css">
+    	#tbl {
+    		border: 0;
+    	}
+    </style>
+  </head>
+  <body>
+    <div>Websocket state: <span id="websocket_state"></span></div>
+    <div>Total messages received: <span id="total_messages_received"></span></div>
+    <hr/>
+    <div>
+    	<input type="button" value="Connect" onclick="javascript:dashboard.connect();"/>
+    	<input type="button" value="Disconnect" onclick="javascript:dashboard.disconnect();"/>
+    	<input type="button" value="Start Logging" onclick="javascript:dashboard.startLogging();"/>
+    	<input type="button" value="Stop Logging" onclick="javascript:dashboard.stopLogging();"/>
+    	
+    	<input type="text" id="canid_filter" value=""/>
+        <input type="button" value="Filter" onclick="javascript:dashboard.applyFilter();"/>
+        <input type="button" value="Clear" onclick="javascript:dashboard.clearFilter();"/>
+    </div>
+    <hr/>
+    <div>
+    	<p>UDS Services</p>
+    	<input type="button" value="Diagnostic Mode" onclick="javascript:dashboard.diagnosticMode();"/>
+        <input type="button" value="Request Seed" onclick="javascript:dashboard.requestSeed();"/>
+    </div>
+    <hr/>
+ 	<table id="tbl">
+ 		<tr>
+ 			<td width="420px">RPM: </td>
+ 			<td id="rpm">0</td>
+ 		</tr>
+ 		<tr>
+ 			<td>Ignition Total Timing:</td>
+ 			<td id="itt">0</td>
+ 		</tr>
+		<tr>
+			<td>Manifold Relative Pressure (Corrected)</td>
+			<td id="mrp">0</td>
+		</tr>
+		<tr>
+			<td>Boost Error* (extended parameter)</td>
+			<td id="be">0</td>
+		</tr>
+		<tr>
+			<td>Primary Wastegate Duty</td>
+			<td id="pwd">0</td>
+		</tr>
+		<tr>
+			<td>Throttle Opening Angle %</td>
+			<td id="toa">0</td>
+		</tr>
+		<tr>
+			<td>CO/OL fueling* (extended parameter)</td>
+			<td id="cf">0</td>
+		</tr>
+		<tr>
+			<td>A/F Correction #1</td>
+			<td id="afc1">0</td>
+		</tr>
+		<tr>
+			<td>A/F Learning #1</td>
+			<td id="afl1">0</td>
+		</tr>
+		<tr>
+			<td>Mass Airflow</td>
+			<td id="ma">0</td>
+		</tr>
+		<tr>
+			<td>Engine Load (Direct)* (extended parameter))</td>
+			<td id="eld">0</td>
+		</tr>
+		<tr>
+			<td>Feedback Knock Correction* (extended parameter)</td>
+			<td id="fkc">0</td>
+		</tr>
+		<tr>
+			<td>Fine Learning Knock Correction* (extended parameter)</td>
+			<td id="flkc">0</td>
+		</tr>
+		<tr>
+			<td>IAM (Ignition Advance Multiplier)* (extended parameter)</td>
+			<td id="iam">0</td>
+		</tr>
+ 	</table>
+ 	<div>
+		<textarea id="websocket_message" rows="6" cols="52"></textarea>
+	</div>
+	<button onclick="javascript:websocket.send(document.getElementById('websocket_message').value);">Send</button>
+  </body>
+</html>

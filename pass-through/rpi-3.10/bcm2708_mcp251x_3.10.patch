@@ -1,0 +1,17 @@
+--- linux-rpi-3.10.y/arch/arm/mach-bcm2708/bcm2708.c	2014-03-02 22:05:44.219928086 -0500
++++ bcm2708.c	2014-03-02 22:27:46.471872480 -0500
+@@ -96,6 +96,14 @@
+ 	armctrl_init(__io_address(ARMCTRL_IC_BASE), 0, 0, 0);
+ }
+ 
++static struct mcp251x_platform_data mcp251x_info = {
++   .oscillator_frequency   = 16000000,
++   .board_specific_setup   = NULL,
++   .irq_flags              = IRQF_TRIGGER_FALLING|IRQF_ONESHOT,
++   .power_enable           = NULL,
++   .transceiver_enable     = NULL,
++};
++
+ static struct map_desc bcm2708_io_desc[] __initdata = {
+ 	{
+ 	 .virtual = IO_ADDRESS(ARMCTRL_BASE),

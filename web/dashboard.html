@@ -1,0 +1,95 @@
+<html>
+  <head>
+    <link href="style.css" rel="stylesheet" type="text/css">
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript" src="js/dashboard.js"></script>
+	<!-- <script type="text/javascript" src="js/gauge/GaugeManager.js"></script> -->
+    <script type="text/javascript" src="js/gauge/gauge.js"></script>
+    <title>Open Source ECU Tuning and Diagnostics</title>
+  </head>
+  <body>
+
+    <div class="gauge_container">
+    	<div align="center">Revolutions Per Minute</div>
+    	<div id="gauge_rpm"></div>
+    </div>
+
+    <div class="gauge_container">
+    	<div align="center">Ignition Total Timing</div>
+    	<div id="gauge_ignition_total_timing"></div>
+    </div>
+
+    <div class="gauge_container">
+    	<div align="center">Manifold Relative Pressure (Corrected)</div>
+    	<div id="gauge_manifold_pressure"></div>
+    </div>
+
+    <div class="gauge_container">
+    	<div align="center">Boost Error* (extended parameter)</div>
+    	<div id="gauge_boost_error"></div>
+    </div>
+
+    <div class="gauge_container">
+    	<div align="center">Primary Wastegate Duty</div>
+    	<div id="gauge_primary_wastegate_duty"></div>
+    </div>
+
+	<div class="row_spacer"></div>
+
+    <div class="gauge_container">
+    	<div align="center">Throttle Opening Angle %</div>
+    	<div id="gauge_throttle_opening_angle"></div>
+    </div>
+
+    <div class="gauge_container">
+    	<div align="center">CO/OL fueling* (extended parameter)</div>
+    	<div id="gauge_co_ol_fueling"></div>
+    </div>
+    
+    <div class="gauge_container">
+    	<div align="center">A/F Correction #1</div>
+    	<div id="gauge_af_correction"></div>
+    </div>
+    
+    <div class="gauge_container">
+    	<div align="center">A/F Learning #1</div>
+    	<div id="gauge_af_learning"></div>
+    </div>
+
+    <div class="gauge_container">
+    	<div align="center">Mass Airflow</div>
+    	<div id="gauge_mass_airflow"></div>
+    </div>
+
+	<div class="row_spacer"></div>
+
+    <div class="gauge_container">
+    	<div align="center">Engine Load (Direct)* (extended parameter))</div>
+    	<div id="gauge_engine_load"></div>
+    </div>
+
+    <div class="gauge_container">
+    	<div align="center">Feedback Knock Correction* (extended parameter)</div>
+    	<div id="gauge_feedback_knock_correction"></div>
+    </div>
+    
+    <div class="gauge_container">
+    	<div align="center">Fine Learning Knock Correction* (extended parameter)</div>
+    	<div id="gauge_fine_learning_knock_correction"></div>
+    </div>
+
+    <div class="gauge_container">
+    	<div align="center">IAM (Ignition Advance Multiplier)* (extended parameter)</div>
+    	<div id="gauge_ignition_advance_multiplier"></div>
+    </div>
+
+	<div class="row_spacer"></div>
+	
+	<div>
+		<textarea id="websocket_message" rows="5" cols="50"></textarea>
+	</div>
+	<button onclick="javascript:dashboard.websocket.send(document.getElementById('websocket_message').value);">Send</button>
+
+  </body>
+  <script type="text/javascript">dashboard.load();</script>
+</html>

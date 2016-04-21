@@ -1,0 +1,15 @@
+auto lo
+
+iface lo inet loopback
+iface eth0 inet dhcp
+
+allow-hotplug wlan0
+iface wlan0 inet manual
+wpa-roam /etc/wpa_supplicant/wpa_supplicant.conf
+iface default inet dhcp
+
+auto can0
+iface can0 inet manual
+pre-up /sbin/ip link set can0 type can bitrate 1000000
+up /sbin/ifconfig can0 up
+down /sbin/ifconfig can0 down
