@@ -47,25 +47,25 @@
 #include "utf8.h"
 
 #ifdef USESSL
-	#include <openssl/rand.h>
-	#include <openssl/ssl.h>
-	#include <openssl/err.h>
+  #include <openssl/rand.h>
+  #include <openssl/ssl.h>
+  #include <openssl/err.h>
 #endif
 
 #ifdef THREADED
-	#include <pthread.h>
+  #include <pthread.h>
 #endif
 
 #ifndef HANDSHAKE_BUFFER_MAX
-	#define HANDSHAKE_BUFFER_MAX 256
+  #define HANDSHAKE_BUFFER_MAX 256
 #endif
 
 #ifndef DATA_BUFFER_MAX
-	#define DATA_BUFFER_MAX 65536
+  #define DATA_BUFFER_MAX 65536
 #endif
 
 #ifndef STACK_SIZE_MIN
-	#define STACK_SIZE_MIN 2
+  #define STACK_SIZE_MIN 2
 #endif
 
 #define WEBSOCKET_STATE_CONNECTING   (1 << 0)
@@ -78,60 +78,60 @@
 #define WEBSOCKET_FLAG_AUTORECONNECT (1 << 1)
 
 typedef enum {
-	TRUE,
-	FALSE
+  TRUE,
+  FALSE
 } bool;
 
 typedef enum {
-	CONTINUATION = 0x00,
-	TEXT_FRAME = 0x01,
-	BINARY_FRAME = 0x02,
-	CLOSE = 0x08,
-	PING = 0x09,
-	PONG = 0x0A,
+  CONTINUATION = 0x00,
+  TEXT_FRAME = 0x01,
+  BINARY_FRAME = 0x02,
+  CLOSE = 0x08,
+  PING = 0x09,
+  PONG = 0x0A,
 } opcode;
 
 typedef struct {
-	uint32_t opcode;
-	uint64_t payload_len;
-	char *payload;
+  uint32_t opcode;
+  uint64_t payload_len;
+  char *payload;
 } cwebsocket_message;
 
 typedef struct {
-	bool fin;
-	bool rsv1;
-	bool rsv2;
-	bool rsv3;
-	opcode opcode;
-	bool mask;
-	int payload_len;
-	uint32_t masking_key[4];
+  bool fin;
+  bool rsv1;
+  bool rsv2;
+  bool rsv3;
+  opcode opcode;
+  bool mask;
+  int payload_len;
+  uint32_t masking_key[4];
 } cwebsocket_frame;
 
 typedef struct _cwebsocket {
-	int socket;
-	int retry;
-	char *uri;
-	uint8_t flags;
+  int socket;
+  int retry;
+  char *uri;
+  uint8_t flags;
 #ifdef USESSL
-	SSL_CTX *sslctx;
-	SSL *ssl;
+  SSL_CTX *sslctx;
+  SSL *ssl;
 #endif
 #ifdef THREADED
-	pthread_t thread;
-	pthread_mutex_t lock;
-	pthread_mutex_t write_lock;
+  pthread_t thread;
+  pthread_mutex_t lock;
+  pthread_mutex_t write_lock;
 #endif
-	uint8_t state;
-	void (*onopen)(struct _cwebsocket *);
-	void (*onmessage)(struct _cwebsocket *, cwebsocket_message *message);
-	void (*onclose)(struct _cwebsocket *, const char *message);
-	void (*onerror)(struct _cwebsocket *, const char *error);
+  uint8_t state;
+  void (*onopen)(struct _cwebsocket *);
+  void (*onmessage)(struct _cwebsocket *, cwebsocket_message *message);
+  void (*onclose)(struct _cwebsocket *, const char *message);
+  void (*onerror)(struct _cwebsocket *, const char *error);
 } cwebsocket_client;
 
 typedef struct {
-	cwebsocket_client *socket;
-	cwebsocket_message *message;
+  cwebsocket_client *socket;
+  cwebsocket_message *message;
 } cwebsocket_thread_args;
 
 // "public"
