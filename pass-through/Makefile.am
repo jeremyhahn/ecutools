@@ -80,7 +80,7 @@ AM_CFLAGS =
 AM_LDFLAGS =
 
 if DEBUG
-  AM_CFLAGS += -Wall -O3
+  AM_CFLAGS += -Wall -g3
 else
   AM_CFLAGS += -Wall -O3
 endif

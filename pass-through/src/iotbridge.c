@@ -14,7 +14,7 @@ int iotbridge_awsiot_onmessage(MQTTCallbackParams params) {
   if(payload == NULL || payload_len <= 0) return 0;
 
   while((bridge->canbus->state & CANBUS_STATE_CONNECTED) == 0) {
-    syslog(LOG_DEBUG, "iotbridge_awsiot_onmessage: waiting for CAN connection\n");
+    syslog(LOG_DEBUG, "iotbridge_awsiot_onmessage: waiting for CAN connection");
     sleep(1);
   }
 
@@ -23,7 +23,7 @@ int iotbridge_awsiot_onmessage(MQTTCallbackParams params) {
       syslog(LOG_ERR, "iotbridge_awsiot_onmessage: %s", strerror(errno));
       return 0;
     }
-    syslog(LOG_DEBUG, "thread created\n");
+    syslog(LOG_DEBUG, "iotbridge_awsiot_onmessage: canbus logger thread created");
     return 0;
   }
   else if(strcmp(payload, "cmd:nolog") == 0) {
@@ -51,7 +51,7 @@ int iotbridge_awsiot_onmessage(MQTTCallbackParams params) {
   else if(strcmp(payload, "cmd:nofilter") == 0) {
 	canbus_close(bridge->canbus);
     if(canbus_connect(bridge->canbus) != 0) {
-      syslog(LOG_CRIT, "iotbridge_awsiot_onmessage: unable to connect to CAN\n");
+      syslog(LOG_CRIT, "iotbridge_awsiot_onmessage: unable to connect to CAN");
       return 0;
     }
     syslog(LOG_DEBUG, "iotbridge_awsiot_onmessage: filter cleared");
@@ -122,7 +122,7 @@ void iotbridge_awsiot_onerror(IoT_Error_t *awsiot, const char *message) {
 
 void *iotbridge_awsiot_subscribe_thread(void *ptr) {
 
-  syslog(LOG_DEBUG, "iotbridge_awsiot_subscribe_thread: started\n");
+  syslog(LOG_DEBUG, "iotbridge_awsiot_subscribe_thread: started");
   iotbridge *bridge = (iotbridge *)ptr;
   awsiot_client_subscribe(bridge->awsiot);
 
@@ -146,7 +146,7 @@ void *iotbridge_awsiot_subscribe_thread(void *ptr) {
 
 void *iotbridge_awsiot_publish_thread(void *ptr) {
 
-  syslog(LOG_DEBUG, "iotbridge_awsiot_publish_thread: started\n");
+  syslog(LOG_DEBUG, "iotbridge_awsiot_publish_thread: started");
 
   iotbridge__publish_thread_args *args = (iotbridge__publish_thread_args *)ptr;
 
@@ -157,7 +157,6 @@ void *iotbridge_awsiot_publish_thread(void *ptr) {
   syslog(LOG_DEBUG, "iotbridge_awsiot_connect_thread: stopping");
   return NULL;
 }
-
 
 void *iotbridge_canbus_logger_thread(void *ptr) {
 
@@ -195,6 +194,7 @@ void *iotbridge_canbus_logger_thread(void *ptr) {
     args->awsiot = bridge->awsiot;
     args->payload = &data;
 
+    syslog(LOG_DEBUG, "iotbridge_canbus_logger_thread: creating publish thread");
     if(pthread_create(&bridge->awsiot->publish_thread, NULL, iotbridge_awsiot_publish_thread, (void *)args) == -1) {
       syslog(LOG_ERR, "cwebsocket_read_data: %s", strerror(errno));
       return -1;
