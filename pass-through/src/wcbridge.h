@@ -36,7 +36,6 @@ void wcbridge_close(wcbridge *wcbridge, const char *message);
 void wcbridge_destroy(wcbridge *wcbridge);
 void wcbridge_process_filter(wcbridge *bridge, struct can_frame *frame);
 
-void *wcbridge_canbus_connect_thread(void *ptr);
 void *wcbridge_canbus_logger_thread(void *ptr);
 void *wcbridge_websocket_thread(void *ptr);
 

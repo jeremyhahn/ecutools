@@ -40,27 +40,6 @@ void cwebsocket_init() {
 	syslog(LOG_DEBUG, "stack limit min=%ld, max=%ld\n", rl.rlim_cur, rl.rlim_max);
 }
 
-char* cwebsocket_base64_encode(const unsigned char *input, int length) {
-
-	BIO *bmem, *b64;
-	BUF_MEM *bptr;
-
-	b64 = BIO_new(BIO_f_base64());
-	bmem = BIO_new(BIO_s_mem());
-	b64 = BIO_push(b64, bmem);
-	BIO_write(b64, input, length);
-	BIO_flush(b64);
-	BIO_get_mem_ptr(b64, &bptr);
-
-	char *buff = (char *)malloc(bptr->length);
-	memcpy(buff, bptr->data, bptr->length-1);
-	buff[bptr->length-1] = '\0';
-
-	BIO_free_all(b64);
-
-	return buff;
-}
-
 void cwebsocket_parse_uri(cwebsocket_client *websocket, const char *uri,
 		char *hostname, char *port, char *resource, char *querystring) {
 
@@ -125,11 +104,6 @@ void cwebsocket_parse_uri(cwebsocket_client *websocket, const char *uri,
 		syslog(LOG_CRIT, "cwebsocket_parse_uri: invalid websocket URL\n");
 		exit(1);
 	}
-}
-
-void cwebsocket_print_frame(cwebsocket_frame *frame) {
-	syslog(LOG_DEBUG, "cwebsocket_print_frame: fin=%i, rsv1=%i, rsv2=%i, rsv3=%i, opcode=%#04x, mask=%i, payload_len=%i\n",
-			frame->fin, frame->rsv1, frame->rsv2, frame->rsv3, frame->opcode, frame->mask, frame->payload_len);
 }
 
 int cwebsocket_connect(cwebsocket_client *websocket) {

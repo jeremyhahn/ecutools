@@ -1,4 +1,5 @@
-#include "wcbridge.h"
+//#include "wcbridge.h"
+#include "iotbridge.h"
 
 int main_exit(int exit_status) {
   syslog(LOG_DEBUG, "exiting ecutune\n");
@@ -69,7 +70,7 @@ void create_mock_metrics(char *metrics) {
 
   memcpy(metrics, metricbuf, 255);
 }
-
+/*
 void run_send_metrics(cwebsocket_client *websocket) {
 
   uint64_t messages_sent = 0;
@@ -90,15 +91,16 @@ void run_send_metrics(cwebsocket_client *websocket) {
   finish_time = time(0);
   printf("run_send_metrics: sent %lld messages in %i seconds\n", (long long)messages_sent, (int) (finish_time-start_time));
 }
+*/
 
-void ecutune_onmessage(wcbridge *bridge, struct can_frame *frame) {
+void ecutune_onmessage(iotbridge *bridge, struct can_frame *frame) {
   //char sframe[50];
   //canbus_framecpy(frame, sframe);
   //syslog(LOG_DEBUG, "wcbridge_bridge_onmessage: %s", sframe);
   syslog(LOG_DEBUG, "ecutune_onmessage fired\n");
 }
 
-void ecutune_bridge_filter1(wcbridge *bridge, struct can_frame *frame) {
+void ecutune_bridge_filter1(iotbridge *bridge, struct can_frame *frame) {
   //bridge->canbus_thread->canbus_print_frame(frame);
 }
 
@@ -129,12 +131,19 @@ int main(int argc, char **argv) {
   setlogmask(LOG_UPTO(LOG_DEBUG)); // LOG_INFO, LOG_DEBUG
   openlog("ecutune", LOG_CONS | LOG_PERROR, LOG_USER);
   syslog(LOG_DEBUG, "starting ecutune\n");
-
+/*
   bridge = wcbridge_new();
   bridge->onmessage = &ecutune_onmessage;
   //bridge->bridge_filters[0] = &bridge_filter1;
   wcbridge_run(bridge);
   wcbridge_close(bridge, "main: run loop complete\n");
+*/
+  bridge = iotbridge_new();
+ // bridge->onmessage = &ecutune_onmessage;
+  //bridge->bridge_filters[0] = &bridge_filter1;
+  iotbridge_run(bridge);
+  iotbridge_close(bridge, "main: run loop complete\n");
+  free(bridge);
 
   return main_exit(EXIT_SUCCESS);
 }

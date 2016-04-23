@@ -55,7 +55,6 @@ AC_CHECK_FUNCS([gettimeofday memset socket strcasecmp strchr strerror strstr])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
-
 # Conditionals
 AC_ARG_ENABLE(debug,
 [--enable-debug    Turn on debugging],
@@ -65,9 +64,9 @@ AC_ARG_ENABLE(debug,
   *) AC_MSG_ERROR(bad value ${enableval} for --enable-debug) ;;
 esac],[debug=false])
 if test "$debug" = true; then
-    AC_DEFINE(ENABLE_DEBUG, [1], ["Compile with GDB support"])
-    CFLAGS='-g'
+    AC_DEFINE(ENABLE_DEBUG, [1], ["Enable debug logging"])
 fi
+AM_CONDITIONAL([DEBUG], [test x$debug = xtrue])
 
 AC_ARG_ENABLE(ssl,
 [--enable-ssl Enable ssl, default: enabled],
@@ -79,6 +78,7 @@ esac], [ssl=true])
 if test "$ssl" = true; then
     AC_DEFINE(ENABLE_SSL, [1], ["Compile with SSL support"])
 fi
+AM_CONDITIONAL([USESSL], [test x$ssl = xtrue])
 
 AC_ARG_ENABLE(threads,
 [--enable-threads    Enable multi-threading],
@@ -88,7 +88,8 @@ AC_ARG_ENABLE(threads,
   *) AC_MSG_ERROR(bad value ${enableval} for --enable-threads) ;;
 esac],[threads=true])
 if test "$threads" = true; then
-    AC_DEFINE(ENABLE_THREADS, [1], ["Compile with client multi-threading support"])
+    AC_DEFINE(ENABLE_THREADS, [1], ["Compile with multi-threading support"])
 fi
+AM_CONDITIONAL([THREADED], [test x$threads = xtrue])
 
 AC_OUTPUT

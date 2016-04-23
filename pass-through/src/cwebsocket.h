@@ -142,10 +142,8 @@ ssize_t cwebsocket_write_data(cwebsocket_client *websocket, const char *data, in
 void cwebsocket_run(cwebsocket_client *websocket);
 void cwebsocket_close(cwebsocket_client *websocket, const char *message);
 void cwebsocket_listen(cwebsocket_client *websocket);
-void cwebsocket_print_frame(cwebsocket_frame *frame);
 
 // "private"
-char* cwebsocket_base64_encode(const unsigned char *input, int length);
 void cwebsocket_parse_uri(cwebsocket_client *websocket, const char *uri, char *hostname, char *port, char *resource, char *querystring);
 int cwebsocket_handshake_handler(cwebsocket_client *websocket, const char *handshake_response, char *seckey);
 int cwebsocket_read_handshake(cwebsocket_client *websocket, char *seckey);

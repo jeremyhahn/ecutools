@@ -1,5 +1,3 @@
-#include "wcbridge.h"
-
 #include <errno.h>
 #include <linux/can/raw.h>
 #include <linux/can.h>
@@ -9,6 +7,7 @@
 #include <sys/socket.h>
 #include <syslog.h>
 #include <unistd.h>
+#include "wcbridge.h"
 
 void wcbridge_websocket_onopen(cwebsocket_client *websocket) {
   syslog(LOG_DEBUG, "wcbridge_onopen: websocket file descriptor: %i\n", websocket->socket);
@@ -124,33 +123,25 @@ void *wcbridge_websocket_thread(void *ptr) {
 
   syslog(LOG_DEBUG, "wcbridge_websocket_thread: running\n");
 
-  wcbridge *args = (wcbridge *)ptr;
+  wcbridge *bridge = (wcbridge *)ptr;
 
-  args->websocket->onopen = &wcbridge_websocket_onopen;
-  args->websocket->onmessage = &wcbridge_websocket_onmessage;
-  args->websocket->onclose = &wcbridge_websocket_onclose;
-  args->websocket->onerror = &wcbridge_websocket_onerror;
+  bridge->websocket->onopen = &wcbridge_websocket_onopen;
+  bridge->websocket->onmessage = &wcbridge_websocket_onmessage;
+  bridge->websocket->onclose = &wcbridge_websocket_onclose;
+  bridge->websocket->onerror = &wcbridge_websocket_onerror;
 
   cwebsocket_init();
   //args->websocket->flags |= WEBSOCKET_FLAG_AUTORECONNECT;
   //args->websocket->retry = 5;
-  args->websocket->uri = (char *)WCBRIDGE_WEBSOCKET_ENDPOINT;
-  if(cwebsocket_connect(args->websocket) == -1) {
+  bridge->websocket->uri = (char *)WCBRIDGE_WEBSOCKET_ENDPOINT;
+  if(cwebsocket_connect(bridge->websocket) == -1) {
 	syslog(LOG_ERR, "wcbridge_websocket_thread: unable to connect to websocket server\n");
   }
 
-  cwebsocket_listen(args->websocket);
+  cwebsocket_listen(bridge->websocket);
 
   syslog(LOG_DEBUG, "wcbridge_websocket_thread: stopping\n");
 
-  return NULL;
-}
-
-void *wcbridge_canbus_connect_thread(void *ptr) {
-  if(canbus_connect(bridge->canbus) != 0) {
-	syslog(LOG_CRIT, "wcbridge_canbus_connect_thread: unable to connect to CAN\n");
-	return NULL;
-  }
   return NULL;
 }
 
@@ -208,8 +199,11 @@ wcbridge *wcbridge_new() {
 int wcbridge_run(wcbridge *bridge) {
   //pthread_attr_init(&bridge->websocket_thread_attr);
   //pthread_attr_setstacksize(&bridge->websocket_thread_attr, STACK_SIZE_MIN);
+  if(canbus_connect(bridge->canbus) != 0) {
+    syslog(LOG_CRIT, "wcbridge_canbus_connect_thread: unable to connect to CAN\n");
+    return -1;
+  }
   pthread_create(&bridge->websocket_thread, NULL, wcbridge_websocket_thread, (void *)bridge);
-  pthread_create(&bridge->canbus_thread, NULL, wcbridge_canbus_connect_thread, (void *)bridge);
   pthread_join(bridge->websocket_thread, NULL);
   syslog(LOG_DEBUG, "wcbridge_run: bridge closed\n");
   return 0;

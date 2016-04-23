@@ -12,12 +12,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <pthread.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
-
-#ifdef THREADED
-#include <pthread.h>
-#endif
 
 #ifndef CAN_IFNAME
   #define CAN_IFACE "vcan0"
@@ -34,11 +31,9 @@ typedef struct {
   int socket;
   uint8_t state;
   uint8_t flags;
-#if THREADED
   pthread_t thread;
   pthread_mutex_t lock;
   pthread_mutex_t rwlock;
-#endif
 } canbus_client;
 
 int canbus_connect(canbus_client *canbus);
