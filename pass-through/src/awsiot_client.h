@@ -25,11 +25,6 @@ typedef struct _awsiot_client {
   void (*onerror)(struct _awsiot_client *, const char *message);
 } awsiot_client;
 
-typedef struct {
-  awsiot_client *awsiot;
-  MQTTMessageParams *message;
-} awsiot_publish_thread_args;
-
 IoT_Error_t awsiot_client_connect(awsiot_client *awsiot);
 bool awsiot_client_isconnected();
 IoT_Error_t awsiot_client_subscribe(awsiot_client *awsiot);

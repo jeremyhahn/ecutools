@@ -10,11 +10,16 @@
 typedef struct _iotbridge {
   struct iotbridge_filter *filters[10];
   pthread_t canbus_thread;
-  pthread_t awsiot_thread;
+  pthread_t publish_thread;
   awsiot_client *awsiot;
   canbus_client *canbus;
   uint8_t canbus_flags;
 } iotbridge;
+
+typedef struct {
+  awsiot_client *awsiot;
+  char *payload;
+} iotbridge__publish_thread_args;
 
 iotbridge *bridge;
 iotbridge *wcbridge_new();
@@ -23,8 +28,8 @@ void iotbridge_close(iotbridge *iotbridge, const char *message);
 void iotridge_destroy(iotbridge *iotbridge);
 void iotbridge_process_filter(iotbridge *bridge, struct can_frame *frame);
 
-void *iotbridge_canbus_connect_thread(void *ptr);
 void *iotbridge_canbus_logger_thread(void *ptr);
 void *iotbridge_awsiot_subscribe_thread(void *ptr);
+void *iotbridge_awsiot_publish_thread(void *ptr);
 
 #endif

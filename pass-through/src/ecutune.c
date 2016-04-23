@@ -2,7 +2,7 @@
 #include "iotbridge.h"
 
 int main_exit(int exit_status) {
-  syslog(LOG_DEBUG, "exiting ecutune\n");
+  syslog(LOG_DEBUG, "exiting ecutune");
   closelog();
   return exit_status;
 }
@@ -10,7 +10,7 @@ int main_exit(int exit_status) {
 void signal_handler(int sig) {
   switch(sig) {
 	case SIGHUP:
-	  syslog(LOG_DEBUG, "Received SIGHUP signal\n");
+	  syslog(LOG_DEBUG, "Received SIGHUP signal");
 	  // Reload config and reopen files
 	  break;
 	case SIGINT:
@@ -97,7 +97,7 @@ void ecutune_onmessage(iotbridge *bridge, struct can_frame *frame) {
   //char sframe[50];
   //canbus_framecpy(frame, sframe);
   //syslog(LOG_DEBUG, "wcbridge_bridge_onmessage: %s", sframe);
-  syslog(LOG_DEBUG, "ecutune_onmessage fired\n");
+  syslog(LOG_DEBUG, "ecutune_onmessage fired");
 }
 
 void ecutune_bridge_filter1(iotbridge *bridge, struct can_frame *frame) {
@@ -130,7 +130,8 @@ int main(int argc, char **argv) {
 
   setlogmask(LOG_UPTO(LOG_DEBUG)); // LOG_INFO, LOG_DEBUG
   openlog("ecutune", LOG_CONS | LOG_PERROR, LOG_USER);
-  syslog(LOG_DEBUG, "starting ecutune\n");
+  syslog(LOG_DEBUG, "starting ecutune");
+
 /*
   bridge = wcbridge_new();
   bridge->onmessage = &ecutune_onmessage;
@@ -142,7 +143,7 @@ int main(int argc, char **argv) {
  // bridge->onmessage = &ecutune_onmessage;
   //bridge->bridge_filters[0] = &bridge_filter1;
   iotbridge_run(bridge);
-  iotbridge_close(bridge, "main: run loop complete\n");
+  iotbridge_close(bridge, "main: run loop complete");
   free(bridge);
 
   return main_exit(EXIT_SUCCESS);

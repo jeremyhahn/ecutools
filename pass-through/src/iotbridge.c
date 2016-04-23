@@ -144,6 +144,21 @@ void *iotbridge_awsiot_subscribe_thread(void *ptr) {
   return NULL;
 }
 
+void *iotbridge_awsiot_publish_thread(void *ptr) {
+
+  syslog(LOG_DEBUG, "iotbridge_awsiot_publish_thread: started\n");
+
+  iotbridge__publish_thread_args *args = (iotbridge__publish_thread_args *)ptr;
+
+  if(awsiot_client_publish(args->awsiot, args->payload) == -1) {
+    syslog(LOG_ERR, "iotbridge_canbus_logger_thread: unable to forward CAN frame to AWS IoT service");
+  }
+
+  syslog(LOG_DEBUG, "iotbridge_awsiot_connect_thread: stopping");
+  return NULL;
+}
+
+
 void *iotbridge_canbus_logger_thread(void *ptr) {
 
   syslog(LOG_DEBUG, "iotbridge_canbus_logger_thread: running");
@@ -175,9 +190,16 @@ void *iotbridge_canbus_logger_thread(void *ptr) {
       continue;
     }
 
-    if(awsiot_client_publish(bridge->awsiot, data) == -1) {
-      syslog(LOG_ERR, "iotbridge_canbus_logger_thread: unable to forward CAN frame to AWS IoT service");
+    iotbridge__publish_thread_args *args = malloc(sizeof(iotbridge__publish_thread_args));
+    memset(args, 0, sizeof(iotbridge__publish_thread_args));
+    args->awsiot = bridge->awsiot;
+    args->payload = &data;
+
+    if(pthread_create(&bridge->awsiot->publish_thread, NULL, iotbridge_awsiot_publish_thread, (void *)args) == -1) {
+      syslog(LOG_ERR, "cwebsocket_read_data: %s", strerror(errno));
+      return -1;
     }
+
   }
 
   syslog(LOG_DEBUG, "iotbridge_canbus_logger_thread: stopping");
