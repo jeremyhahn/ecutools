@@ -10,13 +10,13 @@
 #include "wcbridge.h"
 
 void wcbridge_websocket_onopen(cwebsocket_client *websocket) {
-  syslog(LOG_DEBUG, "wcbridge_onopen: websocket file descriptor: %i\n", websocket->socket);
+  syslog(LOG_DEBUG, "wcbridge_onopen: websocket file descriptor: %i", websocket->socket);
 }
 
 void wcbridge_websocket_onmessage(cwebsocket_client *websocket, cwebsocket_message *message) {
 
   while((bridge->canbus->state & CANBUS_STATE_CONNECTED) == 0) {
-    syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: waiting for CAN connection\n");
+    syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: waiting for CAN connection");
     sleep(1);
   }
 
@@ -27,7 +27,7 @@ void wcbridge_websocket_onmessage(cwebsocket_client *websocket, cwebsocket_messa
       syslog(LOG_ERR, "wcbridge_websocket_onmessage: %s", strerror(errno));
       return;
     }
-    syslog(LOG_DEBUG, "thread created\n");
+    syslog(LOG_DEBUG, "thread created");
     return;
   }
   else if(strcmp(message->payload, "cmd:nolog") == 0) {
@@ -55,7 +55,7 @@ void wcbridge_websocket_onmessage(cwebsocket_client *websocket, cwebsocket_messa
   else if(strcmp(message->payload, "cmd:nofilter") == 0) {
 	canbus_close(bridge->canbus);
     if(canbus_connect(bridge->canbus) != 0) {
-      syslog(LOG_CRIT, "wcbridge_websocket_onmessage: unable to connect to CAN\n");
+      syslog(LOG_CRIT, "wcbridge_websocket_onmessage: unable to connect to CAN");
       return;
     }
     syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: filter cleared");
@@ -63,7 +63,7 @@ void wcbridge_websocket_onmessage(cwebsocket_client *websocket, cwebsocket_messa
   }
   else {
 
-    syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: processing raw CAN p: %s\n", message->payload);
+    syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: processing raw CAN p: %s", message->payload);
 
     if(strstr(message->payload, "#") == NULL) {
       syslog(LOG_DEBUG, "wcbridge_websocket_onmessage: invalid raw CAN payload");
@@ -116,12 +116,12 @@ void wcbridge_websocket_onclose(cwebsocket_client *websocket, const char *messag
 }
 
 void wcbridge_websocket_onerror(cwebsocket_client *websocket, const char *message) {
-  syslog(LOG_DEBUG, "wcbridge_websocket_onerror: message=%s\n", message);
+  syslog(LOG_DEBUG, "wcbridge_websocket_onerror: message=%s", message);
 }
 
 void *wcbridge_websocket_thread(void *ptr) {
 
-  syslog(LOG_DEBUG, "wcbridge_websocket_thread: running\n");
+  syslog(LOG_DEBUG, "wcbridge_websocket_thread: running");
 
   wcbridge *bridge = (wcbridge *)ptr;
 
@@ -135,19 +135,19 @@ void *wcbridge_websocket_thread(void *ptr) {
   //args->websocket->retry = 5;
   bridge->websocket->uri = (char *)WCBRIDGE_WEBSOCKET_ENDPOINT;
   if(cwebsocket_connect(bridge->websocket) == -1) {
-	syslog(LOG_ERR, "wcbridge_websocket_thread: unable to connect to websocket server\n");
+	syslog(LOG_ERR, "wcbridge_websocket_thread: unable to connect to websocket server");
   }
 
   cwebsocket_listen(bridge->websocket);
 
-  syslog(LOG_DEBUG, "wcbridge_websocket_thread: stopping\n");
+  syslog(LOG_DEBUG, "wcbridge_websocket_thread: stopping");
 
   return NULL;
 }
 
 void *wcbridge_canbus_logger_thread(void *ptr) {
 
-  syslog(LOG_DEBUG, "wcbridge_canbus_thread: running\n");
+  syslog(LOG_DEBUG, "wcbridge_canbus_thread: running");
 
   wcbridge *bridge = (wcbridge *)ptr;
 
@@ -161,7 +161,7 @@ void *wcbridge_canbus_logger_thread(void *ptr) {
 
   /*
   while((bridge->websocket->state & WEBSOCKET_STATE_OPEN) == 0) {
-	syslog(LOG_DEBUG, "wcbridge_canbus_listen_thread: waiting for websocket to connect\n");
+	syslog(LOG_DEBUG, "wcbridge_canbus_listen_thread: waiting for websocket to connect");
 	sleep(1);
   }*/
 
@@ -182,7 +182,7 @@ void *wcbridge_canbus_logger_thread(void *ptr) {
     }
   }
 
-  syslog(LOG_DEBUG, "wcbridge_canbus_thread: stopping\n");
+  syslog(LOG_DEBUG, "wcbridge_canbus_thread: stopping");
   return NULL;
 }
 
@@ -199,22 +199,23 @@ wcbridge *wcbridge_new() {
 int wcbridge_run(wcbridge *bridge) {
   //pthread_attr_init(&bridge->websocket_thread_attr);
   //pthread_attr_setstacksize(&bridge->websocket_thread_attr, STACK_SIZE_MIN);
-  if(canbus_connect(bridge->canbus) != 0) {
-    syslog(LOG_CRIT, "wcbridge_canbus_connect_thread: unable to connect to CAN\n");
+  canbus_connect(bridge->canbus);
+  if(!canbus_isconnected(bridge->canbus)) {
+    syslog(LOG_CRIT, "wcbridge_run: unable to connect to CAN");
     return -1;
   }
   pthread_create(&bridge->websocket_thread, NULL, wcbridge_websocket_thread, (void *)bridge);
   pthread_join(bridge->websocket_thread, NULL);
-  syslog(LOG_DEBUG, "wcbridge_run: bridge closed\n");
+  syslog(LOG_DEBUG, "wcbridge_run: bridge closed");
   return 0;
 }
 
 void wcbridge_close(wcbridge *bridge, const char *message) {
-  syslog(LOG_DEBUG, "wcbridge_close: closing bridge\n");
+  syslog(LOG_DEBUG, "wcbridge_close: closing bridge");
   canbus_close(bridge->canbus);
   cwebsocket_close(bridge->websocket, message);
   wcbridge_destroy(bridge);
-  syslog(LOG_DEBUG, "wcbridge_close: bridge closed\n");
+  syslog(LOG_DEBUG, "wcbridge_close: bridge closed");
 }
 
 void wcbridge_destroy(wcbridge *bridge) {

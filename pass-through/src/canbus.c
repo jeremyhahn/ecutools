@@ -94,28 +94,29 @@ int canbus_connect(canbus_client *canbus) {
   return 0;
 }
 
+bool canbus_isconnected(canbus_client *canbus) {
+  return canbus->socket > 0 && (canbus->state & CANBUS_STATE_CONNECTED);
+}
+
 ssize_t canbus_read(canbus_client *canbus, struct can_frame *frame) {
   if((canbus->state & CANBUS_STATE_CONNECTED) == 0) {
     syslog(LOG_ERR, "canbus_read: CAN socket not connected");
     return -1;
   }
 
-//  pthread_mutex_lock(&canbus->rwlock);
-
   int nbytes = read(canbus->socket, frame, sizeof(struct can_frame));
   if(nbytes < 0) {
-    syslog(LOG_CRIT, "canbus_read: %s\n", strerror(errno));
+    syslog(LOG_CRIT, "canbus_read: %s", strerror(errno));
     return -1;
   }
-
-//  pthread_mutex_unlock(&canbus->rwlock);
 
   if(nbytes < sizeof(struct can_frame)) {
-    syslog(LOG_CRIT, "canbus_read: incomplete CAN frame");
+    syslog(LOG_CRIT, "canbus_read: received incomplete CAN frame");
     return -1;
   }
 
-  syslog(LOG_DEBUG, "canbus_read: read %i bytes", nbytes);
+  syslog(LOG_DEBUG, "canbus_read: read %i byte CAN frame", nbytes);
+
   return nbytes;
 }
 
@@ -134,7 +135,8 @@ int canbus_write(canbus_client *canbus, struct can_frame *frame) {
 
   pthread_mutex_unlock(&canbus->rwlock);
 
-  syslog(LOG_DEBUG, "canbus_write: wrote %d bytes", bytes);
+  syslog(LOG_DEBUG, "canbus_write: wrote %d byte CAN frame", bytes);
+
   return bytes;
 }
 

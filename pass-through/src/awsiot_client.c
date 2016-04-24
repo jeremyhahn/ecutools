@@ -1,7 +1,8 @@
 #include "awsiot_client.h"
 
-IoT_Error_t awsiot_client_connect(awsiot_client *awsiot) {
+void awsiot_client_connect(awsiot_client *awsiot) {
 
+  char errmsg[255];
   char rootCA[255];
   char clientCRT[255];
   char clientKey[255];
@@ -25,7 +26,7 @@ IoT_Error_t awsiot_client_connect(awsiot_client *awsiot) {
   connectParams.KeepAliveInterval_sec = 10;
   connectParams.isCleansession = true;
   connectParams.MQTTVersion = MQTT_3_1_1;
-  connectParams.pClientID = "ecutools-data-logger";
+  connectParams.pClientID = "ecutools-datalogger";
   connectParams.pHostURL = AWS_IOT_MQTT_HOST;
   connectParams.port = AWS_IOT_MQTT_PORT;
   connectParams.isWillMsgPresent = false;
@@ -39,44 +40,46 @@ IoT_Error_t awsiot_client_connect(awsiot_client *awsiot) {
 
   awsiot->rc = aws_iot_mqtt_connect(&connectParams);
   if(awsiot->rc != NONE_ERROR) {
-    syslog(LOG_ERR, "Error(%d) connecting to %s:%d", awsiot->rc, connectParams.pHostURL, connectParams.port);
+    sprintf(errmsg, "Error(%d) connecting to %s:%d", awsiot->rc, connectParams.pHostURL, connectParams.port);
+    awsiot->onerror(awsiot, errmsg);
   }
 
   awsiot->rc = aws_iot_mqtt_autoreconnect_set_status(true);
   if(NONE_ERROR != awsiot->rc) {
-    syslog(LOG_ERR, "Unable to set Auto Reconnect to true. IoT_Error_t=%d", awsiot->rc);
+    sprintf(errmsg, "Unable to set Auto Reconnect to true. IoT_Error_t=%d", awsiot->rc);
+    awsiot->onerror(awsiot, errmsg);
   }
 
   awsiot->onopen(awsiot);
-  return awsiot->rc;
 }
 
 bool awsiot_client_isconnected() {
   return aws_iot_is_mqtt_connected();
 }
 
-IoT_Error_t awsiot_client_subscribe(awsiot_client *awsiot) {
+void awsiot_client_canbus_subscribe(awsiot_client *awsiot) {
 
-  syslog(LOG_DEBUG, "awsiot_client_subscribe");
+  syslog(LOG_DEBUG, "awsiot_client_canbus_subscribe: subscribing to topic ecutools/canbus.");
 
   MQTTSubscribeParams subParams = MQTTSubscribeParamsDefault;
   subParams.mHandler = awsiot->onmessage;
-  subParams.pTopic = "ecutools/datalogger";
+  subParams.pTopic = "ecutools/canbus";
   subParams.qos = QOS_0;
 
   if(NONE_ERROR == awsiot->rc) {
     awsiot->rc = aws_iot_mqtt_subscribe(&subParams);
     if (NONE_ERROR != awsiot->rc) {
-      syslog(LOG_ERR, "Error subscribing to %s queue: %d", subParams.pTopic, awsiot->rc);
+      char errmsg[255];
+      sprintf(errmsg, "awsiot_client_canbus_subscribe: error subscribing to topic %s. IoT_Error_t: %d", subParams.pTopic, awsiot->rc);
+      awsiot->onerror(awsiot, errmsg);
     }
   }
-
-  return awsiot->rc;
 }
 
-IoT_Error_t awsiot_client_publish(awsiot_client *awsiot, const char *payload) {
+void awsiot_client_canbus_publish(awsiot_client *awsiot, const char *payload) {
 
   int payload_len = strlen(payload) + 1;
+  syslog(LOG_DEBUG, "awsiot_client_canbus_publish: payload_len=%d, payload=%s", payload_len, payload);
 
   MQTTMessageParams Msg = MQTTMessageParamsDefault;
   Msg.qos = QOS_0;
@@ -84,26 +87,24 @@ IoT_Error_t awsiot_client_publish(awsiot_client *awsiot, const char *payload) {
   Msg.pPayload = (void *) payload;
 
   MQTTPublishParams Params = MQTTPublishParamsDefault;
-  Params.pTopic = "ecutools/datalogger";
+  Params.pTopic = "ecutools/canbus";
   Params.MessageParams = Msg;
 
   if(NONE_ERROR == awsiot->rc) {
     awsiot->rc = aws_iot_mqtt_publish(&Params);
     if (NONE_ERROR != awsiot->rc) {
       char errmsg[255];
-      sprintf(errmsg, "Error subscribing to %s queue", Params.pTopic);
+      sprintf(errmsg, "awsiot_client_canbus_publish: error publishing to topic %s. IoT_Error_t: %d", Params.pTopic, awsiot->rc);
       awsiot->onerror(awsiot, errmsg);
     }
   }
 
-  syslog(LOG_DEBUG, "awsiot_client_publish: payload_len=%d, payload=%s", payload_len, payload);
-
-  return aws_iot_mqtt_publish(&Params);
+  aws_iot_mqtt_publish(&Params);
 }
 
 void awsiot_client_close(awsiot_client *awsiot, const char *payload) {
   if(payload != NULL) {
-    awsiot_client_publish(awsiot, payload);
+    awsiot_client_canbus_publish(awsiot, payload);
   }
   awsiot->rc = aws_iot_mqtt_disconnect();
   awsiot->onclose(awsiot, payload);

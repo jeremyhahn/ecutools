@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -37,6 +38,7 @@ typedef struct {
 } canbus_client;
 
 int canbus_connect(canbus_client *canbus);
+bool canbus_isconnected(canbus_client *canbus);
 ssize_t canbus_read(canbus_client *canbus, struct can_frame *frame);
 int canbus_write(canbus_client *canbus, struct can_frame *frame);
 void canbus_close(canbus_client *canbus);

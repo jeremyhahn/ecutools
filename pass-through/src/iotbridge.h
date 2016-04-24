@@ -29,7 +29,7 @@ void iotridge_destroy(iotbridge *iotbridge);
 void iotbridge_process_filter(iotbridge *bridge, struct can_frame *frame);
 
 void *iotbridge_canbus_logger_thread(void *ptr);
-void *iotbridge_awsiot_subscribe_thread(void *ptr);
-void *iotbridge_awsiot_publish_thread(void *ptr);
+void *iotbridge_awsiot_canbus_subscribe_thread(void *ptr);
+void *iotbridge_awsiot_canbus_publish_thread(void *ptr);
 
 #endif

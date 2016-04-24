@@ -14,8 +14,8 @@ typedef struct _awsiot_client {
   MQTTSubscribeParams *subscribeParams;
   MQTTPublishParams *publishParams;
   IoT_Error_t rc;
-  pthread_t publish_thread;
-  pthread_t subscribe_thread;
+  pthread_t canbus_publish_thread;
+  pthread_t canbus_subscribe_thread;
   pthread_mutex_t publish_lock;
   pthread_mutex_t subscribe_lock;
   void (*onopen)(struct _awsiot_client *);
@@ -25,10 +25,10 @@ typedef struct _awsiot_client {
   void (*onerror)(struct _awsiot_client *, const char *message);
 } awsiot_client;
 
-IoT_Error_t awsiot_client_connect(awsiot_client *awsiot);
+void awsiot_client_connect(awsiot_client *awsiot);
 bool awsiot_client_isconnected();
-IoT_Error_t awsiot_client_subscribe(awsiot_client *awsiot);
-IoT_Error_t awsiot_client_publish(awsiot_client *awsiot, const char *payload);
+void awsiot_client_canbus_subscribe(awsiot_client *awsiot);
+void awsiot_client_canbus_publish(awsiot_client *awsiot, const char *payload);
 void awsiot_client_close(awsiot_client *awsiot, const char *payload);
 
 #endif
