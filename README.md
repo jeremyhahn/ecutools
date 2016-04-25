@@ -1,5 +1,5 @@
 # ECU Tools
-## IoT Automotive Tuning, Diagnostics, Analytics
+## IoT Automotive Tuning, Diagnostics & Analytics
 
 > What if you could turn off that annoying Check Engine Light?
 
