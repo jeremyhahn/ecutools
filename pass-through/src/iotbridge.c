@@ -1,5 +1,7 @@
 #include "iotbridge.h"
 
+const char *IOTBRIDGE_CANBUS_TOPIC = "ecutools/canbus";
+
 void iotbridge_awsiot_onopen(awsiot_client *awsiot) {
   syslog(LOG_DEBUG, "iotbridge_awsiot_onopen");
 }
@@ -125,7 +127,7 @@ void *iotbridge_awsiot_canbus_subscribe_thread(void *ptr) {
 
   syslog(LOG_DEBUG, "iotbridge_awsiot_subscribe_thread: started");
   iotbridge *bridge = (iotbridge *)ptr;
-  awsiot_client_canbus_subscribe(bridge->awsiot);
+  awsiot_client_subscribe(bridge->awsiot, IOTBRIDGE_CANBUS_TOPIC);
 
   while(1) {
 	bridge->awsiot->rc = aws_iot_mqtt_yield(100);
@@ -144,7 +146,7 @@ void *iotbridge_awsiot_canbus_subscribe_thread(void *ptr) {
 void *iotbridge_awsiot_canbus_publish_thread(void *ptr) {
   syslog(LOG_DEBUG, "iotbridge_awsiot_publish_thread: started");
   iotbridge__publish_thread_args *args = (iotbridge__publish_thread_args *)ptr;
-  awsiot_client_canbus_publish(args->awsiot, args->payload);
+  awsiot_client_publish(args->awsiot, IOTBRIDGE_CANBUS_TOPIC, args->payload);
   syslog(LOG_DEBUG, "iotbridge_awsiot_canbus_publish_thread: stopping");
   return NULL;
 }
@@ -236,7 +238,7 @@ void iotbridge_process_filter(iotbridge *bridge, struct can_frame *frame) {
 void iotbridge_close(iotbridge *bridge, const char *message) {
   syslog(LOG_DEBUG, "iotbridge_close: closing bridge");
   canbus_close(bridge->canbus);
-  awsiot_client_close(bridge->awsiot, message);
+  awsiot_client_close(bridge->awsiot, IOTBRIDGE_CANBUS_TOPIC, message);
   iotbridge_destroy(bridge);
   syslog(LOG_DEBUG, "iotbridge_close: bridge closed");
 }

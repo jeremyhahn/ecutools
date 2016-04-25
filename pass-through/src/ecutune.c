@@ -1,5 +1,10 @@
 //#include "wcbridge.h"
-#include "iotbridge.h"
+//#include "iotbridge.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <syslog.h>
+#include <string.h>
 
 int main_exit(int exit_status) {
   syslog(LOG_DEBUG, "exiting ecutune");
@@ -16,7 +21,7 @@ void signal_handler(int sig) {
 	case SIGINT:
 	case SIGTERM:
 	  syslog(LOG_DEBUG, "SIGINT/SIGTERM");
-	  wcbridge_close(bridge, "SIGINT/SIGTERM");
+	  //wcbridge_close(bridge, "SIGINT/SIGTERM");
 	  main_exit(EXIT_SUCCESS);
 	  exit(0);
 	default:
@@ -36,7 +41,7 @@ void print_program_header() {
   fprintf(stdout, "*                                                                          *\n");
   fprintf(stdout, "*                                                                          *\n");
   fprintf(stdout, "* Open Source ECU Tuning and Diagnostics                                   *\n");
-  fprintf(stdout, "* Unified Diagnostic Services / OBD-II / CAN                               *\n");
+  fprintf(stdout, "* J2534 / CAN  / OBD-II / Unified Diagnostic Services                      *\n");
   fprintf(stdout, "* Copyright (c) 2014 Jeremy Hahn                                           *\n");
   fprintf(stdout, "*                                                                          *\n");
   fprintf(stdout, "* ecutools is free software: you can redistribute it and/or modify         *\n");
@@ -55,54 +60,18 @@ void print_program_header() {
   fprintf(stdout, "\n");
 }
 
-void create_mock_metrics(char *metrics) {
-
-  int min = 1;
-  int max = 100;
-  int max2 = 8000;
-  char metricbuf[255];
-
-  sprintf(metricbuf, "rpm %i,itt %i,mrp %i,be %i,pwd %i,toa %i,cf %i,afc1 %i,afl1 %i,ma %i,eld %i,fkc %i,flkc %i,iam %i",
-	rand()%(max2-min + 1) + min, rand()%(max-min + 1) + min, rand()%(max-min + 1) + min, rand()%(max-min + 1) + min,
-	rand()%(max-min + 1) + min, rand()%(max-min + 1) + min, rand()%(max-min + 1) + min, rand()%(max-min + 1) + min,
-	rand()%(max-min + 1) + min, rand()%(max-min + 1) + min, rand()%(max-min + 1) + min, rand()%(max-min + 1) + min,
-	rand()%(max-min + 1) + min, rand()%(max-min + 1) + min);
-
-  memcpy(metrics, metricbuf, 255);
-}
 /*
-void run_send_metrics(cwebsocket_client *websocket) {
-
-  uint64_t messages_sent = 0;
-  char metrics[255];
-
-  time_t start_time, finish_time;
-  start_time = time(0);
-
-  do {
-	create_mock_metrics(metrics);
-	//printf("Metrics: %s\n", metrics);
-	cwebsocket_write_data(websocket, metrics, strlen(metrics));
-	sleep(1);
-	messages_sent++;
-  }
-  while((websocket->state & WEBSOCKET_STATE_OPEN) != 0);
-
-  finish_time = time(0);
-  printf("run_send_metrics: sent %lld messages in %i seconds\n", (long long)messages_sent, (int) (finish_time-start_time));
-}
-*/
-
 void ecutune_onmessage(iotbridge *bridge, struct can_frame *frame) {
   //char sframe[50];
   //canbus_framecpy(frame, sframe);
   //syslog(LOG_DEBUG, "wcbridge_bridge_onmessage: %s", sframe);
   syslog(LOG_DEBUG, "ecutune_onmessage fired");
-}
+}*/
 
+/*
 void ecutune_bridge_filter1(iotbridge *bridge, struct can_frame *frame) {
   //bridge->canbus_thread->canbus_print_frame(frame);
-}
+}*/
 
 int main(int argc, char **argv) {
 
@@ -139,12 +108,18 @@ int main(int argc, char **argv) {
   wcbridge_run(bridge);
   wcbridge_close(bridge, "main: run loop complete\n");
 */
+/*
   bridge = iotbridge_new();
  // bridge->onmessage = &ecutune_onmessage;
   //bridge->bridge_filters[0] = &bridge_filter1;
   iotbridge_run(bridge);
   iotbridge_close(bridge, "main: run loop complete");
   free(bridge);
+*/
+
+  unsigned long *pDeviceCount = 0;
+  unsigned long rc = PassThruScanForDevices(&pDeviceCount);
+  syslog(LOG_DEBUG, "PassThruScanForDevices: pDeviceCount=%d, error: %d", pDeviceCount, rc);
 
   return main_exit(EXIT_SUCCESS);
 }

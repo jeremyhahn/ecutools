@@ -96,9 +96,9 @@ void wcbridge_websocket_onmessage(cwebsocket_client *websocket, cwebsocket_messa
       syslog(LOG_ERR, "wcbridge_websocket_onmessage: unable to forward frame: %s", strerror(errno));
     }
 
-    if(bridge->onmessage != NULL) {
-      bridge->onmessage(bridge, frame);
-    }
+    //if(bridge->onmessage != NULL) {
+    //  bridge->onmessage(bridge, frame);
+    //}
 
 	free(frame);
   }

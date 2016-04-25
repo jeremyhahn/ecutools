@@ -57,29 +57,29 @@ bool awsiot_client_isconnected() {
   return aws_iot_is_mqtt_connected();
 }
 
-void awsiot_client_canbus_subscribe(awsiot_client *awsiot) {
+void awsiot_client_subscribe(awsiot_client *awsiot, const char *topic) {
 
-  syslog(LOG_DEBUG, "awsiot_client_canbus_subscribe: subscribing to topic ecutools/canbus.");
+  syslog(LOG_DEBUG, "awsiot_client_subscribe: subscribing to topic %s.", topic);
 
   MQTTSubscribeParams subParams = MQTTSubscribeParamsDefault;
   subParams.mHandler = awsiot->onmessage;
-  subParams.pTopic = "ecutools/canbus";
+  subParams.pTopic = topic;
   subParams.qos = QOS_0;
 
   if(NONE_ERROR == awsiot->rc) {
     awsiot->rc = aws_iot_mqtt_subscribe(&subParams);
     if (NONE_ERROR != awsiot->rc) {
       char errmsg[255];
-      sprintf(errmsg, "awsiot_client_canbus_subscribe: error subscribing to topic %s. IoT_Error_t: %d", subParams.pTopic, awsiot->rc);
+      sprintf(errmsg, "awsiot_client_subscribe: error subscribing to topic %s. IoT_Error_t: %d", subParams.pTopic, awsiot->rc);
       awsiot->onerror(awsiot, errmsg);
     }
   }
 }
 
-void awsiot_client_canbus_publish(awsiot_client *awsiot, const char *payload) {
+void awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char *payload) {
 
   int payload_len = strlen(payload) + 1;
-  syslog(LOG_DEBUG, "awsiot_client_canbus_publish: payload_len=%d, payload=%s", payload_len, payload);
+  syslog(LOG_DEBUG, "awsiot_client_publish: topic=%s, payload_len=%d, payload=%s", topic, payload_len, payload);
 
   MQTTMessageParams Msg = MQTTMessageParamsDefault;
   Msg.qos = QOS_0;
@@ -87,14 +87,14 @@ void awsiot_client_canbus_publish(awsiot_client *awsiot, const char *payload) {
   Msg.pPayload = (void *) payload;
 
   MQTTPublishParams Params = MQTTPublishParamsDefault;
-  Params.pTopic = "ecutools/canbus";
+  Params.pTopic = topic;
   Params.MessageParams = Msg;
 
   if(NONE_ERROR == awsiot->rc) {
     awsiot->rc = aws_iot_mqtt_publish(&Params);
     if (NONE_ERROR != awsiot->rc) {
       char errmsg[255];
-      sprintf(errmsg, "awsiot_client_canbus_publish: error publishing to topic %s. IoT_Error_t: %d", Params.pTopic, awsiot->rc);
+      sprintf(errmsg, "awsiot_client_publish: error publishing to topic %s. IoT_Error_t: %d", Params.pTopic, awsiot->rc);
       awsiot->onerror(awsiot, errmsg);
     }
   }
@@ -102,9 +102,9 @@ void awsiot_client_canbus_publish(awsiot_client *awsiot, const char *payload) {
   aws_iot_mqtt_publish(&Params);
 }
 
-void awsiot_client_close(awsiot_client *awsiot, const char *payload) {
+void awsiot_client_close(awsiot_client *awsiot, const char *topic, const char *payload) {
   if(payload != NULL) {
-    awsiot_client_canbus_publish(awsiot, payload);
+    awsiot_client_publish(awsiot, topic, payload);
   }
   awsiot->rc = aws_iot_mqtt_disconnect();
   awsiot->onclose(awsiot, payload);

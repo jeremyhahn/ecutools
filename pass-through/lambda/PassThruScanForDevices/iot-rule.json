@@ -1,0 +1,9 @@
+{
+  "sql": "SELECT * FROM 'ecutools/j2534/PassThruScanForDevices/request'",
+  "ruleDisabled": false,
+  "actions": [{
+      "lambda": {
+          "functionArn": "arn:aws:lambda:us-east-1:899038310491:function:PassThruScanForDevices"
+      }
+  }]
+}

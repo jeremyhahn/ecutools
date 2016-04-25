@@ -2,7 +2,7 @@
 
 A J2534 compliant passthru device is responsible for interfacing with the ECU via OBD-II to carry out tuning and diagnostic operations requested by an operator. The J2534 standard is intended to abstract away the differences between manufacturer communication protocols and provide a consistent interface that enables compatibility between various tool and software manufacturers.
 
-This section of the project provides resources and code needed to build a pass-through device using popular open source Microcontroller development boards and CAN Integrated Circuits (IC), as well as client software that connects the pass-through device with the ecutools.io server.
+This section of the project provides resources and code needed to build a pass-through device using popular open source Microcontroller development boards and CAN Integrated Circuits (IC), as well as client software that connects the pass-through device with the j2534.io IoT platform.
 
 Supported / Tested Architectures:
 

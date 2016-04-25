@@ -3,8 +3,8 @@ APP_DIR = ./src
 APP_INCLUDE_DIRS = -I $(APP_DIR)
 APP_NAME=ecutune
 
-#cwebsocket
-ECUTOOLS_SRC_FILES = src/canbus.h src/canbus.c src/wcbridge.h src/wcbridge.c src/awsiot_client.h src/awsiot_client.c src/iotbridge.h src/iotbridge.c src/ecutune.c
+#ecutools
+ECUTOOLS_SRC_FILES = src/canbus.h src/canbus.c src/wcbridge.h src/wcbridge.c src/awsiot_client.h src/awsiot_client.c src/iotbridge.h src/iotbridge.c src/ecutune.c src/j2534.h src/j2534.c src/apigateway.h src/apigateway.c
 
 #cwebsocket
 #CWEBSOCKET_SRC_FILES = $(shell find src/cwebsocket -name '*.c')
@@ -71,7 +71,7 @@ COMPILER_FLAGS += $(LOG_FLAGS)
 
 # ecutools
 COMPILER_FLAGS += -Wall -g3 -pthread -DTHREADED -DUSESSL 
-LD_FLAG += -lpthread -lssl
+LD_FLAG += -lpthread -lssl -lcurl -ljansson
 
 bin_PROGRAMS = ecutune
 ecutune_SOURCES = $(INCLUDE_ALL_DIRS) $(SRC_FILES)

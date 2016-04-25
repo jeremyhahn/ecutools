@@ -27,8 +27,8 @@ typedef struct _awsiot_client {
 
 void awsiot_client_connect(awsiot_client *awsiot);
 bool awsiot_client_isconnected();
-void awsiot_client_canbus_subscribe(awsiot_client *awsiot);
-void awsiot_client_canbus_publish(awsiot_client *awsiot, const char *payload);
-void awsiot_client_close(awsiot_client *awsiot, const char *payload);
+void awsiot_client_subscribe(awsiot_client *awsiot, const char *topic);
+void awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char *payload);
+void awsiot_client_close(awsiot_client *awsiot, const char *topic, const char *payload);
 
 #endif
