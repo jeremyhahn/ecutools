@@ -1,26 +1,53 @@
-# ecutools
-## Open Source ECU Tuning and Diagnostics
+# ECU Tools
+## IoT Automotive Tuning, Diagnostics, Analytics
 
-The goal of ecutools is to provide an open source (POSIX friendly!) alternative to commercial J2534 pass-through devices and their accompanying PC software. Controller Area Network (CAN bus) is the only supported protocol right now.
+> What if you could turn off that annoying Check Engine Light?
 
-This project includes information on how to create a pass-through device and includes software that can perform diagnostics and reprogramming of an ECU.
+> What if your car could automatically install firmware updates to fix manufacturer defects or allow your mechanic to remotely diagnose problems?
 
-The project is broken down into 3 sub-projects. They are:
+> What if you could get a text message when your spouse is 2000 miles overdue for an oil change?
 
-1. pass-through: J2534 compliant pass-through device and accompanying ecutools.io client software
-2. server: WebSocket server responsible for hosting real-time tuning / diagnostic sessions on ecutools.io
-3. webui: Real-time web based user interface for administration, configuration, and management of the ECU, pass-through device, and ecutools.io settings
+> What if your alarm clock could start your car on those ice cold winter mornings?
 
-Successful tests have been conducted on the following architectures:
+> What if your performance tuner could  tune your ECU while you're sitting in the pits and he's sitting on his couch?
+
+> What if you could replace the outdated, overpriced, closed source data logger on your race car with something that's much more powerful and costs less?
+
+##### Race into the future of Connected Cars and the Internet of Things (IoT) with ECU Tools, the solution to archaic, overpriced, proprietary automotive technology!
+
+## Capabilities
+
+* POSIX alternative to commercial J2534 standard.
+* ECU Reprogramming (J2534-1 Pass-Thru)
+* OEM Diagnostics
+* OBDII Diagnostics
+* Data Logging
+* Bus Monitoring
+* Security Research
+
+## Features
+
+* Amazon Web Services Integration (API Gateway & IoT Platform) for endless automation possibilities.
+* Real-time cloud based tuning, diagnostics & analytics.
+* Unrestricted access to vehicle network. Own YOUR automobile and YOUR data.
+* Log vehicle data to the cloud for real-time and offline data processing, trending and statistical analysis.
+* Perform historical analysis using deep learning (AI / ML) technologies, integrate with other IoT things, build a custom web service to unlock your doors, offer remote mechanic services - the possibilities are endless.
+
+## Build / Install
+
+ECU Tools is developed with the following platforms in mind:
 
 1. [x86](http://en.wikipedia.org/wiki/X86)
 2. [x86_64](http://en.wikipedia.org/wiki/X86-64)
 3. [ARM](http://en.wikipedia.org/wiki/ARM_architecture)
 
-### Build
+To install,
 
         ./autogen.sh
         ./configure
         make
         make install
 
+## Development
+
+Got skills? Clone the repo and join the Slack channel to help create the future of open source connected cars.
