@@ -1,5 +1,5 @@
 /**
- * ecutools: Automotive ECU tuning, diagnostics & analytics
+ * ecutools: IoT Automotive Tuning, Diagnostics & Analytics
  * Copyright (C) 2014  Jeremy Hahn
  *
  * This program is free software: you can redistribute it and/or modify
