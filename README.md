@@ -5,7 +5,7 @@
 
 > What if your car could automatically install firmware updates to fix manufacturer defects or allow your mechanic to remotely diagnose problems?
 
-> What if you could get a text message when your spouse is 2000 miles overdue for an oil change?
+> What if you could get a text message when your spouse is 2000 miles overdue for an oil change, or your teenager is going over 100mph in the family station wagon?
 
 > What if your alarm clock could start your car on those ice cold winter mornings?
 

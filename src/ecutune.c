@@ -23,6 +23,7 @@
 #include <signal.h>
 #include <syslog.h>
 #include <string.h>
+#include "j2534.h"
 
 int main_exit(int exit_status) {
   syslog(LOG_DEBUG, "exiting ecutune");
@@ -58,8 +59,8 @@ void print_program_header() {
   fprintf(stdout, "* /_____/  \\____/  \\____/  /_/    \\____/  /_/ |_/  /_____/  /_____/        *\n");
   fprintf(stdout, "*                                                                          *\n");
   fprintf(stdout, "*                                                                          *\n");
-  fprintf(stdout, "* Open Source ECU Tuning and Diagnostics                                   *\n");
-  fprintf(stdout, "* J2534 / CAN  / OBD-II / Unified Diagnostic Services                      *\n");
+  fprintf(stdout, "* IoT Automotive Tuning, Diagnostics & Analytics                           *\n");
+  fprintf(stdout, "* J2534-1 / CAN  / OBD-II / Unified Diagnostic Services                    *\n");
   fprintf(stdout, "* Copyright (c) 2014 Jeremy Hahn                                           *\n");
   fprintf(stdout, "*                                                                          *\n");
   fprintf(stdout, "* ecutools is free software: you can redistribute it and/or modify         *\n");
@@ -138,6 +139,12 @@ int main(int argc, char **argv) {
   unsigned long *pDeviceCount = 0;
   unsigned long rc = PassThruScanForDevices(&pDeviceCount);
   syslog(LOG_DEBUG, "PassThruScanForDevices: pDeviceCount=%d, error: %d", pDeviceCount, rc);
+
+  if(rc != STATUS_NOERROR) {
+    char errmsg[80] = "\0";
+    PassThruGetLastError(&errmsg);
+    syslog(LOG_ERR, "PassThruGetLastError: %s", errmsg);
+  }
 
   return main_exit(EXIT_SUCCESS);
 }
