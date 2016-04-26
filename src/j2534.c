@@ -589,7 +589,9 @@ long PassThruLogicalDisconnect(unsigned long ChannelID) {
  *                                  the time of the function call – this is equivalent to setting the < ChannelThreshold > to 0. The valid range is
  *                                  0-30000 milliseconds. The precision of the timeout is at least 10 milliseconds and the tolerance is 0 to +50
  *                                  milliseconds.
+ *
  * The SCHANNELSET structure is defined in Section 9.20, where:
+ *
  *   <ChannelCount>                 is an input, set by the application, which contains the number of Logical and/or Physical
  *                                  Communication Channel IDs contained in the array <ChannelList>. Upon return, this element will contain
  *                                  the number of channels that are left in the array <ChannelList>.
@@ -626,94 +628,617 @@ long PassThruSelect(SCHANNELSET *ChannelSetPtr, unsigned long SelectType, unsign
 }
 
 /**
- * The PassThruStopPeriodicMsg function is used to terminate the specified periodic message. Once
- * terminated the message identifier or handle value is invalid.
+ * 7.3.10 PassThruReadMsgs
+ * 
+ * This function shall read messages and Indications (special messages generated to report specific events) from the
+ * designated channel. If the function call is successful, the return value shall be STATUS_NOERROR, the array pointed to
+ * by <pMsgs> shall be updated, and the value pointed to by <pNumMsgs> shall be updated to reflect the number
+ * messages read. When messages/Indications are returned, they shall be returned in chronological order, with the oldest at
+ * offset 0. Only complete messages shall be returned. If an error occurs during this function call, the function shall
+ * immediately return with the applicable return value. When the return value is ERR_BUFFER_OVERFLOW or
+ * ERR_TIMEOUT, <pNumMsgs> shall be updated to reflect the number of messages returned and the array pointed to by
+ * <pMsgs> shall be updated to contain the associated messages. Otherwise, <pNumMsgs> shall point to the value of zero
+ * and the array pointed to by <pMsgs> shall not be altered. For physical communication channels, the Pass-Thru Interface
+ * will, by default, block all received messages until a filter is set. However, this will not inhibit the reception of messages for
+ * any corresponding logical communication channels. Filtering on the physical communication channel shall have no impact
+ * on message reception for any corresponding logical communication channels (see PassThruStartMsgFilter for more
+ * details).
  *
- * ChannelID
- * 		The logical communication channel identifier assigned by the J2534 API/DLL when the communication
- * 		channel was opened via the PassThruConnect function.
+ * This function shall only return messages/Indications associated with the designated channel. Therefore, a physical
+ * communication channel shall only return messages/Indications from its receive queue and not those from any associated
+ * logical communication channels. Likewise, logical communication channels cannot return messages/Indications from the
+ * underlying physical communication channel. 
  *
- * MsgID
- * 		The message identifier or handle assigned by the J2534 API/DLL when PassThruStartPeriodicMsg
- * 		function was called.
+ * When using this function, the application can either choose to get only the messages/Indications that are available at the
+ * time of the function call (known as a 'non-blocking read') or wait a specific amount of time for a specific number of
+ * messages/Indications before returning (known as a 'blocking read').
  *
- * If the function succeeds the return value is STATUS_NOERROR. If the function fails, the return value is a
- * nonzero error code and is defined below.
+ * Non-blocking reads are specified by a value of zero for the parameter Timeout. During non-blocking reads, the function
+ * shall retrieve the messages that are currently in the queue (up to the number requested) and return immediately. During a
+ * non-blocking read, the function shall not wait for additional messages nor shall the return value ever be ERR_TIMEOUT.
+ * Figure 41 details various conditions for returning data from a non-blocking read as long as there were no other errors.
  *
- * ERR_DEVICE_NOT_CONNECTED
- * ERR_FAILED
- * ERR_INVALID_CHANNEL_ID
- * ERR_INVALID_MSG_ID
+ * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
+ * <ChannelID> is not valid, the return value shall be ERR_INVALID_CHANNEL_ID. If the Pass-Thru Device is not currently
+ * connected or was previously disconnected without being closed, the return value shall be
+ * ERR_DEVICE_NOT_CONNECTED. If either <pMsg> or <pNumMsgs> are NULL, the return value shall be
+ * ERR_NULL_PARAMETER. For either blocking or non-blocking reads, returning a message that has the
+ * BUFFER_OVERFLOW bit in <RxStatus> set is considered an error and the return value shall be
+ * ERR_BUFFER_OVERFLOW. If the message being read is larger than the size indicated by <DataBufferSize>, then only
+ * the number of bytes indicated by <DataBufferSize> shall be placed in the array <DataBuffer> and the return value shall be
+ * ERR_BUFFER_TOO_SMALL; the remainder of the message bytes will be discarded. If no messages were available to be
+ * read, the return value shall be ERR_BUFFER_EMPTY. If, during a blocking read the requested timeout has expired and
+ * more than one message but less than the total requested were available to be read, the return value shall be
+ * ERR_TIMEOUT. If this function call is not supported for this channel, then the return value shall be
+ * ERR_NOT_SUPPORTED. The return value ERR_FAILED is a mechanism to return other failures, but this is intended for
+ * use during development. A fully compliant SAE J2534-1 Pass-Thru Interface shall never return ERR_FAILED or
+ * ERR_NOT_SUPPORTED.
+ *
+ * Parameters:
+ *   <ChannelID>                      is an input, set by the application that contains the handle to the physical or logical
+ *                                    communication channel from which messages are to be read. The Channel ID was assigned by
+ *                                    a previous call to PassThruConnect or PassThruLogicalConnect. 
+ *   <pMsg>                           is an input, set by the application, which points to the array of message structure(s)
+ *                                    (allocated by the application) where the messages that have been read out of the Pass-Thru
+ *                                    Interface are to be stored. The application must be sure to allocate memory for the <DataBuffer>
+ *                                    and set the <DataBufferSize> according, for each message in the array.
+ *   <pNumMsgs>                       is an input, set by the application, which initially points to an unsigned long that contains
+ *                                    the maximum size of the <pMsg> array. Upon return, the unsigned long shall contain the actual 
+ *                                    number of messages read.
+ *   <Timeout>                        is an input, set by the application, which contains the minimum amount of time (in milliseconds)
+ *                                    that the application is willing to wait to receive the desired number of messages/Indications.
+ *                                    A value of 0 specifies a non-blocking read. A non-zero value specifies a blocking read. The
+ *                                    valid range is 0-30000 milliseconds. The precision of the timeout is at least 10 milliseconds
+ *                                    and the tolerance is 0 to +50 milliseconds.
+ *
+ * Return Values:
+ *   ERR_CONCURRENT_API_CALL          A J2534 API function has been called before the previous J2534 function call has completed
+ *   ERR_DEVICE_NOT_OPEN              PassThruOpen has not successfully been called
+ *   ERR_INVALID_CHANNEL_ID           Invalid <ChannelID> value
+ *   ERR_DEVICE_NOT_CONNECTED         Pass-Thru Device communication error. This indicates that the Pass-Thru Interface DLL has, at
+ *                                    some point, failed to communicate with the Pass-Thru Device – even though it may not currently
+ *                                    be disconnected.
+ *   ERR_NOT_SUPPORTED                Device does not support this API function for the associated <ChannelID>. A fully compliant
+ *                                    SAE J2534-1 Pass-Thru Interface shall never return ERR_NOT_SUPPORTED.
+ *   ERR_NULL_PARAMETER               NULL pointer supplied where a valid pointer is required
+ *   ERR_BUFFER_OVERFLOW              Indicates a buffer overflow occurred and messages were lost (<pNumMsgs> points to the actual
+ *                                    number of messages read)
+ *   ERR_BUFFER_TOO_SMALL             The size of <DataBuffer>, as indicated by the parameter <DataBufferSize> in the PASSTHRU_MSG
+ *                                    structure, is too small to accommodate the full message
+ *   ERR_BUFFER_EMPTY                 The receive queue is empty, no messages available to read
+ *   ERR_TIMEOUT                      Requested action could not be completed in the designated time (<pNumMsgs> point to the actual
+ *                                    number of messages read) NOTE: This only applies when Timeout is non-zero and at least one
+ *                                    message has been read.
+ *   ERR_FAILED                       Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1
+ *                                    Pass-Thru Interface shall never return ERR_FAILED.
+ *   STATUS_NOERROR                   Function call was successful
+ */
+long PassThruReadMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pNumMsgs, unsigned long Timeout) {
+	return 1;
+}
+
+/**
+ * 7.3.11 PassThruQueueMsgs
+ * 
+ * This function shall queue messages to the Pass-Thru Interface for transmission on the designated channel. If the function
+ * call is successful, the return value shall be STATUS_NOERROR and the value pointed to by <pNumMsgs> shall be
+ * updated to reflect the actual number of messages queued as a result of this function call. If an error occurs during this
+ * function call, the function shall immediately return with the applicable return value and the value pointed to by
+ * <pNumMsgs> shall be updated to reflect the actual number of messages queued as a result of this function call. The
+ * Pass-Thru Interface shall not modify structures pointed to by <pMsg>. This function replaces PassThruWriteMsgs, which
+ * was used in earlier versions of the SAE J2534 API.
+ *
+ * This function shall place messages in the transmit queue in the order they were passed in (that is, the message at offset 0
+ * shall be first, the message at offset 1 shall be second, and so on). These messages shall follow the format specified in
+ * Section 7.2.4, including the actions to be taken when messages violate the specified format.
+ *
+ * The entire message must fit in the transmit queue for it to be transferred. If all the requested messages do not fit in the
+ * queue, the return value shall be ERR_BUFFER_FULL and the value pointed to by <pNumMsgs> shall be updated to
+ * reflect the number of messages that were queued as a result of this function call. The function shall not wait for space to
+ * become available to queue messages.
+ *
+ * Note that messages passed to the Pass-Thru Interface using this function call have lower priority than those passed via
+ * PassThruStartPeriodicMsg (see Section 6.10.2 for more details). Also, some protocols will generate Indications when
+ * transmitting (see Section 7.2.6 for more details).
+ *
+ * ISO 15765 logical communication channels can queue a Single Frame whose network address or <TxFlags> do not
+ * match the <RemoteAddress> or <RemoteTxFlags> provided during channel creation. However, an attempt to queue a
+ * Segmented Message shall result in the return value ERR_MSG_NOT_ALLOWED. 
+ *
+ * For SAE J2610 channels, it shall be an error if the programmable voltage generator is in use when a message with
+ * SCI_TX_VOLTAGE is set to 1 in <TxFlags> is becoming active. In this case, if a TxDone Indication was required for the
+ * associated message then a TxFailed Indication shall be generated.
+ *
+ * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
+ * <ChannelID> is not is not valid, the return value shall be ERR_INVALID_CHANNEL_ID. If the Pass-Thru Device is not
+ * currently connected or was previously disconnected without being closed, the return value shall be
+ * ERR_DEVICE_NOT_CONNECTED. If either <pMsg> or <pNumMsgs> are NULL, the return value shall be
+ * ERR_NULL_PARAMETER. If the <ProtocolID> in the PASSTHRU_MSG structure (for any message passed into this
+ * function) does not match the <ProtocolID> for the associated channel, the return value shall be
+ * ERR_MSG_PROTOCOL_ID. If any message passed into this function does not follow the format specified in Section
+ * 7.2.4, the return value shall be ERR_INVALID_MSG. If the initial value pointed to by <pNumMsgs> is 0 then the function
+ * shall take no action and immediately return the value STATUS_NOERROR. If this function call is not supported for this
+ * channel, then the return value shall be ERR_NOT_SUPPORTED. The return value ERR_FAILED is a mechanism to
+ * return other failures, but this is intended for use during development. A fully compliant SAE J2534-1 Pass-Thru Interface
+ * shall never return ERR_FAILED or ERR_NOT_SUPPORTED.
+ *
+ * Parameters:
+ *   <ChannelID>                     is an input, set by the application that contains the handle to the physical or logical
+ *                                   communication channel where the messages are to be queued. The Channel ID was assigned 
+ *                                   by a previous call to PassThruConnect or PassThruLogicalConnect.
+ *   <pMsg>                          is an input, set by the application, which points to an array of message structure(s)
+ *                                   (allocated by the application) to be queued by the Pass-Thru Interface.
+ *   <pNumMsgs>                      is an input, set by the application, which initially points to an unsigned long that
+ *                                   contains the number of messages to be queued. Upon return, the unsigned long shall
+ *                                   contain the actual number of messages that were successfully queued.
+ *
+ * Return Values:
+ *   ERR_CONCURRENT_API_CALL         A J2534 API function has been called before the previous J2534 function call has completed
+ *   ERR_DEVICE_NOT_OPEN             PassThruOpen has not successfully been called
+ *   ERR_DEVICE_NOT_CONNECTED        Pass-Thru Device communication error. This indicates that the Pass-Thru Interface DLL has,
+ *                                   at some point, failed to communicate with the Pass-Thru Device – even though it may not
+ *                                   currently be disconnected.
+ *   ERR_NOT_SUPPORTED               Device does not support this API function for the associated <ChannelID>. A fully compliant
+ *                                   SAE J2534-1 Pass-Thru Interface shall never return ERR_NOT_SUPPORTED.
+ *   ERR_NULL_PARAMETER              NULL pointer supplied where a valid pointer is required
+ *   ERR_MSG_PROTOCOL_ID             <ProtocolID> in the PASSTHRU_MSG structure does not match the <ProtocolID> from the original
+ *                                   call to PassThruConnect for the <ChannelID>
+ *   ERR_INVALID_MSG                 Message structure is invalid for the given <ChannelID> (refer to Section 7.2.4 for more details)
+ *   ERR_MSG_NOT_ALLOWED             Attempting to queue a Segmented Message whose network address and/or <TxFlags> does not match
+ *                                   those defined for the <RemoteAddress> or <RemoteTxFlags> during channel creation on a logical
+ *                                   communication channel (This Return Value is only applicable to ISO 15765 logical communication channels)
+ *   ERR_BUFFER_FULL                 Transmit queue is full (<pNumMsgs> points to the actual number of messages queued)
+ *   ERR_FAILED                      Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1
+ *                                   Pass-Thru Interface shall never return ERR_FAILED.
+ *   STATUS_NOERROR                  Function call was successful
+ */
+long PassThruQueueMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pNumMsgs) {
+	return 1;
+}
+
+/**
+ * 7.3.12 PassThruStartPeriodicMsg
+ * 
+ * This function shall direct the Pass-Thru Interface to create the specified periodic message transmission, at the specified
+ * time interval, on the designated channel. If the function is successful, the return value shall be STATUS_NOERROR and
+ * a new periodic message shall have been created (even if it duplicates an existing periodic message) and immediately
+ * queued for transmission without delay. If an error occurs during this function call, the function shall immediately return with
+ * the applicable return value. The Pass-Thru Interface shall not modify structures pointed to by <pMsg>. Periodic messages
+ * can be started on both physical and logical channels. Each physical communication channel and all of its corresponding
+ * logical communication channels (if any) shall share a common pool of exactly ten periodic messages. Physical
+ * communication channels that do not support logical communication channels shall have exactly ten periodic messages.
+ *
+ * Messages passed to the Pass-Thru Interface using PassThruStartPeriodicMsg shall have a higher priority than those
+ * passed via PassThruQueueMsgs (see Section 6.10.2 for more details). Periodic messages shall remain in the periodic
+ * queue until they can be transmitted without violating bus idle timing parameters (like P3_MIN) or other protocol specific
+ * requirements.
+ * 
+ * The time interval for a periodic message is the time between the end of a successful transmission and the start of its next
+ * transmission. Once a periodic message has been queued for transmission, the associated time interval does not start until
+ * that message has been successfully transmitted. (This eliminates the possibility that multiple copies of the same periodic
+ * message will ‘stack-up’ in the event that the message cannot be immediately transmitted.)
+ *
+ * For ISO 15765 logical channels, periodic messages shall be interjected into a Segmented Message so long as it does not
+ * violate the protocol. This means that a periodic message targeted for ‘Address Z shall have the following impact upon a
+ * segmented transfer in progress between the Pass-Thru Device and the designated address (as detailed in Figure 45):
+ *
+ * In cases where no interjection is allowed, the periodic message shall remain in the periodic queue until it can be safely
+ * transmitted without violating any protocol specific requirements. However, periodic messages from one logical
+ * communication channel may be interleaved with Segmented Messages from other logical communication channels that
+ * share the same physical communication channel. As noted in Section 6.10.2, periodic message transmit queues for a
+ * given logical communication channel shall be serviced in a round-robin fashion.
+ *
+ * Applications must call PassThruStopPeriodicMsg to stop periodic messages individually or PassThruIoctl with the
+ * IOCTL ID of CLEAR_PERIODIC_MSGS to stop all periodic messages.
+ *
+ * Periodic messages shall follow the format specified in Section 7.2.4, including the actions to be taken when messages
+ * violate the specified format. If enabled, periodic messages shall generate TxDone/TxFailed Indications upon transmission.
+ *
+ * Logical communication channels for ISO 15765 can queue a Single Frame periodic message whose network address or
+ * <TxFlags> do not match the <RemoteAddress> or <RemoteTxFlags> provided during channel creation. However, an
+ * attempt to queue a Segmented Periodic Message shall result in the return value ERR_MSG_NOT_ALLOWED.
+ *
+ * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
+ * <ChannelID> is not is not valid, the return value shall be ERR_INVALID_CHANNEL_ID. If the Pass-Thru Device is not
+ * currently connected or was previously disconnected without being closed, the return value shall be
+ * ERR_DEVICE_NOT_CONNECTED. If either <pMsg> or <pMsgID> are NULL, the return value shall be
+ * ERR_NULL_PARAMETER. If the <ProtocolID> in the PASSTHRU_MSG structure (for any message passed into this
+ * function) does not match the <ProtocolID> for the associated channel, the return value shall be
+ * ERR_MSG_PROTOCOL_ID. If any message passed into this function does not follow the format specified in Section
+ * 7.2.4, the return value shall be ERR_INVALID_MSG. If the value for <TimeInterval> is outside the specified range, the
+ * return value shall be ERR_TIME_INTERVAL_NOT_SUPPORTED. If the application attempts to create more periodic
+ * messages than are allowed, the return value shall be ERR_EXCEEDED_LIMIT. If this function call is not supported for
+ * this channel, then the return value shall be ERR_NOT_SUPPORTED. The return value ERR_FAILED is a mechanism to
+ * return other failures, but this is intended for use during development. A fully compliant SAE J2534-1 Pass-Thru Interface
+ * shall never return ERR_FAILED or ERR_NOT_SUPPORTED.
+ *
+ * Application developers should carefully consider how and when to use periodic messages. Developers should be aware
+ * that periodic messages are asynchronous to application messages.
+ *
+ * Parameters:
+ *   <ChannelID>                        is an input, set by the application that contains the handle to the physical or logical
+ *                                      communication channel from which messages are to be read. The Channel ID was assigned
+ *                                      by a previous call to PassThruConnect or PassThruLogicalConnect.
+ *   <pMsg>                             is an input, set by the application, which points to the message structure (allocated
+ *                                      by the application) containing the desired periodic message.
+ *   <pMsgID>                           is an input, set by the application, which points to an unsigned long allocated by the application.
+ *                                      Upon return, the unsigned long shall contain the Message ID, which is to be used as a 
+ *                                      handle to this periodic message for future function calls.
+ *   <TimeInterval>                     is an input, set by the application, which contains the time interval between the end of the periodic
+ *                                      message transmission and the start of the next time this periodic message becomes active, in
+ *                                      milliseconds. The valid range is 5 to 65535 milliseconds. The precision of the time interval is at least 1
+ *                                      millisecond and the tolerance is ±1 millisecond (assuming no additional protocol delays are imposed –
+ *                                      such as, delays due to arbitration, intra-message delays, etc.).
+ * Return Values:
+ *   ERR_CONCURRENT_API_CALL            A J2534 API function has been called before the previous J2534 function call has completed
+ *   ERR_DEVICE_NOT_OPEN                PassThruOpen has not successfully been called
+ *   ERR_INVALID_CHANNEL_ID             Invalid <ChannelID> value
+ *   ERR_DEVICE_NOT_CONNECTED           Pass-Thru Device communication error. This indicates that the Pass-Thru Interface DLL has, at
+ *                                      some point, failed to communicate with the Pass-Thru Device – even though it may not currently be disconnected.
+ *   ERR_NOT_SUPPORTED                  Device does not support this API function for the associated <ChannelID>. A fully compliant SAE J2534-1
+ *                                      Pass-Thru Interface shall never return ERR_NOT_SUPPORTED.
+ *   ERR_NULL_PARAMETER                 NULL pointer supplied where a valid pointer is required
+ *   ERR_MSG_PROTOCOL_ID                <ProtocolID> in the PASSTHRU_MSG structure does not match the <ProtocolID> from the original
+ *                                      call to PassThruConnect for the <ChannelID>
+ *   ERR_INVALID_MSG                    Message structure is invalid for the given <ChannelID> (refer to Section 7.2.4 for more details)
+ *   ERR_MSG_NOT_ALLOWED                Attempting to queue a Segmented Message whose network address and/or <TxFlags> does not match
+ *                                      those defined for the <RemoteAddress> or <RemoteTxFlags> during channel creation on a logical
+ *                                      communication channel (This Return Value is only applicable to ISO 15765 logical communication channels)
+ *   ERR_TIME_INTERVAL_NOT_SUPPORTED    Value for the <TimeInterval> is either invalid or out of range for the current channel)
+ *   ERR_EXCEEDED_LIMIT                 Exceeded the maximum number of periodic message IDs
+ *   ERR_FAILED                         Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1 Pass-Thru
+ *                                      Interface shall never return ERR_FAILED.
+ *   STATUS_NOERROR                     Function call was successful
+ */
+long PassThruStartPeriodicMsg(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pMsgID, unsigned long TimeInterval) {
+	return 1;
+}
+
+/**
+ * 7.3.13 PassThruStopPeriodicMsg
+ * 
+ * This function shall delete the specified periodic message transmission on the designated channel. If the function call is
+ * successful, the return value shall be STATUS_NOERROR, the associated <MsgID> shall be invalidated, the interval timer
+ * shall be stopped, and the associated periodic message shall be removed (if present) from the periodic queue. This
+ * function shall not terminate the associated periodic message if it is currently active.
+ *
+ * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
+ * <ChannelID> is not is not valid, the return value shall be ERR_INVALID_CHANNEL_ID. If the Pass-Thru Device is not
+ * currently connected or was previously disconnected without being closed, the return value shall be
+ * ERR_DEVICE_NOT_CONNECTED. If <MsgID> is not is not valid, the return value shall be ERR_INVALID_MSG_ID. If
+ * this function call is not supported for this channel, then the return value shall be ERR_NOT_SUPPORTED. The return
+ * value ERR_FAILED is a mechanism to return other failures, but this is intended for use during development. A fully
+ * compliant SAE J2534-1 Pass-Thru Interface shall never return ERR_FAILED or ERR_NOT_SUPPORTED.
+ * 
+ * Parameters:
+ *   <ChannelID>                       is an input, set by the application that contains the handle to the physical or logical communication channel
+ *                                     from which messages are to be read. The Channel ID was assigned by a previous call to
+ *                                     PassThruConnect or PassThruLogicalConnect. 
+ *   <MsgID>                           is an input, set by the application, which contains the Message ID (assigned by PassThruStartPeriodicMsg) that is to be stopped.
+ * Return Values:
+ *   ERR_CONCURRENT_API_CALL           A J2534 API function has been called before the previous J2534 function call has completed
+ *   ERR_DEVICE_NOT_OPEN               PassThruOpen has not successfully been called
+ *   ERR_INVALID_CHANNEL_ID            Invalid <ChannelID> value
+ *   ERR_DEVICE_NOT_CONNECTED          Pass-Thru Device communication error. This indicates that the Pass-Thru Interface DLL has, at some point, failed
+ *                                     to communicate with the Pass-Thru Device – even though it may not currently be disconnected.
+ *   ERR_NOT_SUPPORTED                 Device does not support this API function for the associated <ChannelID>. A fully compliant SAE J2534-1 Pass-Thru
+ *                                     Interface shall never return ERR_NOT_SUPPORTED.
+ *   ERR_INVALID_MSG_ID                Invalid <MsgID> value
+ *   ERR_FAILED                        Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1 Pass-Thru
+ *                                     Interface shall never return ERR_FAILED.
+ *   STATUS_NOERROR                    Function call was successful
  */
 long PassThruStopPeriodicMsg(unsigned long ChannelID, unsigned long MsgID) {
 	return 1;
 }
 
 /**
- * The PassThruStartMsgFilter function is used to setup a network protocol filter that will selectively
- * restrict or limit network protocol messages received by the PassThru device. The filter messages will flow
- * from the User Application to the PassThru device. There is a limit of ten filter messages per network layer
- * protocol.
+ * 7.3.14 PassThruStartMsgFilter
  *
+ * This function shall add the specified filter to the message evaluation process for the designated physical communication
+ * channel. (Message filters are not applicable to logical communication channels. Setting a filter on a physical
+ * communication channel shall not impact the operation of any associated logical communication channels.) If the function
+ * is successful, the return value shall be STATUS_NOERROR and a new filter shall be created and used to evaluate
+ * messages. Indications are not processed by the filter mechanism and shall be placed directly in the receive queue. The
+ * Pass-Thru Interface shall support exactly ten filters per physical communication channel. Message filters shall not affect
+ * message transmissions.
  *
+ * There are two types of filters: pass (PASS_FILTER) and block (BLOCK_FILTER). Pass and block filters are not valid on
+ * ISO 15765 logical communication channels. They are used to determine which of the incoming messages shall be placed
+ * in the receive queue. These filter types require two PASSTHRU_MSG structures, one for the pattern message
+ * (<pPatternMsg>) and the other for the mask message (<pMaskMsg>). The <TxFlags>, <DataLength>, and the
+ * <DataBuffer> elements will be use when defining a filter.
+ *
+ * Figure 48 details how pass and block filters affect incoming messages for CAN based protocols. Figure 49 details how
+ * pass and block filters affect incoming messages for all other protocols. As noted in Figure 48, an incoming message is
+ * processed by both the logical communcation channels and the physical communication channel. This dual path for
+ * incoming messages will allow applications to receive an ISO 15765 message (on a logical communication channel) as
+ * well as the Raw CAN frames that comprise it (on the physical communication channel).
+ *
+ * Once the Pass-Thru Interface has handled the Network and Transport Layer details, as described in Section 7.2.3, the
+ * messages are evaluated by the filters. This means that things like the Checksum (for ISO 9141 and ISO 14230 channels -
+ * if <Flags> have CHECKSUM_DISABLED set to 0), etc. will not be part of the message when the filter evaluation takes
+ * place.
+ * 
+ * The mask message designates which bits in the pattern message are to be evaluated. The filter matches when the
+ * designated bits in the incoming message match the corresponding bits in the pattern message. Incoming messages
+ * whose <DataLength> is less than that of the pattern message shall be considered not to match, even if the mask byte(s)
+ * indicate ‘Don’t Care’. Any bytes in the incoming messages that extend beyond the end pattern message shall be treated
+ * as ‘Don’t Care’ and ignored during the evaluation of the filter.
+ *
+ * For a pass filter, matching the pattern message shall cause the incoming message to proceed on for evaluation by the
+ * block filters. Otherwise, the incoming message shall be discarded. If no block filters exists, then the incoming message
+ * shall be added to the receive queue. For a block filter, matching the pattern message shall cause the incoming message
+ * to be discarded. Otherwise, the incoming message shall be added to the receive queue.
+ *
+ * When populating the mask and pattern messages, the <TxFlags> of both must be identical. Only CAN channels shall be
+ * permitted to set any <TxFlags> and then only the CAN_29BIT_ID bit is valid - no other bits in <TxFlags> are valid. In this
+ * case, the state of the CAN_29BIT_ID bit in <TxFlags> for the filter is compared against the attributes of the incoming
+ * messages. Therefore, to create a filter for 29-bit CAN IDs (on a CAN channel that allows the reception of 29-bit CAN IDs),
+ * the CAN_29BIT_ID field in the <TxFlags> of both mask and pattern messages would need to be set. Similarly, a separate
+ * filter would need to be defined to filter 11-bit CAN IDs. Figure 51 details the valid <TxFlags> for pass and block filters as
+ * well as describing their use.
+ *
+ * For SAE J1850 PWM, it may be physically impossible to create the requested filter due to hardware limitations of the data
+ * link controller. (For example, some data link controllers must be set in a special mode of operation that allows them to
+ * ‘receive’ messages that do not match their current Node Address and/or are not in the Functional Message Lookup
+ * Table.) In these cases, if the Mask and Pattern messages follow the format specified in Section 7.2.4 and the return value
+ * shall be STATUS_NOERROR. This means that a pass filter may only provide a subset of all messages on the physical
+ * vehicle bus. See Appendix A2.16 for a more detailed description.
+ *
+ * By default, PassThruConnect, PassThruDisconnect, PassThruOpen, and PassThruClose clear all of the filters for the
+ * associated channel(s), which results in blocking all incoming messages. Therefore, an application must set the
+ * appropriate pass or block filters to allow incoming messages to be placed in the receive queue.
+ *
+ * This function does not clear any messages that may have been received and queued before a filter was set. Application
+ * developers are cautioned to consider performing a CLEAR_RX_QUEUE after starting a message filter to be sure that
+ * unwanted messages are purged.
+ *
+ * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
+ * <ChannelID> is not valid or identifies a logical communication channel, the return value shall be
+ * ERR_INVALID_CHANNEL_ID. If the Pass-Thru Device is not currently connected or was previously disconnected without
+ * being closed, the return value shall be ERR_DEVICE_NOT_CONNECTED. If the <pMaskMsg>, <pPatternMsg>, or
+ * <pFilterId> are NULL, the return value shall be ERR_NULL_PARAMETER. If the filter type is not permitted for the given
+ * Channel ID or is in the reserved range, then the return value shall be ERR_FILTER_TYPE_NOT_SUPPORTED. If the
+ * <ProtocolID> in the PASSTHRU_MSG structure (for any message passed into this function) does not match the
+ * <ProtocolID> for the associated channel, the return value shall be ERR_MSG_PROTOCOL_ID. If any message passed
+ * into this function does not follow the format specified in Section 7.2.4, the return value shall be ERR_INVALID_MSG. If
+ * the application attempts to create more filters than are allowed, the return value shall be ERR_EXCEEDED_LIMIT. If this
+ * function call is not supported for this channel, then the return value shall be ERR_NOT_SUPPORTED. The return value
+ * ERR_FAILED is a mechanism to return other failures, but this is intended for use during development. A fully compliant
+ * SAE J2534-1 Pass-Thru Interface shall never return ERR_FAILED or ERR_NOT_SUPPORTED.
+ *
+ * Parameters:
+ *   <ChannelID>                       is an input, set by the application that contains the handle to the physical communication channel on
+ *                                     which the filter is to be set. The Channel ID was assigned by a previous call to PassThruConnect. 
+ *   <FilterType>                      is an input, set by the application that designates the type of filter that will be started. Valid types are:
+ *
+ *                                     PASS_FILTER allows matching messages to proceed on for evaluation by the block filter(s), on
+ *                                                 the way to the receive queue. (A block filter can still discard messages that match a
+ *                                                 pass filter.) This filter type is valid for all physical communication channels.
+ *                                     BLOCK_FILTER keeps matching messages out of the receive queue. This filter type is valid for all
+ *                                                  physical communication channels.
+ *   <pMaskMsg>                        is an input, set by the application that designates a pointer to the ‘mask message’. The <DataBuffer>,
+ *                                     <DataLength>, and <TxFlags> elements in this PASSTHRU_MSG structure are used to determine the
+ *                                     mask and mask size. Bits in the <DataBuffer> element that are set to ‘0’ are unimportant (or ‘Don’t
+ *                                     Care’), while bits that are ‘1’ are important (or ‘Care’). The <RxStatus> field shall always be ignored.
+ *                                     The <DataLength> and <TxFlags> in this PASSTHRU_MSG structure shall be identical to that from
+ *                                     the pattern message. The structure shall follow the format specified in Section 7.2.4, including the
+ *                                     actions to be taken when messages violate the specified format. The Pass-Thru Interface shall not
+ *                                     modify this structure.
+ *   <pPatternMsg>                     is an input, set by the application that designates a pointer to the ‘pattern message’. The
+ *                                     <DataBuffer>, <DataLength>, and <TxFlags> elements in this PASSTHRU_MSG structure are used to
+ *                                     determine the pattern and pattern size. The <RxStatus> element shall always be ignored. Otherwise,
+ *                                     the structure shall follow the format specified in Section 7.2.4, including the actions to be taken when
+ *                                     messages violate the specified format. The Pass-Thru Interface shall not modify this structure.
+ *   <pFilterID>                       is an input, set by the application, which points to an unsigned long allocated by the application. Upon
+ *                                     return, the unsigned long shall contain the Filter ID, which is to be used as a handle to the filter for
+ *                                     future function calls.
+ * Return Values:
+ *   ERR_CONCURRENT_API_CALL           A J2534 API function has been called before the previous J2534 function call has completed
+ *   ERR_DEVICE_NOT_OPEN               PassThruOpen has not successfully been called
+ *   ERR_INVALID_CHANNEL_ID            Invalid <ChannelID> value
+ *   ERR_DEVICE_NOT_CONNECTED          Pass-Thru Device communication error. This indicates that the Pass-Thru Interface DLL has, at some point, 
+ *                                     failed to communicate with the Pass-Thru Device – even though it may not currently be disconnected.
+ *   ERR_NOT_SUPPORTED                 Device does not support this API function for the associated <ChannelID>. A fully compliant SAE J2534-1
+ *                                     Pass-Thru Interface shall never return ERR_NOT_SUPPORTED.
+ *   ERR_NULL_PARAMETER                NULL pointer supplied where a valid pointer is required
+ *   ERR_FILTER_TYPE_NOT_SUPPORTED     <FilterType> is either not permitted for the current channel or is in the reserved range
+ *   ERR_MSG_PROTOCOL_ID               <ProtocolID> in the PASSTHRU_MSG structure does not match the <ProtocolID> from the original call to
+ *                                     PassThruConnect for the <ChannelID>
+ *   ERR_INVALID_MSG                   Message structure is invalid for the given Channel ID (refer to Section 7.2.4 for more details)
+ *   ERR_EXCEEDED_LIMIT                Exceeded the maximum number of filter message IDs
+ *   ERR_FAILED                        Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1 Pass-Thru
+ *                                     Interface shall never return ERR_FAILED.
+ *   STATUS_NOERROR                    Function call was successful
  */
-long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, PASSTHRU_MSG *pMaskMsg, PASSTHRU_MSG *pPatternMsg,
-				PASSTHRU_MSG *pFlowControlMsg,	unsigned long *pMsgID) {
+long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, PASSTHRU_MSG *pMaskMsg, PASSTHRU_MSG *pPatternMsg, unsigned long *pFilterID) {
 	return 1;
 }
 
 /**
- * The PassThruStopMsgFilter function is used to terminate the specified network protocol filter. Once
- * terminated the filter identifier or handle value is invalid.
+ * 7.3.15 PassThruStopMsgFilter
+ * 
+ * This function shall delete the specified filter from the message evaluation process for the designated channel. If the
+ * function call is successful, the return value shall be STATUS_NOERROR, the <FilterID> shall be invalidated, and the
+ * associated filter shall no longer be used to evaluate incoming messages.
+ *
+ * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
+ * <ChannelID> is not is not valid or identifies a logical communication channel, the return value shall be
+ * ERR_INVALID_CHANNEL_ID. If the Pass-Thru Device is not currently connected or was previously disconnected without
+ * being closed, the return value shall be ERR_DEVICE_NOT_CONNECTED. If <FilterID> is not is not valid, the return
+ * value shall be ERR_INVALID_FILTER_ID. If this function call is not supported for this channel, then the return value shall
+ * be ERR_NOT_SUPPORTED. The return value ERR_FAILED is a mechanism to return other failures, but this is intended
+ * for use during development. A fully compliant SAE J2534-1 Pass-Thru Interface shall never return ERR_FAILED or
+ * ERR_NOT_SUPPORTED.
+ *
+ * Parameters:
+ *   <ChannelID>                       is an input, set by the application that contains the handle to the physical communication channel on which
+ *                                     the filter is to be stopped. The Channel ID was assigned by a previous call to PassThruConnect. 
+ *   <FilterID>                        is an input, set by the application, which contains the Filter ID that is to be stopped. The Filter ID was
+ *                                     assigned by a previous call to PassThruStartMsgFilter. 
+ * Return Values:
+ *   ERR_CONCURRENT_API_CALL           A J2534 API function has been called before the previous J2534 function call has completed
+ *   ERR_DEVICE_NOT_OPEN               PassThruOpen has not successfully been called
+ *   ERR_INVALID_CHANNEL_ID            Invalid <ChannelID> value
+ *   ERR_DEVICE_NOT_CONNECTED          Pass-Thru Device communication error. This indicates that the Pass-Thru Interface DLL has, at some point,
+ *                                     failed to communicate with the Pass-Thru Device – even though it may not currently be disconnected.
+ *   ERR_NOT_SUPPORTED                 Device does not support this API function for the associated <ChannelID>. A fully compliant SAE J2534-1
+ *                                     Pass-Thru Interface shall never return ERR_NOT_SUPPORTED.
+ *   ERR_INVALID_FILTER_ID             Invalid <FilterID> value
+ *   ERR_FAILED                        Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1 Pass-Thru
+ *                                     Interface shall never return ERR_FAILED.
+ *   STATUS_NOERROR                    Function call was successful
  */
-long PassThruStopMsgFilter(unsigned long ChannelID, unsigned long MsgID) {
-	return 1;
-}
+long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID) {
+  return 1;
+} 
 
 /**
- * The PassThruSetProgrammingVoltage function is used to set the programmable voltage level on the
- * specified J1962 connector pin. Only one pin can have a specified voltage applied at a time. The
- * UserApplication must turn the voltage off(VOLTAGE_OFF option) on the selected pin before applying
- * voltage to a different pin. It is permissible to program pin 15 for SHORT_TO_GROUND and program
- * another pin to a voltage level.
+ * 7.3.16 PassThruSetProgrammingVoltage
  *
- * The User Application must protect against applying incorrect voltage levels to any of the programmable
- * pins.
+ * This function shall set either a programming voltage on a single pin or short a single pin to ground on the designated
+ * Pass-Thru Device. If the function call is successful, the return value shall be STATUS_NOERROR and the associated pin
+ * shall be at the specified level. The default state for all pins shall be PIN_OFF. This function does not require a Channel ID,
+ * so it may be used after a call to PassThruOpen for the corresponding Pass-Thru Device.
+ *
+ * The Pass-Thru Interface contains exactly one programmable voltage generator and one programmable ground, which
+ * operate independently but cannot exist on the same pin (see Section 6.7 for more details). At any given time, the voltage
+ * can be routed to at-maximum one pin and the ground can be routed to at-maximum one pin. After applying a voltage or
+ * ground to a specific pin, that pin must be set to PIN_OFF before a new pin can be used. The pin must also be set to
+ * PIN_OFF when switching between voltage and ground on the same pin. However, there is no need to set a pin to
+ * PIN_OFF when selecting a different voltage on the same pin.
+ * 
+ * The application programmer shall ensure that voltages are not applied to any pins that may cause damage to a vehicle or
+ * ECU. PassThruSetProgrammingVoltage does NOT protect from usage that might result in damage to a vehicle or ECU.
+ * 
+ * SAE J2610 channels are unique, as they require the programmable voltage generator to be on the Rx pin. For SAE J2610
+ * channels ONLY, the programming voltage may be manually set with this function (for an immediate affect) on the Rx pin
+ * without getting the return value ERR_PIN_IN_USE. Otherwise, the programmable voltage generator shall be
+ * automatically controlled with the SCI_TX_VOLTAGE bit in <TxFlags> of the PASSTHRU_MSG structure during a call to
+ * PassThruQueueMsgs. However, if the programmable voltage generator is in use at that time, the call to
+ * PassThruQueueMsgs shall fail (see PassThruQueueMsgs for more details).
+ *
+ * Attempting to set an unused pin to PIN_OFF shall result in the return value STATUS_NOERROR. Attempting to set a pin
+ * that is already in use for a different purpose (except as noted above) shall result in the return value ERR_PIN_IN_USE.
+ * Attempting to set a voltage on a pin other than 0, 6, 9, 11, 12, 13, 14, or 15 of the J1962_CONNECTOR shall result in the
+ * return value ERR_PIN_NOT_SUPPORTED. Attempting to set a ground on a pin other than 15 of the
+ * J1962_CONNECTOR shall result in the return value ERR_PIN_NOT_SUPPORTED. Attempting to set
+ * <ResourceStruct.NumOfResources> to a value other 1 shall result in the return value ERR_PIN_NOT_SUPPORTED.
+ * Attempting to set a voltage on a valid pin when the voltage is currently being applied to another pin shall result in the
+ * return value ERR_VOLTAGE_IN_USE. Attempting to set a voltage that is out of range on a valid pin shall result in the
+ * return value ERR_EXCEEDED_LIMIT. If <ResourceStruct.ResourceListPtr> is NULL, the return value shall be
+ * ERR_NULL_PARAMETER.
+ *
+ * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
+ * <DeviceID> is not is not valid, the return value shall be ERR_INVALID_DEVICE_ID. If the Pass-Thru Device is not
+ * currently connected or was previously disconnected without being closed, the return value shall be
+ * ERR_DEVICE_NOT_CONNECTED. If this function call is not supported for this device, then the return value shall be
+ * ERR_NOT_SUPPORTED. The return value ERR_FAILED is a mechanism to return other failures, but this is intended for
+ * use during development. A fully compliant SAE J2534-1 Pass-Thru Interface shall never return ERR_FAILED or
+ * ERR_NOT_SUPPORTED.
+ *
+ * Parameters:
+ *   <DeviceID>                          is an input, set by the application that contains the handle to the Pass-Thru Device whose programmable
+ *                                       voltage generator / programmable ground will be set. The Device ID was assigned by a previous call to
+ *                                       PassThruOpen.
+ *   <ResourceStruct>                    is an input, set by the application, that identifies the connector and pin on which the programmable
+ *                                       voltage generator / programmable ground will be set. This structure is defined in Section 9.18. Valid
+ *                                       values for each of the structure elements are:
+ *                                         <ResourceStruct.Connector> shall be set to J1962_CONNECTOR
+ *                                         <ResourceStruct.NumOfResources> shall be set to 1
+ *                                         <ResourceStruct.ResourceListPtr> shall point to an unsigned long that contains one of these values:
+ *                                           0 – Auxiliary output pin (the banana jack identified in Section 6.7)
+ *                                           6 – Pin 6 on the SAE J1962 connector.
+ *                                           9 – Pin 9 on the SAE J1962 connector.
+ *                                           11 – Pin 11 on the SAE J1962 connector.
+ *                                           12 – Pin 12 on the SAE J1962 connector.
+ *                                           13 – Pin 13 on the SAE J1962 connector.
+ *                                           14 – Pin 14 on the SAE J1962 connector.
+ *                                           15 – Pin 15 on the SAE J1962 connector (short to ground only).
+ * Return Values:
+ *   ERR_CONCURRENT_API_CALL             A J2534 API function has been called before the previous J2534 function call has completed
+ *   ERR_DEVICE_NOT_OPEN                 PassThruOpen has not successfully been called
+ *   ERR_INVALID_DEVICE_ID               Invalid <DeviceID> value
+ *   ERR_DEVICE_NOT_CONNECTED            Pass-Thru Device communication error. This indicates that the Pass-Thru Interface DLL has, at some point,
+ *                                       failed to communicate with the Pass-Thru Device – even though it may not currently be disconnected.
+ *   ERR_NOT_SUPPORTED                   Device does not support this API function for the associated <DeviceID>. A fully compliant SAE J2534-1
+ *                                       Pass-Thru Interface shall never return ERR_NOT_SUPPORTED.
+ *   ERR_PIN_NOT_SUPPORTED               One or more of the following is either invalid or unknown: The pin number specified by <ResourceStruct.ResourceListPtr>,
+ *                                       the connector specified by <ResourceStruct.Connector>, or the number of resources.
+ *   ERR_VOLTAGE_IN_USE                  Programming voltage is currently being applied to another pin
+ *   ERR_PIN_IN_USE                      <PinNumber> specified is currently in use (either for voltage, ground, or by another channel)
+ *   ERR_EXCEEDED_LIMIT                  Exceeded the allowed limits for programmable voltage generator
+ *   ERR_NULL_PARAMETER                  NULL pointer supplied where a valid pointer is required
+ *   ERR_FAILED                          Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1 Pass-Thru
+ *                                       Interface shall never return ERR_FAILED.
+ *   STATUS_NOERROR                      Function call was successful
  */
-long PassThruSetProgrammingVoltage(unsigned long PinNumber, unsigned long Voltage) {
-	return 1;
-}
+ long  PassThruSetProgrammingVoltage(unsigned long DeviceID, RESOURCE_STRUCT ResourceStruct, unsigned long Voltage) {
+  return 1;
+ }
 
-/**
- * The PassThruReadVersion function is used to retrieve the PassThru device firmware version, the
- * PassThru device DLL version and the version of the J2534 specification that was referenced. The version
- * information is in the form of NULL terminated strings. The User Application must dimension the version
- * character arrays to be at least 80 characters in size.
- *
- * pFirmwareVersion
- * 		Pointer to Firmware Version array, which will receive the firmware version string in XX.YY format.
- * 		The PassThru device supplies this string.
- *
- * pDllVersion
- * 		Pointer to DLL Version array, which will receive the DLL version string in XX.YY format. The
- * 		PassThru device installed DLL supplies this string.
- *
- * pApiVersion
- * 		Pointer to API Version array, which will receive the API version string in XX.YY format. The PassThru
- * 		device installed DLL supplies this string. It corresponds to the ballot date of the J2534 specification that
- * 		was referenced by the PassThru DLL implementers.
- *
- * If the function succeeds the return value is STATUS_NOERROR. If the function fails, the return value is a
- * nonzero error code and is defined below.
- *
- * ERR_DEVICE_NOT_CONNECTED
- * ERR_FAILED
- * ERR_NULL_PARAMETER
- */
-long PassThruReadVersion(char *pFirmwareVersion, char * pDllVersion, char *pApiVersion) {
-	return 1;
+ /**
+  * 7.3.17 PassThruReadVersion
+  *
+  * This function shall return the Firmware, DLL, and API version information for the designated Pass-Thru Device. If the
+  * function call is successful, the return value shall be STATUS_NOERROR and the associated version buffers shall each
+  * contain a valid version string. This function does not require a Channel ID, so it may be used after a call to
+  * PassThruOpen for the corresponding Pass-Thru Device.
+  *
+  * In cases where the return value is neither STATUS_NOERROR nor ERR_NULL_PARAMETER, the function shall return
+  * the applicable return value and a valid DLL version string. If available, other valid version strings may also be returned. If
+  * a version string is not available, the first byte shall be set to the NULL terminator by the Pass-Thru Interface.
+  *
+  * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
+  * <DeviceID> is not is not valid, the return value shall be ERR_INVALID_DEVICE_ID. If the Pass-Thru Device is not
+  * currently connected or was previously disconnected without being closed, the return value shall be
+  * ERR_DEVICE_NOT_CONNECTED. If <pFirmwareVersion>, <pDllVersion>, or <pApiVersion> are NULL, the return value
+  * shall be ERR_NULL_PARAMETER. The return value ERR_FAILED is a mechanism to return other failures, but this is
+  * intended for use during development. A fully compliant SAE J2534-1 Pass-Thru Interface shall never return
+  * ERR_FAILED.
+  *
+  * Parameters:
+  *   <DeviceID>                          is an input, set by the application that contains the handle to the Pass-Thru Device whose version will be
+  *                                       read. The Device ID was assigned by a previous call to PassThruOpen
+  *   <pFirmwareVersion>                  is an input, allocated by the application that points to a buffer where the Firmware version will be
+  *                                       placed. The version buffer is allocated by the application and must be eighty (80) characters, where
+  *                                       one character shall consume one byte. Upon return, the array shall contain an ASCII character
+  *                                       string that represents the version string. The Pass-Thru Interface vendor that supplies the device
+  *                                       shall determine the version string. A valid version string shall contain 80 ASCII characters or less,
+  *                                       including the NULL terminator ($00), and the first byte shall NOT be the NULL terminator (unless an
+  *                                       error occurred).
+  *   <pDllVersion>                       is an input, allocated by the application that points to a buffer where the DLL version will be placed. The
+  *                                       version buffer is allocated by the application and must be eighty (80) characters, where one character
+  *                                       shall consume one byte. Upon return, the array shall contain an ASCII character string that represents the
+  *                                       version string. The Pass-Thru Interface vendor that supplies the DLL shall determine the version string. A
+  *                                       valid version string shall contain 80 ASCII characters or less, including the NULL terminator ($00), and
+  *                                       the first byte shall NOT be the NULL terminator.
+  *   <pApiVersion>                       is an input, allocated by the application that points to a buffer where the API version will be placed. The
+  *                                       version buffer is allocated by the application and must be eighty (80) characters, where one character
+  *                                       shall consume one byte. Upon return, the array shall contain an ASCII character string that represents the
+  *                                       version string. The API version string shall be of the “XX.YY” format (where XX is the major version
+  *                                       number and YY is the minor version number). All API version strings shall contain 80 ASCII characters or
+  *                                       less, including the NULL terminator ($00), and the first byte shall NOT be the NULL terminator (unless an
+  *                                       error occurred). Valid API version strings are defined below:
+  *                                         February 2002 publication = “02.02”
+  *                                         December 2004 publication = “04.04”
+  *                                         This version = “05.00”
+  * 
+  * Return Values:
+  *   ERR_CONCURRENT_API_CALL             A J2534 API function has been called before the previous J2534 function call has completed
+  *   ERR_DEVICE_NOT_OPEN                 PassThruOpen has not successfully been called
+  *   ERR_INVALID_DEVICE_ID               Invalid <DeviceID> value
+  *   ERR_DEVICE_NOT_CONNECTED            Pass-Thru Device communication error. This indicates that the Pass-Thru Interface DLL has, at some point,
+  *                                       failed to communicate with the Pass-Thru Device – even though it may not currently be disconnected.
+  *   ERR_NULL_PARAMETER                  NULL pointer supplied where a valid pointer is required
+  *   ERR_FAILED                          Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1 Pass-Thru
+  *                                       Interface shall never return ERR_FAILED.
+  *   STATUS_NOERROR                      Function call was successful
+  */
+long PassThruReadVersion(unsigned long DeviceID, char *pFirmwareVersion, char *pDllVersion, char *pApiVersion) {
+  return 1;
 }
-
 
 /**
  * 7.3.18 PassThruGetLastError
@@ -755,38 +1280,79 @@ long PassThruGetLastError(char *pErrorDescription) {
 }
 
 /**
- * The PassThruIoctl function is a general purpose I/O control function for modifying the vehicle network
- * interface characteristics, measuring battery and voltage levels and clearing internal message tables and
- * Receive/Transmit queues of the PassThru device. The input and output structures are dependent on the
- * selected Ioctl function. The Ioctl supported function list is described below.
+ * 7.3.19 PassThruIoctl
+ * 
+ * This function shall be used to configure and control various features of the designated channel or device. If the function
+ * call is successful, the return value shall be STATUS_NOERROR and the requested action shall have been completed. 
  *
- * ChannelID
- * 		The logical communication channel identifier assigned by the J2534 API/DLL when the communication
- * 		channel was opened via the PassThruConnect function.
+ * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If the
+ * <IoctlID> is unknown, not applicable for the <ControlTarget> (for example, trying to initiate a Five-Baud Initialization on a
+ * CAN channel), or required by this document but not supported by the Pass-Thru Interface, the return value shall be
+ * ERR_IOCTL_ID_NOT_SUPPORTED. If the <ControlTarget> is required to be the Device ID and that value is not valid,
+ * the return value shall be ERR_INVALID_DEVICE_ID. If the <ControlTarget> is required to be the Channel ID and that
+ * value is not valid, the return value shall be ERR_INVALID_CHANNEL_ID. If the Pass-Thru Device is not currently
+ * connected or was previously disconnected without being closed, the return value shall be
+ * ERR_DEVICE_NOT_CONNECTED. If either <InputPtr> or <OutputPtr> are NULL when they are required to be nonNULL,
+ * the return value shall be ERR_NULL_PARAMETER. If either <InputPtr> or <OutputPtr> are non-NULL when they
+ * are required to be NULL, the return value shall be ERR_NULL_REQUIRED. If the <ProtocolID> in the PASSTHRU_MSG
+ * structure (for any message passed into this function) does not match the <ProtocolID> for the associated channel, the
+ * return value shall be ERR_MSG_PROTOCOL_ID. If any message passed into this function does not follow the format
+ * specified in Section 7.2.4, the return value shall be ERR_INVALID_MSG. If the configuration Parameter ID (for the IOCTL
+ * ID values GET_CONFIG and SET_CONFIG) is unknown or not applicable, the return value shall be ERR_IOCTL_PARAM_ID_NOT_SUPPORTED.
+ * If the configuration <Value> (for the IOCTL ID values GET_CONFIG and SET_CONFIG) is unknown, invalid, out of range, or not applicable,
+ * the return value shall be ERR_IOCTL_VALUE_NOT_SUPPORTED. If the result of this function call will cause the Pass-Thru Interface to exceed a
+ * prescribed limit, the return value shall be ERR_EXCEEDED_LIMIT. If an initialization is requested and it is unsuccessful,
+ * the return value shall be ERR_INIT_FAILED. If a buffer overflow occurred during this function call, the return value shall
+ * be ERR_BUFFER_OVERFLOW. If a message being returned in the structure PASSTHRU_MSG is larger than the size
+ * indicated by <DataBufferSize>, then only the number of bytes indicated by <DataBufferSize> shall be placed in the array
+ * <DataBuffer> and the return value shall be ERR_BUFFER_TOO_SMALL. If this function call is not supported for this
+ * device, then the return value shall be ERR_NOT_SUPPORTED. The return value ERR_FAILED is a mechanism to return
+ * other failures, but this is intended for use during development. A fully compliant SAE J2534-1 Pass-Thru Interface shall
+ * never return ERR_FAILED or ERR_NOT_SUPPORTED.
  *
- * IoctlID
- * 		Ioctl function identifier, refer to Ioctl detailed function description below.
- *
- * pInput
- * 		Input structure pointer, refer to Ioctl detailed function description below.
- *
- * pOutput
- * 		Output structure pointer, refer to Ioctl detailed function description below.
- *
- * If the function succeeds the return value is STATUS_NOERROR. If the function fails, the return value is a
- * nonzero error code and is defined below.
- *
- * ERR_DEVICE_NOT_CONNECTED
- * ERR_FAILED
- * ERR_NULL_PARAMETER
- * ERR_INVALID_CHANNEL_ID
- * ERR_INVALID_IOCTL_ID
- * ERR_NOT_SUPPORTED
+ * Parameters:
+ *   <ControlTarget>                  is an input, set by the application that contains the handle of channel/device to be controlled. For
+ *                                    IOCTL ID values that act on channels, this will be the corresponding Channel ID assigned by the
+ *                                    PassThruConnect or PassThruLogicalConnect functions. For IOCTL ID values that act on devices,
+ *                                    this will be the corresponding the Device ID assigned by the PassThruOpen function. (See the
+ *                                    specific IOCTL Section to determine the content of the <ConrolTarget>.)
+ *   <IoctlID>                        is an input, set by the application that contains the desired IOCTL ID value (see Figure 60 for a list of valid values).
+ *   <InputPtr>                       is an input, set by the application that points to the location of the input. The structure of the input is
+ *                                    specific to each IOCTL ID value and shall be allocated and initialized by the calling application (see the
+ *                                    specific IOCTL Section for more details).
+ *   <OutputPtr>                      is an input, set by the application that points to the location of the output. The structure of the output is
+ *                                    specific to each IOCTL ID value and shall be allocated by the calling application (see the specific
+ *                                    IOCTL Section for more details). Upon successful completion, the output field shall be updated as
+ *                                    indicated.
+ * 
+ * Return Values:
+ *   ERR_CONCURRENT_API_CALL          A J2534 API function has been called before the previous J2534 function call has completed
+ *   ERR_DEVICE_NOT_OPEN              PassThruOpen has not successfully been called
+ *   ERR_IOCTL_ID_NOT_SUPPORTED       <IoctlID> value is not supported (either invalid, unknown, or not applicable for the current channel)
+ *   ERR_INVALID_DEVICE_ID            PassThruOpen has been successfully called, but the current Device ID is not valid
+ *   ERR_INVALID_CHANNEL_ID           Invalid Channel ID value
+ *   ERR_DEVICE_NOT_CONNECTED         Pass-Thru Device communication error. This indicates that the PassThru Interface DLL has, at some point,
+ *                                    failed to communicate with the Pass-Thru Device – even though it may not currently be disconnected.
+ *   ERR_NOT_SUPPORTED                Device does not support this API function for the associated Channel ID. A fully compliant SAE J2534-1
+ *                                    Pass-Thru Interface shall never return ERR_NOT_SUPPORTED.
+ *   ERR_NULL_PARAMETER               NULL pointer supplied where a valid pointer is required
+ *   ERR_NULL_REQUIRED                A parameter that is required to be NULL is not set to NULL
+ *   ERR_MSG_PROTOCOL_ID              <ProtocolID> in the PASSTHRU_MSG structure does not match the <ProtocolID> from the original call to PassThruConnect for the Channel ID
+ *   ERR_INVALID_MSG                  Message structure is invalid for the given Channel ID (refer to Section 7.2.4 for more details)
+ *   ERR_IOCTL_PARAM_ID_NOT_SUPPORTED Parameter referenced in the SCONFIG_LIST structure is not supported (either invalid, unknown, or not applicable for the current channel)
+ *   ERR_IOCTL_VALUE_NOT_SUPPORTED    Value referenced in the SCONFIG_LIST structure is not supported (either unknown, invalid, out of range, or not applicable for the current channel)
+ *   ERR_PIN_NOT_SUPPORTED            One or more of the following is either invalid or unknown: The pin number specified by <InputPtr->ResourceListPtr>, the connector specified
+ *                                    by <InputPtr->Connector>, or the number of resources specified by <InputPtr->NumOfResources>
+ *   ERR_EXCEEDED_LIMIT               Exceeded the allowed limits
+ *   ERR_INIT_FAILED                  Physical vehicle bus initialization failed
+ *   ERR_BUFFER_OVERFLOW              Indicates a buffer overflow occurred and messages were lost
+ *   ERR_BUFFER_TOO_SMALL             The size of <DataBuffer>, as indicated by the parameter <DataBufferSize> in the PASSTHRU_MSG structure, is too small to accommodate the full message
+ *   ERR_FAILED                       Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1 Pass-Thru Interface shall never return ERR_FAILED.
+ *   STATUS_NOERROR                   Function call was successful
  */
-long PassThruIoctl(unsigned long ChannelID, unsigned long IoctlID, void *pInput, void *pOutput) {
-	return 1;
+long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *InputPtr, void *OutputPtr) {
+  return 1;
 }
-
 
 // private helpers; not part of j2534 spec
 unsigned long unless_concurrent_call(unsigned long status, int api_call) {

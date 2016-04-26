@@ -275,6 +275,7 @@ typedef struct {
  unsigned long DataBufferSize;
 } PASSTHRU_MSG;
 
+// v05.00
 long PassThruScanForDevices(unsigned long *pDeviceCount);
 long PassThruGetNextDevice(SDEVICE *psDevice);
 long PassThruOpen(const char *pName, unsigned long *pDeviceID);
@@ -284,17 +285,16 @@ long PassThruDisconnect(unsigned long ChannelID);
 long PassThruLogicalConnect(unsigned long PhysicalChannelID, unsigned long ProtocolID, unsigned long Flags, void *pChannelDescriptor, unsigned long *pChannel);
 long PassThruLogicalDisconnect(unsigned long ChannelID);
 long PassThruSelect(SCHANNELSET *ChannelSetPtr, unsigned long SelectType, unsigned long Timeout);
-
 long PassThruReadMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pNumMsgs, unsigned long Timeout);
-long PassThruWriteMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pNumMsgs, unsigned long Timeout);
+long PassThruQueueMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pNumMsgs);
 long PassThruStartPeriodicMsg(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pMsgID, unsigned long TimeInterval);
 long PassThruStopPeriodicMsg(unsigned long ChannelID, unsigned long MsgID);
-long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, PASSTHRU_MSG *pMaskMsg, PASSTHRU_MSG *pPatternMsg, PASSTHRU_MSG *pFlowControlMsg, unsigned long *pMsgID);
-long PassThruStopMsgFilter(unsigned long ChannelID, unsigned long MsgID);
-long PassThruSetProgrammingVoltage(unsigned long PinNumber, unsigned long Voltage);
-long PassThruReadVersion(char *pFirmwareVersion, char * pDllVersion, char *pApiVersion);
+long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, PASSTHRU_MSG *pMaskMsg, PASSTHRU_MSG *pPatternMsg, unsigned long *pFilterID);
+long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID);
+long  PassThruSetProgrammingVoltage(unsigned long DeviceID, RESOURCE_STRUCT ResourceStruct, unsigned long Voltage);
+long PassThruReadVersion(unsigned long DeviceID, char *pFirmwareVersion, char *pDllVersion, char *pApiVersion);
 long PassThruGetLastError(char *pErrorDescription);
-long PassThruIoctl(unsigned long ChannelID, unsigned long IoctlID, void *pInput, void *pOutput);
+long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *InputPtr, void *OutputPtr);
 
 // private helpers; not related to j2534 spec
 unsigned long unless_concurrent_call(unsigned long status, int api_call);
