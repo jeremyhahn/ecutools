@@ -68,7 +68,7 @@ int apigateway_post(const char *resource, const char *postData) {
   strcat(url, resource);
   CURL *curl;
   CURLcode res;
-  //char postData[] = "username=newuser&password=newpasswd&msg=test&msisdn=9999999999&tagname=Demo&shortcode=8888&telcoId=5&dnRequired=false";
+  //char postData[] = "key1=val1&key2=val2";
   curl = curl_easy_init();
   if(curl) {
     curl_easy_setopt(curl, CURLOPT_URL, url);

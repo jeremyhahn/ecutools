@@ -2,14 +2,12 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([ecutune], [0.1], [root@localhost])
+AC_INIT([ecutools], [0.1], [root@localhost])
 #AM_INIT_AUTOMAKE([1.9 foreign])
-AC_CONFIG_SRCDIR([src/ecutune.c])
+AC_CONFIG_SRCDIR([src/ecutuned.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-#AM_INIT_AUTOMAKE([subdir-objects -Wall -Werror])
-#AM_INIT_AUTOMAKE([subdir-objects])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_FILES([Makefile])
 
@@ -19,6 +17,10 @@ LT_INIT
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
+
+AC_SEARCH_LIBS([floor], [m])
+AC_SEARCH_LIBS([timer_create], [rt])
+AC_SEARCH_LIBS([pthread_create], [pthread])
 
 # Remember externally set CFLAGS
 EXTERNAL_CFLAGS="$CFLAGS"
@@ -41,7 +43,7 @@ AM_CONDITIONAL([PTHREAD],  [test "$have_libpthread" = "yes"])
 #AM_CONDITIONAL([WSCLIENT],  [test "$have_libwsclient" = "yes"])
 
 # Checks for header files.
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h check.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL

@@ -59,14 +59,16 @@ static SDEVICE j2534_device_list[50] = {0};
  *   STATUS_NOERROR            Function call was successful
  */
 long PassThruScanForDevices(unsigned long *pDeviceCount) {
-
+ 
   j2534_current_api_call = 731;
 
   if(pDeviceCount == NULL) {
     return ERR_NULL_PARAMETER;
   }
 
-  const char *response = apigateway_get("/j2534/passthruscanfordevices");
+  char *response = apigateway_get("/j2534/passthruscanfordevices");
+
+  printf(response);
 
   json_t *root;
   json_error_t error;
@@ -1251,9 +1253,9 @@ long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID) {
 long PassThruReadVersion(unsigned long DeviceID, char *pFirmwareVersion, char *pDllVersion, char *pApiVersion) {
   int api_call = 7317;
   j2534_current_api_call = api_call;
-  *pFirmwareVersion = "0.1.0";
-  *pDllVersion = "0.0.0";
-  *pApiVersion = "0.1.0";
+  strcpy(pFirmwareVersion, "0.1.0");
+  strcpy(pDllVersion, "0.0.0");
+  strcpy(pApiVersion, "0.1.0");
   return unless_concurrent_call(STATUS_NOERROR, api_call);
 }
 

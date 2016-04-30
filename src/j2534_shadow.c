@@ -3,8 +3,7 @@
 awsiot_client awsiot;
 
 void j2534_shadow_init() {
-  
-  awsiot.
+  //awsiot
 }
 
 
