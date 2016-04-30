@@ -1,6 +1,6 @@
 #!/bin/sh
 
 aclocal --install -I m4 &&
-  autoconf &&
+  autoreconf -fi &&
   autoheader &&
   automake --add-missing --copy
