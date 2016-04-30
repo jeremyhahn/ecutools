@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "iotbridge.h"
+#include "canbus_iotbridge.h"
 
 const char *IOTBRIDGE_CANBUS_TOPIC = "ecutools/canbus";
 
@@ -163,9 +163,10 @@ void *iotbridge_awsiot_canbus_subscribe_thread(void *ptr) {
 
 void *iotbridge_awsiot_canbus_publish_thread(void *ptr) {
   syslog(LOG_DEBUG, "iotbridge_awsiot_publish_thread: started");
-  iotbridge__publish_thread_args *args = (iotbridge__publish_thread_args *)ptr;
+  iotbridge_publish_thread_args *args = (iotbridge_publish_thread_args *)ptr;
   awsiot_client_publish(args->awsiot, IOTBRIDGE_CANBUS_TOPIC, args->payload);
   syslog(LOG_DEBUG, "iotbridge_awsiot_canbus_publish_thread: stopping");
+  free(ptr);
   return NULL;
 }
 
@@ -200,12 +201,12 @@ void *iotbridge_canbus_logger_thread(void *ptr) {
       continue;
     }
 
-    iotbridge__publish_thread_args *args = malloc(sizeof(iotbridge__publish_thread_args));
-    memset(args, 0, sizeof(iotbridge__publish_thread_args));
+    iotbridge_publish_thread_args *args = malloc(sizeof(iotbridge_publish_thread_args));
+    memset(args, 0, sizeof(iotbridge_publish_thread_args));
     args->awsiot = bridge->awsiot;
     args->payload = data;
 
-    if(pthread_create(&bridge->awsiot->canbus_publish_thread, NULL, iotbridge_awsiot_canbus_publish_thread, (void *)args) == -1) {
+    if(pthread_create(&bridge->awsiot->publish_thread, NULL, iotbridge_awsiot_canbus_publish_thread, (void *)args) == -1) {
       syslog(LOG_ERR, "cwebsocket_read_data: %s", strerror(errno));
       return -1;
     }
@@ -242,8 +243,8 @@ int iotbridge_run(iotbridge *bridge) {
     syslog(LOG_CRIT, "iotbridge_run: unable to connect to AWS IoT service");
     return -1;
   }
-  pthread_create(&bridge->awsiot->canbus_subscribe_thread, NULL, iotbridge_awsiot_canbus_subscribe_thread, (void *)bridge);
-  pthread_join(bridge->awsiot->canbus_subscribe_thread, NULL);
+  pthread_create(&bridge->awsiot->subscribe_thread, NULL, iotbridge_awsiot_canbus_subscribe_thread, (void *)bridge);
+  pthread_join(bridge->awsiot->subscribe_thread, NULL);
   syslog(LOG_DEBUG, "iotbridge_run: bridge closed");
   return 0;
 }

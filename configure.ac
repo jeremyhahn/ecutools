@@ -3,17 +3,21 @@
 
 AC_PREREQ([2.69])
 AC_INIT([ecutune], [0.1], [root@localhost])
-AM_INIT_AUTOMAKE([1.9 foreign])
+#AM_INIT_AUTOMAKE([1.9 foreign])
 AC_CONFIG_SRCDIR([src/ecutune.c])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIR([m4])
 
-if test -z $CFLAGS; then
-    CFLAGS=''
-fi
+#AM_INIT_AUTOMAKE([subdir-objects -Wall -Werror])
+#AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([foreign])
+AC_CONFIG_FILES([Makefile])
+
+AM_PROG_AR
+LT_INIT
 
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_RANLIB
 AC_PROG_INSTALL
 
 # Remember externally set CFLAGS
@@ -52,7 +56,6 @@ AC_TYPE_UINT8_T
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([gettimeofday memset socket strcasecmp strchr strerror strstr])
 
-AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
 # Conditionals

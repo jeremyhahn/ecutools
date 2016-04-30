@@ -37,7 +37,7 @@ typedef struct _iotbridge {
 typedef struct {
   awsiot_client *awsiot;
   char *payload;
-} iotbridge__publish_thread_args;
+} iotbridge_publish_thread_args;
 
 iotbridge *bridge;
 iotbridge *wcbridge_new();

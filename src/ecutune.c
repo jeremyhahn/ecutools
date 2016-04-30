@@ -16,14 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//#include "wcbridge.h"
-//#include "iotbridge.h"
+#include "canbus_iotbridge.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <syslog.h>
 #include <string.h>
-#include "j2534.h"
 
 int main_exit(int exit_status) {
   syslog(LOG_DEBUG, "exiting ecutune");
@@ -120,31 +118,12 @@ int main(int argc, char **argv) {
   openlog("ecutune", LOG_CONS | LOG_PERROR, LOG_USER);
   syslog(LOG_DEBUG, "starting ecutune");
 
-/*
-  bridge = wcbridge_new();
-  bridge->onmessage = &ecutune_onmessage;
-  //bridge->bridge_filters[0] = &bridge_filter1;
-  wcbridge_run(bridge);
-  wcbridge_close(bridge, "main: run loop complete\n");
-*/
-/*
   bridge = iotbridge_new();
- // bridge->onmessage = &ecutune_onmessage;
+  // bridge->onmessage = &ecutune_onmessage;
   //bridge->bridge_filters[0] = &bridge_filter1;
   iotbridge_run(bridge);
   iotbridge_close(bridge, "main: run loop complete");
   free(bridge);
-*/
-
-  unsigned long *pDeviceCount = 0;
-  unsigned long rc = PassThruScanForDevices(&pDeviceCount);
-  syslog(LOG_DEBUG, "PassThruScanForDevices: pDeviceCount=%d, error: %d", pDeviceCount, rc);
-
-  if(rc != STATUS_NOERROR) {
-    char errmsg[80] = "\0";
-    PassThruGetLastError(&errmsg);
-    syslog(LOG_ERR, "PassThruGetLastError: %s", errmsg);
-  }
 
   return main_exit(EXIT_SUCCESS);
 }

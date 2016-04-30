@@ -202,23 +202,32 @@ long PassThruGetNextDevice(SDEVICE *psDevice) {
 /**
  * 7.3.3 PassThruOpen
  *
- * This function shall close the communications to the designated Pass-Thru Device. This function must be successfully
- * called prior to the termination of the application. If the function call is successful, the return value shall be
- * STATUS_NOERROR, the associated Device ID shall be invalidated, and the device shall be in a default state.
+ * This function shall establish communications with the designated Pass-Thru Device verifying that it is connected to the PC
+ * and initialize it. This function must be successfully called prior to all other function calls to the Pass-Thru Device (with the
+ * exception of PassThruScanForDevices, PassThruGetNextDevice, and PassThruGetLastError). If the function call is
+ * successful, the return value shall be STATUS_NOERROR, the value pointed to by <pDeviceID> shall be used as a
+ * handle to the associated device, and the device shall be in a default state. Otherwise, the return value shall reflect the
+ * error detected and the value pointed to by <pDeviceID> shall not be altered.
  *
  * When entering the default state, the first action shall be to return all pins (connecting physical communication channels to
  * the vehicle on the specified device) to the default state. In the default state: all logical communication channels shall be
  * disconnected (as described in PassThruLogicalDisconnect) and all physical communication channels shall be
- * disconnected (as described in PassThruDisconnect).
+ * disconnected (as described in PassThruDisconnect). Additionally, the Pass-Thru Interface shall detect when the PassThru
+ * Device has become disconnected. Refer to Section 6.1 for the requirements of detecting and reporting a Pass-Thru
+ * Device disconnect.
  *
- * Any function calls to the Pass-Thru Device after a call to PassThruClose (with the exception of
- * PassThruScanForDevices, PassThruGetNextDevice, and PassThruGetLastError) shall result in the return value
- * ERR_DEVICE_NOT_OPEN. If the corresponding <DeviceID> is not currently open, the return value shall be
- * ERR_DEVICE_NOT_OPEN. If PassThruOpen was successfully called but the <DeviceID> is currently not valid, the
- * return value shall be ERR_INVALID_DEVICE_ID. If the Pass-Thru Device is not currently connected or was previously
- * disconnected without being closed, the return value shall be ERR_DEVICE_NOT_CONNECTED. The return value
- * ERR_FAILED is a mechanism to return other failures, but this is intended for use during development. A fully compliant
- * SAE J2534-1 Pass-Thru Interface shall never return ERR_FAILED.
+ * SAE J2534-1 compliant applications are limited to a connection to a single Pass-Thru Interface. If <pName> or
+ * <pDeviceID> are NULL, the return value shall be ERR_NULL_PARAMETER. If the Pass-Thru Device is not currently
+ * connected or was previously disconnected without being closed, the return value shall be
+ * ERR_DEVICE_NOT_CONNECTED. If the device is currently open, the return value shall be ERR_DEVICE_IN_USE. If
+ * <pName> contains an API Designation that is not supported, an unknown device name, or there is a configuration error
+ * with the device being opened (e.g., firmware/DLL mismatch, etc.), the return value shall be ERR_OPEN_FAILED. The
+ * return value ERR_FAILED is a mechanism to return other failures, but this is intended for use during development. A fully
+ * compliant SAE J2534-1 Pass-Thru Interface shall never return ERR_FAILED.
+ *
+ * If PassThruOpen has never been successfully called or no Pass-Thru Devices are currently open then all subsequent
+ * function calls (with the exception of PassThruScanForDevices, PassThruGetNextDevice, and PassThruGetLastError)
+ * shall result in the return value ERR_DEVICE_NOT_OPEN.
  * 
  * Parameters:
  *     <pName>                        is an input, set by the application, which points to an array of characters allocated by the application where
@@ -236,16 +245,19 @@ long PassThruGetNextDevice(SDEVICE *psDevice) {
  *
  * Return Values:
  *     ERR_CONCURRENT_API_CALL        A J2534 API function has been called before the previous J2534 function call has completed
- *     ERR_DEVICE_NOT_OPEN            PassThruOpen has not successfully been called
- *     ERR_INVALID_DEVICE_ID          PassThruOpen has been successfully called, but the current <DeviceID> is not valid
+ *     ERR_NULL_PARAMETER             NULL pointer supplied where a valid pointer is required
  *     ERR_DEVICE_NOT_CONNECTED       Pass-Thru Device communication error. This indicates that the Pass-Thru Interface DLL has,
- *                                   at some point, failed to communicate with the Pass-Thru Device – even though it may not currently be disconnected.
+ *                                    at some point, failed to communicate with the Pass-Thru Device – even though it may not currently be disconnected.
+ *     ERR_DEVICE_IN_USE              Device is currently open
+ *     ERR_OPEN_FAILED                The specified name is invalid or there is a configuration issue (e.g., firmware/DLL mismatch, using an API
+ *                                    Designation that is not supported, etc.) and the associated device could not be opened.Running the configuration
+ *                                    application (for the PassThru Interface) may help identify the issue.
  *     ERR_FAILED                     Undefined error, use PassThruGetLastError for text description. A fully compliant SAE J2534-1 Pass-Thru Interface
- *                                   shall never return ERR_FAILED.
+ *                                    shall never return ERR_FAILED.
  *     STATUS_NOERROR                 Function call was successful
  */
 long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
-  return 1;
+  return ERR_FAILED;
 }
 
 /**
@@ -283,7 +295,7 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
  * 	 STATUS_NOERROR                 Function call was successful
  */
 long PassThruClose(unsigned long DeviceID) {
-  return 1;
+  return ERR_FAILED;
 }
 
 /**
@@ -313,7 +325,7 @@ long PassThruClose(unsigned long DeviceID) {
  * connector that is already in use, the return value shall be ERR_RESOURCE_CONFLICT. If the designated pin(s) are not
  * valid for the designated <ProtocolID> or the <Connector> is not J1962_CONNECTOR, the return value shall be
  * ERR_PIN_NOT_SUPPORTED. If the number in <NumOfResources> is invalid, the return value shall be
- * ERR_RESOURCE_CONFLICT. If either <pChannelID> or <ResourceStruct. ResourceListPtr> is NULL, the return value
+ * ERR_RESOURCE_CONFLICT. If either <pChannelID> or <ResourceStruct.ResourceListPtr> is NULL, the return value
  * shall be ERR_NULL_PARAMETER. Attempts to use <ProtocolID> values designated as 'reserved' shall result in the
  * return value ERR_PROTOCOL_ID_NOT_SUPPORTED. Attempts to use bits in <Flags> designated as 'reserved' or bits
  * that are not applicable for the <ProtocolID> indicated shall result in the return value ERR_FLAG_NOT_SUPPORTED.
@@ -376,7 +388,7 @@ long PassThruConnect(unsigned long DeviceID, unsigned long ProtocolID, unsigned 
     return ERR_NULL_PARAMETER;
   }
 
-  return STATUS_NOERROR;
+  return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -422,7 +434,7 @@ long PassThruConnect(unsigned long DeviceID, unsigned long ProtocolID, unsigned 
  *   STATUS_NOERROR               Function call was successful
  */
 long PassThruDisconnect(unsigned long ChannelID) {
-  return STATUS_NOERROR;
+  return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -496,7 +508,7 @@ long PassThruDisconnect(unsigned long ChannelID) {
  *   STATUS_NOERROR                  Function call was successful
  */
 long PassThruLogicalConnect(unsigned long PhysicalChannelID, unsigned long ProtocolID, unsigned long flags, void *pChannelDescriptor, unsigned long *pChannelID) {
-	return 1;
+	return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -536,7 +548,7 @@ long PassThruLogicalConnect(unsigned long PhysicalChannelID, unsigned long Proto
  *   STATUS_NOERROR                  Function call was successful
  */
 long PassThruLogicalDisconnect(unsigned long ChannelID) {
-	return 1;
+	return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -624,7 +636,7 @@ long PassThruLogicalDisconnect(unsigned long ChannelID) {
  *   STATUS_NOERROR                 Function call was successful
  */
 long PassThruSelect(SCHANNELSET *ChannelSetPtr, unsigned long SelectType, unsigned long Timeout) {
-	return 1;
+	return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -714,7 +726,7 @@ long PassThruSelect(SCHANNELSET *ChannelSetPtr, unsigned long SelectType, unsign
  *   STATUS_NOERROR                   Function call was successful
  */
 long PassThruReadMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pNumMsgs, unsigned long Timeout) {
-	return 1;
+	return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -750,7 +762,7 @@ long PassThruReadMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long
  * associated message then a TxFailed Indication shall be generated.
  *
  * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
- * <ChannelID> is not is not valid, the return value shall be ERR_INVALID_CHANNEL_ID. If the Pass-Thru Device is not
+ * <ChannelID> is not valid, the return value shall be ERR_INVALID_CHANNEL_ID. If the Pass-Thru Device is not
  * currently connected or was previously disconnected without being closed, the return value shall be
  * ERR_DEVICE_NOT_CONNECTED. If either <pMsg> or <pNumMsgs> are NULL, the return value shall be
  * ERR_NULL_PARAMETER. If the <ProtocolID> in the PASSTHRU_MSG structure (for any message passed into this
@@ -793,7 +805,7 @@ long PassThruReadMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long
  *   STATUS_NOERROR                  Function call was successful
  */
 long PassThruQueueMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pNumMsgs) {
-	return 1;
+	return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -891,7 +903,7 @@ long PassThruQueueMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned lon
  *   STATUS_NOERROR                     Function call was successful
  */
 long PassThruStartPeriodicMsg(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pMsgID, unsigned long TimeInterval) {
-	return 1;
+	return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -929,7 +941,7 @@ long PassThruStartPeriodicMsg(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsig
  *   STATUS_NOERROR                    Function call was successful
  */
 long PassThruStopPeriodicMsg(unsigned long ChannelID, unsigned long MsgID) {
-	return 1;
+	return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -1053,7 +1065,7 @@ long PassThruStopPeriodicMsg(unsigned long ChannelID, unsigned long MsgID) {
  *   STATUS_NOERROR                    Function call was successful
  */
 long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, PASSTHRU_MSG *pMaskMsg, PASSTHRU_MSG *pPatternMsg, unsigned long *pFilterID) {
-	return 1;
+	return ERR_NOT_SUPPORTED;
 }
 
 /**
@@ -1091,8 +1103,8 @@ long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, P
  *   STATUS_NOERROR                    Function call was successful
  */
 long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID) {
-  return 1;
-} 
+  return ERR_NOT_SUPPORTED;
+}
 
 /**
  * 7.3.16 PassThruSetProgrammingVoltage
@@ -1131,7 +1143,7 @@ long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID) {
  * ERR_NULL_PARAMETER.
  *
  * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
- * <DeviceID> is not is not valid, the return value shall be ERR_INVALID_DEVICE_ID. If the Pass-Thru Device is not
+ * <DeviceID> is not valid, the return value shall be ERR_INVALID_DEVICE_ID. If the Pass-Thru Device is not
  * currently connected or was previously disconnected without being closed, the return value shall be
  * ERR_DEVICE_NOT_CONNECTED. If this function call is not supported for this device, then the return value shall be
  * ERR_NOT_SUPPORTED. The return value ERR_FAILED is a mechanism to return other failures, but this is intended for
@@ -1175,7 +1187,7 @@ long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID) {
  *   STATUS_NOERROR                      Function call was successful
  */
  long  PassThruSetProgrammingVoltage(unsigned long DeviceID, RESOURCE_STRUCT ResourceStruct, unsigned long Voltage) {
-  return 1;
+  return ERR_NOT_SUPPORTED;
  }
 
  /**
@@ -1191,7 +1203,7 @@ long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID) {
   * a version string is not available, the first byte shall be set to the NULL terminator by the Pass-Thru Interface.
   *
   * If the corresponding Pass-Thru Device is not currently open, the return value shall be ERR_DEVICE_NOT_OPEN. If
-  * <DeviceID> is not is not valid, the return value shall be ERR_INVALID_DEVICE_ID. If the Pass-Thru Device is not
+  * <DeviceID> is not valid, the return value shall be ERR_INVALID_DEVICE_ID. If the Pass-Thru Device is not
   * currently connected or was previously disconnected without being closed, the return value shall be
   * ERR_DEVICE_NOT_CONNECTED. If <pFirmwareVersion>, <pDllVersion>, or <pApiVersion> are NULL, the return value
   * shall be ERR_NULL_PARAMETER. The return value ERR_FAILED is a mechanism to return other failures, but this is
@@ -1237,7 +1249,12 @@ long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID) {
   *   STATUS_NOERROR                      Function call was successful
   */
 long PassThruReadVersion(unsigned long DeviceID, char *pFirmwareVersion, char *pDllVersion, char *pApiVersion) {
-  return 1;
+  int api_call = 7317;
+  j2534_current_api_call = api_call;
+  *pFirmwareVersion = "0.1.0";
+  *pDllVersion = "0.0.0";
+  *pApiVersion = "0.1.0";
+  return unless_concurrent_call(STATUS_NOERROR, api_call);
 }
 
 /**
@@ -1351,7 +1368,7 @@ long PassThruGetLastError(char *pErrorDescription) {
  *   STATUS_NOERROR                   Function call was successful
  */
 long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *InputPtr, void *OutputPtr) {
-  return 1;
+  return ERR_NOT_SUPPORTED;
 }
 
 // private helpers; not part of j2534 spec

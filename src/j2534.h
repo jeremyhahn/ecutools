@@ -236,10 +236,10 @@ typedef struct {
 } RESOURCE_STRUCT;
 
 typedef struct {
- unsigned long LocalTxFlags;    /* TxFlags for the Local Address */
- unsigned long RemoteTxFlags;   /* TxFlags for the Remote Address */
- char LocalAddress[5];          /* Address for J2534 Device ISO 15765 end point */
- char RemoteAddress[5];         /* Address for remote/vehicle ISO 15765 end point */
+ unsigned long LocalTxFlags;      /* TxFlags for the Local Address */
+ unsigned long RemoteTxFlags;     /* TxFlags for the Remote Address */
+ char LocalAddress[5];            /* Address for J2534 Device ISO 15765 end point */
+ char RemoteAddress[5];           /* Address for remote/vehicle ISO 15765 end point */
 } ISO15765_CHANNEL_DESCRIPTOR;
 
 typedef struct {
@@ -249,18 +249,18 @@ typedef struct {
 } SCHANNELSET;
 
 typedef struct {
-  unsigned long Parameter; /* ID of parameter */
-  unsigned long Value;     /* value of the parameter */
+  unsigned long Parameter;        /* ID of parameter */
+  unsigned long Value;            /* value of the parameter */
 } SCONFIG;
 
 typedef struct {
-  unsigned long NumOfParams;    /* size of SCONFIG array */
-  SCONFIG *ConfigPtr;           /* array of SCONFIG */
+  unsigned long NumOfParams;      /* size of SCONFIG array */
+  SCONFIG *ConfigPtr;             /* array of SCONFIG */
 } SCONFIG_LIST;
 
 typedef struct {
-  unsigned long NumOfBytes; /* number of bytes in the array */
-  unsigned char *BytePtr;   /* array of bytes */
+  unsigned long NumOfBytes;       /* number of bytes in the array */
+  unsigned char *BytePtr;         /* array of bytes */
 } SBYTE_ARRAY;
 
 typedef struct {
@@ -290,8 +290,8 @@ long PassThruQueueMsgs(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned lon
 long PassThruStartPeriodicMsg(unsigned long ChannelID, PASSTHRU_MSG *pMsg, unsigned long *pMsgID, unsigned long TimeInterval);
 long PassThruStopPeriodicMsg(unsigned long ChannelID, unsigned long MsgID);
 long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, PASSTHRU_MSG *pMaskMsg, PASSTHRU_MSG *pPatternMsg, unsigned long *pFilterID);
-long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID);
-long  PassThruSetProgrammingVoltage(unsigned long DeviceID, RESOURCE_STRUCT ResourceStruct, unsigned long Voltage);
+long PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID);
+long PassThruSetProgrammingVoltage(unsigned long DeviceID, RESOURCE_STRUCT ResourceStruct, unsigned long Voltage);
 long PassThruReadVersion(unsigned long DeviceID, char *pFirmwareVersion, char *pDllVersion, char *pApiVersion);
 long PassThruGetLastError(char *pErrorDescription);
 long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *InputPtr, void *OutputPtr);
