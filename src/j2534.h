@@ -296,7 +296,13 @@ long PassThruReadVersion(unsigned long DeviceID, char *pFirmwareVersion, char *p
 long PassThruGetLastError(char *pErrorDescription);
 long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *InputPtr, void *OutputPtr);
 
-// private helpers; not related to j2534 spec
+// private helpers; not part of J2534 API
+typedef struct {
+  char *pName;
+  char *deviceName;
+  unsigned long deviceId;
+} DeviceMap;
+
 unsigned long unless_concurrent_call(unsigned long status, int api_call);
 
 #endif

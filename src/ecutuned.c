@@ -58,7 +58,7 @@ void print_program_header() {
   fprintf(stdout, "*                                                                          *\n");
   fprintf(stdout, "*                                                                          *\n");
   fprintf(stdout, "* IoT Automotive Tuning, Diagnostics & Analytics                           *\n");
-  fprintf(stdout, "* J2534-1 / CAN  / OBD-II / Unified Diagnostic Services                    *\n");
+  fprintf(stdout, "* J2534-1 / CAN / OBD-II / Unified Diagnostic Services                     *\n");
   fprintf(stdout, "* Copyright (c) 2014 Jeremy Hahn                                           *\n");
   fprintf(stdout, "*                                                                          *\n");
   fprintf(stdout, "* ecutools is free software: you can redistribute it and/or modify         *\n");
@@ -77,13 +77,12 @@ void print_program_header() {
   fprintf(stdout, "\n");
 }
 
-/*
 void ecutune_onmessage(iotbridge *bridge, struct can_frame *frame) {
   //char sframe[50];
   //canbus_framecpy(frame, sframe);
   //syslog(LOG_DEBUG, "wcbridge_bridge_onmessage: %s", sframe);
   syslog(LOG_DEBUG, "ecutune_onmessage fired");
-}*/
+}
 
 /*
 void ecutune_bridge_filter1(iotbridge *bridge, struct can_frame *frame) {
@@ -115,11 +114,11 @@ int main(int argc, char **argv) {
   sigaction(SIGINT, &newSigAction, NULL);     /* catch interrupt signal */
 
   setlogmask(LOG_UPTO(LOG_DEBUG)); // LOG_INFO, LOG_DEBUG
-  openlog("ecutune", LOG_CONS | LOG_PERROR, LOG_USER);
+  openlog("ecutuned", LOG_CONS | LOG_PERROR, LOG_USER);
   syslog(LOG_DEBUG, "starting ecutune");
 
   bridge = iotbridge_new();
-  // bridge->onmessage = &ecutune_onmessage;
+  //bridge->onmessage = &ecutune_onmessage;
   //bridge->bridge_filters[0] = &bridge_filter1;
   iotbridge_run(bridge);
   iotbridge_close(bridge, "main: run loop complete");

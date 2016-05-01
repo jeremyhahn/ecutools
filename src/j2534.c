@@ -21,8 +21,11 @@
 static bool j2534_is_connected = false;
 static char j2534_last_error[80] = "";
 static int j2534_current_api_call = 0;
-static unsigned long j2534_device_count = 0;
-static SDEVICE j2534_device_list[50] = {0};
+
+long j2534_device_count = 0;
+SDEVICE j2534_device_list[25] = {0};
+
+//DeviceMap device_map[];
 
 /**
  * 7.3.1 PassThruScanForDevices
@@ -62,13 +65,15 @@ long PassThruScanForDevices(unsigned long *pDeviceCount) {
  
   j2534_current_api_call = 731;
 
+  openlog("ecutools-j2534", LOG_CONS | LOG_PERROR, LOG_USER);
+
   if(pDeviceCount == NULL) {
     return ERR_NULL_PARAMETER;
   }
 
   char *response = apigateway_get("/j2534/passthruscanfordevices");
 
-  printf(response);
+  syslog(LOG_DEBUG, "PassThruScanForDevices: response=%s", response);
 
   json_t *root;
   json_error_t error;
@@ -94,7 +99,7 @@ long PassThruScanForDevices(unsigned long *pDeviceCount) {
 	  return ERR_FAILED;
   }
 
-  j2534_device_count = json_array_size(things);
+  j2534_device_count = (unsigned long) json_array_size(things);
 
   int i;
   for(i=0; i<j2534_device_count; i++) {
@@ -112,7 +117,7 @@ long PassThruScanForDevices(unsigned long *pDeviceCount) {
       strcpy(j2534_last_error, "thingName is not a string");
       json_decref(root);
       return ERR_FAILED;
-	}
+    }
 
     const char *sThingName = json_string_value(thingName);
 
@@ -121,18 +126,18 @@ long PassThruScanForDevices(unsigned long *pDeviceCount) {
       return ERR_FAILED;
     }
 
-    SDEVICE sdevice;
-    strcpy(sdevice.DeviceName, sThingName);
-    sdevice.DeviceDLLFWStatus = DEVICE_DLL_FW_COMPATIBLE;
-    sdevice.DeviceConnectMedia = DEVICE_CONN_WIRELESS;
-    sdevice.DeviceConnectSpeed = 100000;
-    sdevice.DeviceSignalQuality = 100;
-    sdevice.DeviceSignalStrength = 100;
-
-    j2534_device_list[i] = sdevice;
+    strcpy(j2534_device_list[i].DeviceName, sThingName);
+    j2534_device_list[i].DeviceDLLFWStatus = DEVICE_DLL_FW_COMPATIBLE;
+    j2534_device_list[i].DeviceConnectMedia = DEVICE_CONN_WIRELESS;
+    j2534_device_list[i].DeviceConnectSpeed = 100000;
+    j2534_device_list[i].DeviceSignalQuality = 100;
+    j2534_device_list[i].DeviceSignalStrength = 100;
   }
 
   *pDeviceCount = j2534_device_count;
+
+  syslog(LOG_DEBUG, "PassThruScanForDevices: pDeviceCount=%d", (*pDeviceCount));
+  syslog(LOG_DEBUG, "PassThruScanForDevices: j2534_device_list[0].DeviceName=%s", j2534_device_list[0].DeviceName);
 
   return unless_concurrent_call(STATUS_NOERROR, 731);
 }
@@ -183,19 +188,19 @@ long PassThruGetNextDevice(SDEVICE *psDevice) {
   int api_call = 732;
   j2534_current_api_call = api_call;
   if(psDevice == NULL) {
-    return ERR_NULL_PARAMETER;
+    return unless_concurrent_call(ERR_NULL_PARAMETER, api_call);
   }
   if(j2534_device_count == 0) {
-    return ERR_BUFFER_EMPTY;
+    return unless_concurrent_call(ERR_BUFFER_EMPTY, api_call);
   }
   int i;
   for(i=0; i<j2534_device_count; i++) {
-    if(j2534_device_list[i].DeviceName == *psDevice->DeviceName) {
-      *psDevice = j2534_device_list[i];
+    if(strcmp(j2534_device_list[i].DeviceName, psDevice->DeviceName)) {
+      if(i == j2534_device_count) {
+        return unless_concurrent_call(ERR_EXCEEDED_LIMIT, api_call);
+      }
+      *psDevice = j2534_device_list[i+1];
       return unless_concurrent_call(STATUS_NOERROR, api_call);
-    }
-    if(i == j2534_device_count) {
-      return unless_concurrent_call(ERR_EXCEEDED_LIMIT, api_call);
     }
   }
   return unless_concurrent_call(ERR_BUFFER_EMPTY, api_call);
@@ -259,7 +264,24 @@ long PassThruGetNextDevice(SDEVICE *psDevice) {
  *     STATUS_NOERROR                 Function call was successful
  */
 long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
-  return ERR_FAILED;
+
+  openlog("ecutools-j2534", LOG_CONS | LOG_PERROR, LOG_USER);
+  syslog(LOG_DEBUG, "PassThruOpen: j2534_device_count=%d, pName=%s, pDeviceId=%d", j2534_device_count, pName, pDeviceID);
+
+  int i;
+  for(i=0; i<j2534_device_count; i++) {
+
+    syslog(LOG_DEBUG, "PassThruOpen: inspecting device %s", pName);
+    if(strcmp(j2534_device_list[i].DeviceName, pName) == 0) {
+
+      syslog(LOG_DEBUG, "PassThruOpen: Found device %s", pName);
+      return STATUS_NOERROR;
+    }
+
+  }
+
+  closelog();
+  return ERR_OPEN_FAILED;
 }
 
 /**

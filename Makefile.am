@@ -65,17 +65,16 @@ SRC_FILES += $(ECUTOOLS_SRC_FILES)
 COMPILER_FLAGS = -g3
 
 # ecutools
-LD_FLAG += -lm -lpthread -lssl -lcurl -ljansson
+LD_FLAG += -lpthread -lssl -lcurl -ljansson
 
 AM_CFLAGS = -DUSESSL -DTHREADED $(INCLUDE_ALL_DIRS) $(COMPILER_FLAGS)
 AM_LDFLAGS = $(LD_FLAG) $(EXTERNAL_LIBS)
 
 include_HEADERS = src/j2534.h
 
-# J2534 .so
 lib_LTLIBRARIES = libj2534.la
 libj2534_la_SOURCES = src/j2534.c src/apigateway.c
-libj2534_la_LDFLAGS = -version-info 0:0:0 -shared -module $(LD_FLAG)
+libj2534_la_LDFLAGS = $(LD_FLAG) -version-info 0:0:0 -shared
 
 bin_PROGRAMS = ecutuned
 ecutuned_SOURCES = $(SRC_FILES) src/ecutuned.c
@@ -85,8 +84,7 @@ ecutuned_LDFLAGS = $(LD_FLAG) $(EXTERNAL_LIBS)
 TESTS = check_j2534
 check_PROGRAMS = check_j2534
 check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
-check_j2534_LDFLAGS = -lm -lcheck -lrt -lpthread
-check_j2534_LDADD = libj2534.la
+check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
 
 clean:
-	rm -rf compile config.h.in config.h config.cache configure install-sh aclocal.m4 autom4te.cache/ config.log config.status Debug/ depcomp .deps/ m4/ Makefile Makefile.in missing stamp-h1 *.o src/*.o src/.deps/ src/.dirstamp config.guess config.sub .libs libj2534.* libtool ar-lib *.lo *~ ltmain.sh ecutuned check_j2534* test-driver test-suite.log COPYING INSTALL
+	rm -rf compile config.h.in config.h config.cache configure install-sh aclocal.m4 autom4te.cache/ config.log config.status Debug/ depcomp .deps/ m4/ Makefile Makefile.in missing stamp-h1 *.o src/*.o src/.deps/ src/.dirstamp config.guess config.sub .libs libj2534.* libtool ar-lib *.lo *~ ltmain.sh ecutuned check_j2534* test-driver test-suite.log COPYING INSTALL /usr/local/lib/libj2534.*
