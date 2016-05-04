@@ -3,12 +3,12 @@ ACLOCAL_AMFLAGS = -I m4
 APP_DIR = src
 APP_INCLUDE_DIRS = -I$(top_srcdir)/include -I$(APP_DIR)
 
-ECUTOOLS_SRC_FILES = src/canbus.c src/awsiot_client.c src/canbus_iotbridge.c src/apigateway.c
+ECUTOOLS_SRC_FILES = src/canbus.c src/canbus_logger.c src/canbus_filelogger.c src/canbus_log.c src/apigateway.c src/passthru_shadow.c src/passthru_iotbridge.c
 ECUTOOLS_TEST_FILES = tests/check_j2534.c
 
 # AWS IoT client directory
 IOT_CLIENT_DIR = src/aws_iot_src
-IOT_INCLUDE_DIRS =
+IOT_INCLUDE_DIRS =  -I $(IOT_CLIENT_DIR)/shadow
 IOT_INCLUDE_DIRS += -I $(IOT_CLIENT_DIR)/protocol/mqtt
 IOT_INCLUDE_DIRS += -I $(IOT_CLIENT_DIR)/protocol/mqtt/aws_iot_embedded_client_wrapper
 IOT_INCLUDE_DIRS += -I $(IOT_CLIENT_DIR)/protocol/mqtt/aws_iot_embedded_client_wrapper/platform_linux
@@ -18,7 +18,9 @@ IOT_INCLUDE_DIRS += -I $(IOT_CLIENT_DIR)/utils
 
 PLATFORM_DIR = $(IOT_CLIENT_DIR)/protocol/mqtt/aws_iot_embedded_client_wrapper/platform_linux/openssl
 PLATFORM_COMMON_DIR = $(IOT_CLIENT_DIR)/protocol/mqtt/aws_iot_embedded_client_wrapper/platform_linux/common
-IOT_SRC_FILES =
+
+IOT_SRC_FILES =  $(IOT_CLIENT_DIR)/utils/jsmn.c $(IOT_CLIENT_DIR)/utils/aws_iot_json_utils.c
+IOT_SRC_FILES += $(IOT_CLIENT_DIR)/shadow/aws_iot_shadow.c $(IOT_CLIENT_DIR)/shadow/aws_iot_shadow_actions.c $(IOT_CLIENT_DIR)/shadow/aws_iot_shadow_json.c $(IOT_CLIENT_DIR)/shadow/aws_iot_shadow_records.c
 IOT_SRC_FILES += $(IOT_CLIENT_DIR)/protocol/mqtt/aws_iot_embedded_client_wrapper/aws_iot_mqtt_embedded_client_wrapper.c
 IOT_SRC_FILES += $(PLATFORM_DIR)/network_openssl_wrapper.c $(PLATFORM_DIR)/openssl_hostname_validation.c $(PLATFORM_DIR)/hostname_compare.c $(PLATFORM_DIR)/rawstr.c
 IOT_SRC_FILES += $(PLATFORM_COMMON_DIR)/timer.c

@@ -16,14 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "canbus_iotbridge.h"
-
-const char *IOTBRIDGE_CANBUS_TOPIC = "ecutools/canbus";
-
-void iotbridge_awsiot_onopen(awsiot_client *awsiot) {
-  syslog(LOG_DEBUG, "iotbridge_awsiot_onopen");
-}
-
+#include "passthru_iotbridge.h"
+/*
 int iotbridge_awsiot_onmessage(MQTTCallbackParams params) {
 
   uint32_t payload_len = params.MessageParams.PayloadLen;
@@ -81,7 +75,7 @@ int iotbridge_awsiot_onmessage(MQTTCallbackParams params) {
 
     if(strstr(payload, "#") == NULL) {
       syslog(LOG_ERR, "iotbridge_awsiot_onmessage: dropping invalid CAN payload: %s", payload);
-	  return 0;
+	    return 0;
     }
 
     char *can_id = strsep(&payload, "#");
@@ -98,13 +92,12 @@ int iotbridge_awsiot_onmessage(MQTTCallbackParams params) {
 	    can_message += 2 * sizeof(char);
     }
 
-    /*
-	int i;
-	for(i=0; i<sizeof(bridge->filters); i++) {
-	  if(bridge->filters[i] != NULL) {
-        iotbridge_process_filter(bridge, frame);
-      }
-	}*/
+    //int i;
+    //for(i=0; i<sizeof(bridge->filters); i++) {
+      //if(bridge->filters[i] != NULL) {
+         //iotbridge_process_filter(bridge, frame);
+      //}
+    //}
 
     if(canbus_write(bridge->canbus, frame) == -1) {
       syslog(LOG_ERR, "iotbridge_awsiot_onmessage: unable to write frame to CAN bus. error: %s", strerror(errno));
@@ -113,122 +106,83 @@ int iotbridge_awsiot_onmessage(MQTTCallbackParams params) {
 	free(frame);
 	return 0;
   }
+}*/
 
+void iotbridge_shadow_onopen(passthru_shadow *shadow) {
+  syslog(LOG_DEBUG, "iotbridge_shadow_onopen");
 }
 
-void iotbridge_awsiot_onclose(awsiot_client *awsiot) {
-  syslog(LOG_DEBUG, "iotbridge_awsiot_onclose: connection closed");
+void iotbridge_shadow_onerror(passthru_shadow *shadow, const char *message) {
+  syslog(LOG_DEBUG, "iotbridge_shadow_onerror: message=%s", message);
 }
 
-void iotbridge_awsiot_ondisconnect(void) {
-  syslog(LOG_DEBUG, "iotbridge_awsiot_ondisconnect: MQTT Disconnect");
-  if(aws_iot_is_autoreconnect_enabled()){
-    syslog(LOG_DEBUG, "Auto Reconnect is enabled, Reconnecting attempt will start now");
-  }
-  else {
-    syslog(LOG_DEBUG, "Auto Reconnect not enabled. Starting manual reconnect...");
-    IoT_Error_t rc = aws_iot_mqtt_attempt_reconnect();
-    if(RECONNECT_SUCCESSFUL == rc){
-      syslog(LOG_DEBUG, "Manual reconnect successful");
-    }
-    else {
-      syslog(LOG_ERR, "Manual reconnect failed. IoT_Error_t: %d", rc);
-    }
+void iotbridge_shadow_onget(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t) {
+  syslog(LOG_DEBUG, "iotbridge_shadow_onget: message=%s", pJsonValueBuffer);
+}
+
+void iotbridge_shadow_ondelta(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t) {
+  syslog(LOG_DEBUG, "iotbridge_shadow_ondelta pJsonValueBuffer=%.*s", valueLength, pJsonValueBuffer);
+  if(passthru_shadow_build_report_json(DELTA_REPORT, SHADOW_MAX_SIZE_OF_RX_BUFFER, pJsonValueBuffer, valueLength)) {
+    messageArrivedOnDelta = true;
   }
 }
 
-void iotbridge_awsiot_onerror(IoT_Error_t *awsiot, const char *message) {
-  syslog(LOG_DEBUG, "iotbridge_awsiot_onerror: message=%s", message);
+void iotbridge_shadow_onupdate(const char *pThingName, ShadowActions_t action, Shadow_Ack_Status_t status,
+    const char *pReceivedJsonDocument, void *pContextData) {
+
+  if (status == SHADOW_ACK_TIMEOUT) {
+    syslog(LOG_DEBUG, "Update Timeout--");
+  }
+  else if(status == SHADOW_ACK_REJECTED) {
+    syslog(LOG_DEBUG, "Update Rejected");
+  }
+  else if(status == SHADOW_ACK_ACCEPTED) {
+    syslog(LOG_DEBUG, "Update Accepted !!");
+  }
 }
 
-void *iotbridge_awsiot_canbus_subscribe_thread(void *ptr) {
+void *iotbridge_shadow_yield_thread(void *ptr) {
 
-  syslog(LOG_DEBUG, "iotbridge_awsiot_subscribe_thread: started");
+  syslog(LOG_DEBUG, "iotbridge_shadow_yield_thread: started");
   iotbridge *bridge = (iotbridge *)ptr;
-  awsiot_client_subscribe(bridge->awsiot, IOTBRIDGE_CANBUS_TOPIC);
 
   while(1) {
-	bridge->awsiot->rc = aws_iot_mqtt_yield(100);
-	if(NETWORK_ATTEMPTING_RECONNECT == bridge->awsiot->rc) {
-	  syslog(LOG_DEBUG, "Attempting to reconnect to AWS IoT service");
-	  sleep(1);
-	  continue;
-    }
-	sleep(1);
-  }
-
-  syslog(LOG_DEBUG, "iotbridge_awsiot_canbus_subscribe_thread: stopping");
-  return NULL;
-}
-
-void *iotbridge_awsiot_canbus_publish_thread(void *ptr) {
-  syslog(LOG_DEBUG, "iotbridge_awsiot_publish_thread: started");
-  iotbridge_publish_thread_args *args = (iotbridge_publish_thread_args *)ptr;
-  awsiot_client_publish(args->awsiot, IOTBRIDGE_CANBUS_TOPIC, args->payload);
-  syslog(LOG_DEBUG, "iotbridge_awsiot_canbus_publish_thread: stopping");
-  free(ptr);
-  return NULL;
-}
-
-void *iotbridge_canbus_logger_thread(void *ptr) {
-
-  syslog(LOG_DEBUG, "iotbridge_canbus_logger_thread: running");
-
-  iotbridge *bridge = (iotbridge *)ptr;
-
-  int can_frame_len = sizeof(struct can_frame);
-  struct can_frame frame;
-  memset(&frame, 0, can_frame_len);
-
-  int data_len = can_frame_len + 25;
-  char data[data_len];
-  memset(data, 0, data_len);
-
-  while(!awsiot_client_isconnected()) {
-	syslog(LOG_DEBUG, "iotbridge_canbus_logger_thread: waiting for connection to AWS IoT service");
-	sleep(1);
-  }
-
-  while(awsiot_client_isconnected() &&
-    (bridge->canbus->state & CANBUS_STATE_CONNECTED) &&
-    canbus_read(bridge->canbus, &frame) > 0) {
-
-    memset(data, 0, data_len);
-    canbus_framecpy(&frame, data);
-
-    if(frame.can_id & CAN_ERR_FLAG) {
-      syslog(LOG_ERR, "iotbridge_canbus_logger_thread: CAN ERROR: %s", data);
+    bridge->shadow->rc = aws_iot_shadow_yield(bridge->shadow->mqttClient, 1000);
+    if(NETWORK_ATTEMPTING_RECONNECT == bridge->shadow->rc) {
+      syslog(LOG_DEBUG, "Attempting to reconnect to AWS IoT shadow service");
+      sleep(1);
       continue;
     }
 
-    iotbridge_publish_thread_args *args = malloc(sizeof(iotbridge_publish_thread_args));
-    memset(args, 0, sizeof(iotbridge_publish_thread_args));
-    args->awsiot = bridge->awsiot;
-    args->payload = data;
-
-    if(pthread_create(&bridge->awsiot->publish_thread, NULL, iotbridge_awsiot_canbus_publish_thread, (void *)args) == -1) {
-      syslog(LOG_ERR, "cwebsocket_read_data: %s", strerror(errno));
-      return -1;
+    if(messageArrivedOnDelta) {
+      syslog(LOG_DEBUG, "Sending delta message back. message=%s\n", DELTA_REPORT);
+      bridge->shadow->rc = aws_iot_shadow_update(bridge->shadow->mqttClient, AWS_IOT_MY_THING_NAME, DELTA_REPORT, bridge->shadow->onupdate, NULL, 2, true);
+      messageArrivedOnDelta = false;
     }
 
+    syslog(LOG_DEBUG, "iotbridge_shadow_yield_thread: waiting for delta");
+    sleep(1);
   }
 
-  syslog(LOG_DEBUG, "iotbridge_canbus_logger_thread: stopping");
+  syslog(LOG_DEBUG, "iotbridge_shadow_yield_thread: stopping");
   return NULL;
+
 }
 
 iotbridge *iotbridge_new() {
   iotbridge *bridge = malloc(sizeof(iotbridge));
   memset(bridge, 0, sizeof(iotbridge));
+
   bridge->canbus = malloc(sizeof(canbus_client));
   memset(bridge->canbus, 0, sizeof(canbus_client));
-  bridge->awsiot = malloc(sizeof(awsiot_client));
-  memset(bridge->awsiot, 0, sizeof(awsiot_client));
-  bridge->awsiot->onopen = &iotbridge_awsiot_onopen;
-  bridge->awsiot->onmessage = &iotbridge_awsiot_onmessage;
-  bridge->awsiot->ondisconnect = &iotbridge_awsiot_ondisconnect;
-  bridge->awsiot->onclose = &iotbridge_awsiot_onclose;
-  bridge->awsiot->onerror = &iotbridge_awsiot_onerror;
+
+  bridge->shadow = malloc(sizeof(passthru_shadow));
+  memset(bridge->shadow, 0, sizeof(passthru_shadow));
+  bridge->shadow->onerror = &iotbridge_shadow_onerror;
+  bridge->shadow->onopen = &iotbridge_shadow_onopen;
+  bridge->shadow->ondelta = &iotbridge_shadow_ondelta;
+  bridge->shadow->onupdate = &iotbridge_shadow_onupdate;
+
   return bridge;
 }
 
@@ -236,15 +190,15 @@ int iotbridge_run(iotbridge *bridge) {
   canbus_connect(bridge->canbus);
   if(!canbus_isconnected(bridge->canbus)) {
     syslog(LOG_CRIT, "iotbridge_run: unable to connect to CAN");
-    return -1;
+    return 1;
   }
-  awsiot_client_connect(bridge->awsiot);
-  if(bridge->awsiot->rc != NONE_ERROR) {
-    syslog(LOG_CRIT, "iotbridge_run: unable to connect to AWS IoT service");
-    return -1;
+  passthru_shadow_connect(bridge->shadow);
+  if(bridge->shadow->rc != NONE_ERROR) {
+    syslog(LOG_CRIT, "iotbridge_run: unable to connect to AWS IoT shadow service");
+    return 3;
   }
-  pthread_create(&bridge->awsiot->subscribe_thread, NULL, iotbridge_awsiot_canbus_subscribe_thread, (void *)bridge);
-  pthread_join(bridge->awsiot->subscribe_thread, NULL);
+  pthread_create(&bridge->shadow->yield_thread, NULL, iotbridge_shadow_yield_thread, (void *)bridge);
+  pthread_join(bridge->shadow->yield_thread, NULL);
   syslog(LOG_DEBUG, "iotbridge_run: bridge closed");
   return 0;
 }
@@ -257,12 +211,12 @@ void iotbridge_process_filter(iotbridge *bridge, struct can_frame *frame) {
 void iotbridge_close(iotbridge *bridge, const char *message) {
   syslog(LOG_DEBUG, "iotbridge_close: closing bridge");
   canbus_close(bridge->canbus);
-  awsiot_client_close(bridge->awsiot, IOTBRIDGE_CANBUS_TOPIC, message);
+  passthru_shadow_disconnect(bridge->shadow);
   iotbridge_destroy(bridge);
   syslog(LOG_DEBUG, "iotbridge_close: bridge closed");
 }
 
 void iotbridge_destroy(iotbridge *bridge) {
-  free(bridge->awsiot);
+  free(bridge->shadow);
   free(bridge->canbus);
 }

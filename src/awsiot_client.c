@@ -60,12 +60,14 @@ void awsiot_client_connect(awsiot_client *awsiot) {
   if(awsiot->rc != NONE_ERROR) {
     sprintf(errmsg, "Error(%d) connecting to %s:%d", awsiot->rc, connectParams.pHostURL, connectParams.port);
     awsiot->onerror(awsiot, errmsg);
+    return NULL;
   }
 
   awsiot->rc = aws_iot_mqtt_autoreconnect_set_status(true);
   if(NONE_ERROR != awsiot->rc) {
     sprintf(errmsg, "Unable to set Auto Reconnect to true. IoT_Error_t=%d", awsiot->rc);
     awsiot->onerror(awsiot, errmsg);
+    return NULL;
   }
 
   awsiot->onopen(awsiot);
@@ -90,6 +92,7 @@ void awsiot_client_subscribe(awsiot_client *awsiot, const char *topic) {
       char errmsg[255];
       sprintf(errmsg, "awsiot_client_subscribe: error subscribing to topic %s. IoT_Error_t: %d", subParams.pTopic, awsiot->rc);
       awsiot->onerror(awsiot, errmsg);
+      return NULL;
     }
   }
 }
@@ -114,6 +117,7 @@ void awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char 
       char errmsg[255];
       sprintf(errmsg, "awsiot_client_publish: error publishing to topic %s. IoT_Error_t: %d", Params.pTopic, awsiot->rc);
       awsiot->onerror(awsiot, errmsg);
+      return NULL;
     }
   }
 

@@ -16,12 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "canbus_iotbridge.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <syslog.h>
 #include <string.h>
+#include "passthru_iotbridge.h"
 
 int main_exit(int exit_status) {
   syslog(LOG_DEBUG, "exiting ecutune");

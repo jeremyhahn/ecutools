@@ -4,6 +4,7 @@
 #include "j2534.h"
 
 extern SDEVICE j2534_device_list[25];
+extern SDEVICE *j2534_device_selected;
 
 START_TEST(test_j2534_PassThruScanForDevices)
 {
@@ -15,6 +16,8 @@ START_TEST(test_j2534_PassThruScanForDevices)
     PassThruGetLastError(&errmsg);
     printf("PassThruGetLastError: %s", errmsg);
   }
+
+syslog(LOG_DEBUG, "j2534_device_selected: %s", j2534_device_selected);
 
   ck_assert_int_eq(pDeviceCount, 1);
 }
@@ -41,7 +44,6 @@ START_TEST(test_j2534_PassThruOpen)
   }
 
   ck_assert_int_eq(pDeviceId, 1);
-  syslog(LOG_DEBUG, "device name: %s", j2534_device_list[0].DeviceName);
 }
 END_TEST
 

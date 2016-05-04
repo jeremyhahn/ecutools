@@ -66,7 +66,6 @@
 //Reserved for SAE J2534-1               0x00000027 - 0x00007FFF
 //Reserved for SAE                       0x00008000 - 0xFFFFFFFF
 
-
 // Values for <DeviceAvailable>
 #define DEVICE_STATE_UNKNOWN  0x00
 #define DEVICE_AVAILABLE      0x01
