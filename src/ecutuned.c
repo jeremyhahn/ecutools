@@ -21,7 +21,9 @@
 #include <signal.h>
 #include <syslog.h>
 #include <string.h>
-#include "passthru_iotbridge.h"
+#include "passthru_thing.h"
+
+passthru_thing *thing;
 
 int main_exit(int exit_status) {
   syslog(LOG_DEBUG, "exiting ecutune");
@@ -36,11 +38,12 @@ void signal_handler(int sig) {
 	  // Reload config and reopen files
 	  break;
 	case SIGINT:
+    if(thing != NULL) {
+      passthru_thing_close(thing);
+    }
 	case SIGTERM:
 	  syslog(LOG_DEBUG, "SIGINT/SIGTERM");
-	  //wcbridge_close(bridge, "SIGINT/SIGTERM");
-	  main_exit(EXIT_SUCCESS);
-	  exit(0);
+	  //passthru_thing_close(thing);
 	default:
 	  syslog(LOG_WARNING, "Unhandled signal %s\n", strsignal(sig));
 	  break;
@@ -77,18 +80,6 @@ void print_program_header() {
   fprintf(stdout, "\n");
 }
 
-void ecutune_onmessage(iotbridge *bridge, struct can_frame *frame) {
-  //char sframe[50];
-  //canbus_framecpy(frame, sframe);
-  //syslog(LOG_DEBUG, "wcbridge_bridge_onmessage: %s", sframe);
-  syslog(LOG_DEBUG, "ecutune_onmessage fired");
-}
-
-/*
-void ecutune_bridge_filter1(iotbridge *bridge, struct can_frame *frame) {
-  //bridge->canbus_thread->canbus_print_frame(frame);
-}*/
-
 int main(int argc, char **argv) {
 
   print_program_header();
@@ -96,33 +87,29 @@ int main(int argc, char **argv) {
   struct sigaction newSigAction;
   sigset_t newSigSet;
 
-  // Set signal mask - signals to block
   sigemptyset(&newSigSet);
-  sigaddset(&newSigSet, SIGCHLD);  			/* ignore child - i.e. we don't need to wait for it */
-  sigaddset(&newSigSet, SIGTSTP);  			/* ignore Tty stop signals */
-  sigaddset(&newSigSet, SIGTTOU);  			/* ignore Tty background writes */
-  sigaddset(&newSigSet, SIGTTIN);  			/* ignore Tty background reads */
-  sigprocmask(SIG_BLOCK, &newSigSet, NULL);   /* Block the above specified signals */
+  sigaddset(&newSigSet, SIGCHLD);
+  sigaddset(&newSigSet, SIGTSTP);
+  sigaddset(&newSigSet, SIGTTOU);
+  sigaddset(&newSigSet, SIGTTIN);
+  sigprocmask(SIG_BLOCK, &newSigSet, NULL);
 
-  // Set up a signal handler
   newSigAction.sa_handler = signal_handler;
   sigemptyset(&newSigAction.sa_mask);
   newSigAction.sa_flags = 0;
 
-  sigaction(SIGHUP, &newSigAction, NULL);     /* catch hangup signal */
-  sigaction(SIGTERM, &newSigAction, NULL);    /* catch term signal */
-  sigaction(SIGINT, &newSigAction, NULL);     /* catch interrupt signal */
+  sigaction(SIGHUP, &newSigAction, NULL);
+  sigaction(SIGTERM, &newSigAction, NULL);
+  sigaction(SIGINT, &newSigAction, NULL);
 
-  setlogmask(LOG_UPTO(LOG_DEBUG)); // LOG_INFO, LOG_DEBUG
+  setlogmask(LOG_UPTO(LOG_DEBUG));
   openlog("ecutuned", LOG_CONS | LOG_PERROR, LOG_USER);
   syslog(LOG_DEBUG, "starting ecutune");
 
-  bridge = iotbridge_new();
-  //bridge->onmessage = &ecutune_onmessage;
-  //bridge->bridge_filters[0] = &bridge_filter1;
-  iotbridge_run(bridge);
-  iotbridge_close(bridge, "main: run loop complete");
-  free(bridge);
+  thing = passthru_thing_new();
+  passthru_thing_run(thing);
+  passthru_thing_close(thing);
+  passthru_thing_destroy(thing);
 
   return main_exit(EXIT_SUCCESS);
 }

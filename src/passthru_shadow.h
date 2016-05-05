@@ -41,7 +41,6 @@ typedef struct _passthru_shadow {
   void (*onupdate)(const char *pThingName, ShadowActions_t action, Shadow_Ack_Status_t status, const char *pReceivedJsonDocument, void *pContextData);
   void (*onget)(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t);
   void (*ondisconnect)(void);
-  void (*onclose)(struct _passthru_shadow *, const char *message);
   void (*onerror)(struct _passthru_shadow *, const char *message);
 } passthru_shadow;
 
@@ -51,17 +50,5 @@ void passthru_shadow_report_delta(passthru_shadow *shadow);
 void passthru_shadow_get(passthru_shadow *shadow);
 void passthru_shadow_update(passthru_shadow *shadow, char *message);
 void passthru_shadow_disconnect(passthru_shadow *shadow);
-
-/*
-void passthru_shadow_update_accepted(passthru_shadow *shadow);
-void passthru_shadow_update_rejected(passthru_shadow *shadow);
-void passthru_shadow_update_delta(passthru_shadow *shadow);
-
-void passthru_shadow_get(passthru_shadow *shadow);
-void passthru_shadow_get_accepted(passthru_shadow *shadow);
-void passthru_shadow_get_rejected(passthru_shadow *shadow);
-
-void passthru_shadow_delete(passthru_shadow *shadow);
-*/
 
 #endif

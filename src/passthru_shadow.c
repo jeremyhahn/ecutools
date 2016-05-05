@@ -37,6 +37,11 @@ void passthru_shadow_connect(passthru_shadow *shadow) {
   sp.pClientKey = clientKey;
   sp.pRootCA = rootCA;
 
+  MQTTwillOptions lwt;
+  lwt.pTopicName = "ecutools/lwt";
+  lwt.pMessage = "\{connected\": \"false\"}";
+  lwt.qos = QOS_1;
+
   shadow->rc = aws_iot_shadow_init(shadow->mqttClient);
   if(shadow->rc != NONE_ERROR) {
     sprintf(errmsg, "aws_iot_shadow_init error rc=%d", shadow->rc);
@@ -95,7 +100,7 @@ void passthru_shadow_get(passthru_shadow *shadow) {
 }
 
 void passthru_shadow_update(passthru_shadow *shadow, char *message) {
-  syslog(LOG_DEBUG, "passthru_shadow_update: %s", DELTA_REPORT);
+  syslog(LOG_DEBUG, "passthru_shadow_update: %s", message);
   shadow->rc = aws_iot_shadow_update(shadow->mqttClient, AWS_IOT_MY_THING_NAME, message, shadow->onupdate, NULL, 2, true);
   if(shadow->rc != NONE_ERROR) {
     char errmsg[255];
@@ -105,6 +110,7 @@ void passthru_shadow_update(passthru_shadow *shadow, char *message) {
 }
 
 void passthru_shadow_disconnect(passthru_shadow *shadow) {
+  syslog(LOG_DEBUG, "passthru_shadow_disconnect");
   shadow->rc = aws_iot_shadow_disconnect(shadow->mqttClient);
   if(shadow->rc != NONE_ERROR) {
     char errmsg[255];
@@ -113,7 +119,7 @@ void passthru_shadow_disconnect(passthru_shadow *shadow) {
   }
 }
 
-bool passthru_shadow_build_report_json(char *pJsonDocument, size_t maxSizeOfJsonDocument, const char *pReceivedDeltaData, uint32_t lengthDelta) {
+bool passthru_shadow_build_report_json(char *pJsonDocument, size_t maxSizeOfJsonDocument, const char *pData, uint32_t pDataLen) {
 
   int32_t ret;
 
@@ -127,7 +133,7 @@ bool passthru_shadow_build_report_json(char *pJsonDocument, size_t maxSizeOfJson
     return false;
   }
 
-  ret = snprintf(pJsonDocument, maxSizeOfJsonDocument, "{\"state\":{\"reported\":%.*s}, \"clientToken\":\"%s\"}", lengthDelta, pReceivedDeltaData, tempClientTokenBuffer);
+  ret = snprintf(pJsonDocument, maxSizeOfJsonDocument, "{\"state\":{\"reported\":%.*s}, \"clientToken\":\"%s\"}", pDataLen, pData, tempClientTokenBuffer);
 
   if (ret >= maxSizeOfJsonDocument || ret < 0) {
     return false;

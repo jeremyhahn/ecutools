@@ -23,11 +23,11 @@
 #include <pthread.h>
 #include "canbus.h"
 
-typedef struct _logger {
+typedef struct {
   uint8_t canbus_flags;
   pthread_t canbus_thread;
   struct canbus_filter *filters[10];
   canbus_client *canbus;
-} logger;
+} canbus_logger;
 
 #endif

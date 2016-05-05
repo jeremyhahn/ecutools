@@ -24,7 +24,7 @@ void *canbus_filelogger_thread(void *ptr) {
 
   canbus_log_open();
 
-  logger *pLogger = (logger *)ptr;
+  canbus_logger *pLogger = (canbus_logger *)ptr;
 
   int can_frame_len = sizeof(struct can_frame);
   struct can_frame frame;
@@ -53,7 +53,7 @@ void *canbus_filelogger_thread(void *ptr) {
   return NULL;
 }
 
-unsigned int canbus_filelogger_run(logger *logger) {
+unsigned int canbus_filelogger_run(canbus_logger *logger) {
   canbus_connect(logger->canbus);
   if(!canbus_isconnected(logger->canbus)) {
     syslog(LOG_CRIT, "canbus_filelogger_run: unable to connect to CAN");
@@ -65,6 +65,6 @@ unsigned int canbus_filelogger_run(logger *logger) {
   return 0;
 }
 
-unsigned int canbus_filelogger_cancel(logger *logger) {
+unsigned int canbus_filelogger_cancel(canbus_logger *logger) {
   return pthread_cancel(logger->canbus_thread);
 }

@@ -21,7 +21,7 @@
 
 #include "canbus_logger_interface.h"
 
-unsigned int canbus_filelogger_run(logger *logger);
-unsigned int canbus_filelogger_cancel(logger *logger);
+unsigned int canbus_filelogger_run(canbus_logger *logger);
+unsigned int canbus_filelogger_cancel(canbus_logger *logger);
 
  #endif

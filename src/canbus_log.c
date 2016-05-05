@@ -18,8 +18,6 @@
 
 #include "canbus_log.h"
 
-//FILE *canbus_log;
-
 char* canbus_log_datestamp() {
   char buf[1000];
   time_t now = time(0);
