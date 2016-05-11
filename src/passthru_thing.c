@@ -34,17 +34,20 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
 
   syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: pThingName=%s, pReceivedJsonDocument=%s, pContextData=%s", pThingName, pReceivedJsonDocument, (char *) pContextData);
 
-  if(strncmp(pThingName, AWS_IOT_MY_THING_NAME, strlen(AWS_IOT_MY_THING_NAME)) == 0) {
+  if(strncmp(pThingName, AWS_IOT_MY_THING_NAME, strlen(AWS_IOT_MY_THING_NAME)) == 0) { // Receiving message that was sent by this device
     
-    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: processing message that I sent");
-
     shadow_message *message = passthru_shadow_parser_parse(pReceivedJsonDocument);
+
+    // report: connected
     if(message && message->state && message->state->reported && message->state->reported->connected) {
-      if(strncmp(message->state->reported->connected, "false", strlen("false"))) {
-        syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: TODO: DISCONNECT");  
+      syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: connected=%s", message->state->reported->connected);
+      if(strncmp(message->state->reported->connected, "false", strlen("false")) == 0) {
+        passthru_thing_disconnect();
       }
       passthru_shadow_parser_free(message);
     }
+
+    // report: 
   }
 
   if(action == SHADOW_GET) {
@@ -73,6 +76,7 @@ void passthru_thing_shadow_onget(const char *pJsonValueBuffer, uint32_t valueLen
 }
 
 void passthru_thing_shadow_ondisconnect() {
+  thing->state = THING_STATE_DISCONNECTED;
   syslog(LOG_DEBUG, "passthru_thing_shadow_ondisconnect: disconnected");
 }
 
@@ -84,31 +88,28 @@ void *passthru_thing_shadow_yield_thread(void *ptr) {
 
   syslog(LOG_DEBUG, "passthru_thing_shadow_yield_thread: started");
 
-  passthru_thing *thing = (passthru_thing *)ptr;
-
   syslog(LOG_DEBUG, "passthru_thing_shadow_yield_thread: sending connect report to AWS IoT");
   passthru_thing_send_connect_report(thing);
 
-  while((thing->state & THING_STATE_CONNECTED) || (thing->state & THING_STATE_DISCONNECTING)) {
+  while((thing->state & THING_STATE_CONNECTED) || (thing->state & THING_STATE_CLOSING)) {
 
     thing->shadow->rc = aws_iot_shadow_yield(thing->shadow->mqttClient, 200);
-    if(NETWORK_ATTEMPTING_RECONNECT == thing->shadow->rc) {
+    if(thing->shadow->rc == NETWORK_ATTEMPTING_RECONNECT) {
       syslog(LOG_DEBUG, "Attempting to reconnect to AWS IoT shadow service");
       sleep(1);
       continue;
     }
 
     if(messageArrivedOnDelta) {
-      syslog(LOG_DEBUG, "Sending delta message back. message=%s\n", DELTA_REPORT);
+      syslog(LOG_DEBUG, "Sending delta message to AWS IoT. message=%s", DELTA_REPORT);
       passthru_shadow_update(&thing->shadow, DELTA_REPORT);
       messageArrivedOnDelta = false;
     }
 
-    if(thing->state & THING_STATE_DISCONNECTING) {
-      syslog(LOG_DEBUG, "passthru_thing_shadow_yield_thread: disconnecting thing clientId=%s", thing->clientId);
-      if(passthru_thing_send_disconnect_report(thing)) {
-        syslog(LOG_ERR, "passthru_thing_shadow_yield_thread: unable to send disconnect report!");
-        sleep(1);
+    if(thing->state & THING_STATE_CLOSING) {
+      if(passthru_thing_send_disconnect_report(thing) != 0) {
+        syslog(LOG_ERR, "passthru_thing_shadow_yield_thread: failed to send disconnect report!");
+        sleep(2);
         continue;
       }
     }
@@ -121,8 +122,7 @@ void *passthru_thing_shadow_yield_thread(void *ptr) {
   return NULL;
 }
 
-int passthru_thing_send_connect_report(passthru_thing *thing) {
-  syslog(LOG_DEBUG, "passthru_thing_send_connect_report: thing->clientId=%s", thing->clientId);
+int passthru_thing_send_connect_report() {
   char pJsonDocument[SHADOW_MAX_SIZE_OF_RX_BUFFER];
   char state[255] = "{\"connected\": \"true\"}";
   if(!passthru_shadow_build_report_json(pJsonDocument, SHADOW_MAX_SIZE_OF_RX_BUFFER, state, strlen(state))) {
@@ -132,8 +132,7 @@ int passthru_thing_send_connect_report(passthru_thing *thing) {
   return passthru_shadow_update(thing->shadow, pJsonDocument);
 }
 
-int passthru_thing_send_disconnect_report(passthru_thing *thing) {
-  syslog(LOG_DEBUG, "passthru_thing_send_disconnect_report: thing->clientId=%s", thing->clientId);
+int passthru_thing_send_disconnect_report() {
   char pJsonDocument[SHADOW_MAX_SIZE_OF_RX_BUFFER];
   char state[255] = "{\"connected\": \"false\"}";
   if(!passthru_shadow_build_report_json(pJsonDocument, SHADOW_MAX_SIZE_OF_RX_BUFFER, state, strlen(state))) {
@@ -143,11 +142,13 @@ int passthru_thing_send_disconnect_report(passthru_thing *thing) {
   return passthru_shadow_update(thing->shadow, pJsonDocument);
 }
 
-passthru_thing* passthru_thing_new() {
+void passthru_thing_init(const char *thingId) {
 
-  passthru_thing *thing = malloc(sizeof(passthru_thing));
-  memset(thing, 0, sizeof(passthru_thing));
-  thing->clientId = "test";
+  syslog(LOG_DEBUG, "%s", thingId);
+
+  thing = malloc(sizeof(passthru_thing));
+  thing->name = malloc(strlen(thingId)+1);
+  strncpy(thing->name, thingId, strlen(thingId)+1);
 
   thing->shadow = malloc(sizeof(passthru_shadow));
   memset(thing->shadow, 0, sizeof(passthru_shadow));
@@ -158,11 +159,9 @@ passthru_thing* passthru_thing_new() {
   thing->shadow->onget = &passthru_thing_shadow_onget;
   thing->shadow->ondisconnect = &passthru_thing_shadow_ondisconnect;
   thing->shadow->onerror = &passthru_thing_shadow_onerror;
-
-  return thing;
 }
 
-int passthru_thing_run(passthru_thing *thing) {
+int passthru_thing_run() {
   thing->state = THING_STATE_CONNECTING;
   if(passthru_shadow_connect(thing->shadow) != 0) {
     syslog(LOG_CRIT, "passthru_thing_run: unable to connect to AWS IoT shadow service");
@@ -174,25 +173,31 @@ int passthru_thing_run(passthru_thing *thing) {
   }
   thing->state = THING_STATE_CONNECTED;
 
-syslog(LOG_DEBUG, "passthru_thing_run: thing->clientId=%s", thing->clientId);
-
-  pthread_create(&thing->shadow->yield_thread, NULL, passthru_thing_shadow_yield_thread, thing);
+  pthread_create(&thing->shadow->yield_thread, NULL, passthru_thing_shadow_yield_thread, NULL);
   pthread_join(thing->shadow->yield_thread, NULL);
   syslog(LOG_DEBUG, "passthru_passthru_thing: run loop complete");
   return 0;
 }
 
-void passthru_thing_close(passthru_thing *thing) {
-  syslog(LOG_DEBUG, "passthru_thing_close: closing clientId=%s", thing->clientId);
+void passthru_thing_disconnect() {
   thing->state = THING_STATE_DISCONNECTING;
-  while(!(thing->state & THING_STATE_DISCONNECTING)) {
-    syslog(LOG_DEBUG, "passthru_thing_close: waiting for thing connection to close");
+  if(passthru_shadow_disconnect(thing->shadow) != 0) {
+    syslog(LOG_ERR, "passthru_thing_disconnect: failed to disconnect from AWS IoT. rc=%d", thing->shadow->rc);
+  }
+}
+
+void passthru_thing_close() {
+  if(!(thing->state & THING_STATE_CONNECTED)) return; 
+  syslog(LOG_DEBUG, "passthru_thing_close: closing thing. name=%s", thing->name);
+  thing->state = THING_STATE_CLOSING;
+  while(!(thing->state & THING_STATE_DISCONNECTED)) {
+    syslog(LOG_DEBUG, "passthru_thing_close: waiting for thing to disconnect");
     sleep(1);
   }
   syslog(LOG_DEBUG, "passthru_thing_close: closed");
 }
 
-void passthru_thing_destroy(passthru_thing *thing) {
+void passthru_thing_destroy() {
   syslog(LOG_DEBUG, "passthru_thing_destroy");
   passthru_shadow_destroy(thing->shadow);
   free(thing->shadow);

@@ -34,14 +34,16 @@
 #define THING_STATE_DISCONNECTED  (1 << 5)
 
 typedef struct {
-  const char *clientId;
+  const char *name;
   uint8_t state;
   pthread_t yield_thread;
   passthru_shadow *shadow;
 } passthru_thing;
 
-int passthru_thing_send_connect_report(passthru_thing *thing);
-int passthru_thing_send_disconnect_report(passthru_thing *thing);
+passthru_thing *thing;
+
+int passthru_thing_send_connect_report();
+int passthru_thing_send_disconnect_report();
 
 void passthru_thing_shadow_onopen(passthru_shadow *shadow);
 void passthru_thing_shadow_ondelta(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t);
@@ -51,9 +53,9 @@ void passthru_thing_shadow_onget(const char *pJsonValueBuffer, uint32_t valueLen
 void passthru_thing_shadow_ondisconnect();
 void passthru_thing_shadow_onerror(passthru_shadow *shadow, const char *message);
 void *passthru_thing_shadow_yield_thread(void *ptr);
-passthru_thing* passthru_thing_new();
-int passthru_thing_run(passthru_thing *thing);
-void passthru_thing_close(passthru_thing *thing);
-void passthru_thing_destroy(passthru_thing *thing);
+void passthru_thing_init(const char *thingId);
+int passthru_thing_run();
+void passthru_thing_close();
+void passthru_thing_destroy();
 
 #endif

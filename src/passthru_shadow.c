@@ -3,12 +3,6 @@
 bool messageArrivedOnDelta = false;
 
 int passthru_shadow_connect(passthru_shadow *shadow) {
-/*
-  if(pthread_mutex_init(&shadow->shadow_update_lock, NULL) != 0) {
-    syslog(LOG_ERR, "passthru_shadow_connect: unable to initialize shadown update lock: %s", strerror(errno));
-    return 1;
-  }
-*/
 
   AWS_IoT_Client mqttClient;
   shadow->mqttClient = malloc(sizeof(AWS_IoT_Client));

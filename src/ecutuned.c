@@ -23,10 +23,8 @@
 #include <string.h>
 #include "passthru_thing.h"
 
-passthru_thing *thing;
-
 int main_exit(int exit_status) {
-  syslog(LOG_DEBUG, "exiting ecutune");
+  syslog(LOG_DEBUG, "exiting ecutuned");
   closelog();
   return exit_status;
 }
@@ -38,12 +36,11 @@ void signal_handler(int sig) {
 	  // Reload config and reopen files
 	  break;
 	case SIGINT:
-    if(thing != NULL) {
-      passthru_thing_close(thing);
-    }
+    passthru_thing_close();
+    break;
 	case SIGTERM:
-	  syslog(LOG_DEBUG, "SIGINT/SIGTERM");
-	  //passthru_thing_close(thing);
+	  passthru_thing_close();
+    break;
 	default:
 	  syslog(LOG_WARNING, "Unhandled signal %s\n", strsignal(sig));
 	  break;
@@ -104,12 +101,11 @@ int main(int argc, char **argv) {
 
   setlogmask(LOG_UPTO(LOG_DEBUG));
   openlog("ecutuned", LOG_CONS | LOG_PERROR, LOG_USER);
-  syslog(LOG_DEBUG, "starting ecutune");
+  syslog(LOG_DEBUG, "starting ecutuned");
 
-  thing = passthru_thing_new();
-  passthru_thing_run(thing);
-  passthru_thing_close(thing);
-  //passthru_thing_destroy(thing);
+  passthru_thing_init("ecutuned");
+  passthru_thing_run();
+  passthru_thing_close();
 
   return main_exit(EXIT_SUCCESS);
 }
