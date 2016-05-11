@@ -22,8 +22,9 @@
 #include <stddef.h>
 #include <signal.h>
 #include <pthread.h>
-#include "passthru_shadow.h"
 #include "canbus_logger.h"
+#include "passthru_shadow.h"
+#include "passthru_shadow_parser.h"
 
 #define THING_STATE_CONNECTING    (1 << 0)
 #define THING_STATE_CONNECTED     (1 << 1)
@@ -33,10 +34,14 @@
 #define THING_STATE_DISCONNECTED  (1 << 5)
 
 typedef struct {
+  const char *clientId;
   uint8_t state;
   pthread_t yield_thread;
   passthru_shadow *shadow;
 } passthru_thing;
+
+int passthru_thing_send_connect_report(passthru_thing *thing);
+int passthru_thing_send_disconnect_report(passthru_thing *thing);
 
 void passthru_thing_shadow_onopen(passthru_shadow *shadow);
 void passthru_thing_shadow_ondelta(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t);
@@ -46,7 +51,7 @@ void passthru_thing_shadow_onget(const char *pJsonValueBuffer, uint32_t valueLen
 void passthru_thing_shadow_ondisconnect();
 void passthru_thing_shadow_onerror(passthru_shadow *shadow, const char *message);
 void *passthru_thing_shadow_yield_thread(void *ptr);
-passthru_thing *passthru_thing_new();
+passthru_thing* passthru_thing_new();
 int passthru_thing_run(passthru_thing *thing);
 void passthru_thing_close(passthru_thing *thing);
 void passthru_thing_destroy(passthru_thing *thing);

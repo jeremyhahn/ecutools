@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
   thing = passthru_thing_new();
   passthru_thing_run(thing);
   passthru_thing_close(thing);
-  passthru_thing_destroy(thing);
+  //passthru_thing_destroy(thing);
 
   return main_exit(EXIT_SUCCESS);
 }

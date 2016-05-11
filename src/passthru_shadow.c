@@ -2,8 +2,18 @@
 
 bool messageArrivedOnDelta = false;
 
-void passthru_shadow_connect(passthru_shadow *shadow) {
+int passthru_shadow_connect(passthru_shadow *shadow) {
+/*
+  if(pthread_mutex_init(&shadow->shadow_update_lock, NULL) != 0) {
+    syslog(LOG_ERR, "passthru_shadow_connect: unable to initialize shadown update lock: %s", strerror(errno));
+    return 1;
+  }
+*/
 
+  AWS_IoT_Client mqttClient;
+  shadow->mqttClient = malloc(sizeof(AWS_IoT_Client));
+  shadow->rc = SUCCESS;
+  
   char errmsg[255];
   char rootCA[255];
   char clientCRT[255];
@@ -13,7 +23,8 @@ void passthru_shadow_connect(passthru_shadow *shadow) {
   char cafileName[] = AWS_IOT_ROOT_CA_FILENAME;
   char clientCRTName[] = AWS_IOT_CERTIFICATE_FILENAME;
   char clientKeyName[] = AWS_IOT_PRIVATE_KEY_FILENAME;
-  shadow->rc = NONE_ERROR;
+
+  syslog(LOG_DEBUG, "AWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
   getcwd(CurrentWD, sizeof(CurrentWD));
   sprintf(rootCA, "%s/%s/%s", CurrentWD, certDirectory, cafileName);
@@ -24,45 +35,40 @@ void passthru_shadow_connect(passthru_shadow *shadow) {
   syslog(LOG_DEBUG, "clientCRT %s", clientCRT);
   syslog(LOG_DEBUG, "clientKey %s", clientKey);
 
-  MQTTClient_t mqttClient;
-  aws_iot_mqtt_init(&mqttClient);
-  shadow->mqttClient = &mqttClient;
-
-  ShadowParameters_t sp = ShadowParametersDefault;
-  sp.pMyThingName = AWS_IOT_MY_THING_NAME;
-  sp.pMqttClientId = AWS_IOT_MQTT_CLIENT_ID;
+  ShadowInitParameters_t sp = ShadowInitParametersDefault;
   sp.pHost = AWS_IOT_MQTT_HOST;
   sp.port = AWS_IOT_MQTT_PORT;
   sp.pClientCRT = clientCRT;
   sp.pClientKey = clientKey;
   sp.pRootCA = rootCA;
+  sp.enableAutoReconnect = true;
+  sp.disconnectHandler = shadow->ondisconnect;
 
-  MQTTwillOptions lwt;
-  lwt.pTopicName = "ecutools/lwt";
-  lwt.pMessage = "\{connected\": \"false\"}";
-  lwt.qos = QOS_1;
-
-  shadow->rc = aws_iot_shadow_init(shadow->mqttClient);
-  if(shadow->rc != NONE_ERROR) {
+  shadow->rc = aws_iot_shadow_init(shadow->mqttClient, &sp);
+  if(shadow->rc != SUCCESS) {
     sprintf(errmsg, "aws_iot_shadow_init error rc=%d", shadow->rc);
     shadow->onerror(shadow, errmsg);
-    return;
+    return 1;
   }
 
-  shadow->rc = aws_iot_shadow_connect(shadow->mqttClient, &sp);
-  if(shadow->rc != NONE_ERROR) {
+  ShadowConnectParameters_t scp = ShadowConnectParametersDefault;
+  scp.pMyThingName = AWS_IOT_MY_THING_NAME;
+  scp.pMqttClientId = AWS_IOT_MQTT_CLIENT_ID;
+
+  shadow->rc = aws_iot_shadow_connect(shadow->mqttClient, &scp);
+  if(shadow->rc != SUCCESS) {
     sprintf(errmsg, "aws_iot_shadow_connect error rc=%d", shadow->rc);
     shadow->onerror(shadow, errmsg);
-    return;
+    return 2;
   }
-/*
-  shadow->rc = shadow->mqttClient->setAutoReconnectStatus(true);
-  if(shadow->rc != NONE_ERROR){
-    sprintf(errmsg, "setAutoReconnectStatus error rc=%d", shadow->rc);
+
+  shadow->rc = aws_iot_shadow_set_autoreconnect_status(shadow->mqttClient, true);
+  if(shadow->rc != SUCCESS) {
+    sprintf(errmsg, "aws_iot_shadow_set_autoreconnect_status error rc=%d", shadow->rc);
     shadow->onerror(shadow, errmsg);
-    return;
+    return 3;
   }
-*/
+
   jsonStruct_t deltaObject;
   deltaObject.pData = DELTA_REPORT;
   deltaObject.pKey = "state";
@@ -70,52 +76,60 @@ void passthru_shadow_connect(passthru_shadow *shadow) {
   deltaObject.cb = shadow->ondelta;
 
   shadow->rc = aws_iot_shadow_register_delta(shadow->mqttClient, &deltaObject);
-  if(shadow->rc != NONE_ERROR) {
+  if(shadow->rc != SUCCESS) {
     sprintf(errmsg, "aws_iot_shadow_register_delta error rc=%d", shadow->rc);
     shadow->onerror(shadow, errmsg);
-    return;
+    return 4;
   }
 
   shadow->onopen(shadow);
+  return 0;
 }
 
-void passthru_shadow_report_delta(passthru_shadow *shadow) {
+int passthru_shadow_report_delta(passthru_shadow *shadow) {
   syslog(LOG_DEBUG, "Sending delta report: %s", DELTA_REPORT);
-  shadow->rc = aws_iot_shadow_update(shadow->mqttClient, AWS_IOT_MY_THING_NAME, DELTA_REPORT, shadow->onupdate, NULL, 2, true);
-  if(shadow->rc != NONE_ERROR) {
-    char errmsg[255];
-    sprintf(errmsg, "aws_iot_shadow_update error rc=%d", shadow->rc);
-    shadow->onerror(shadow, errmsg);
-  }
+  return passthru_shadow_update(shadow, DELTA_REPORT);
 }
 
 void passthru_shadow_get(passthru_shadow *shadow) {
   syslog(LOG_DEBUG, "passthru_shadow_get: %s", DELTA_REPORT);
   shadow->rc = aws_iot_shadow_get(shadow->mqttClient, AWS_IOT_MY_THING_NAME, shadow->onget, NULL, 2, true);
-  if(shadow->rc != NONE_ERROR) {
+  if(shadow->rc != SUCCESS) {
     char errmsg[255];
     sprintf(errmsg, "aws_iot_shadow_get error rc=%d", shadow->rc);
     shadow->onerror(shadow, errmsg);
   }
 }
 
-void passthru_shadow_update(passthru_shadow *shadow, char *message) {
-  syslog(LOG_DEBUG, "passthru_shadow_update: %s", message);
+int passthru_shadow_update(passthru_shadow *shadow, char *message) {
+  syslog(LOG_DEBUG, "passthru_shadow_update: message=%s", message);
   shadow->rc = aws_iot_shadow_update(shadow->mqttClient, AWS_IOT_MY_THING_NAME, message, shadow->onupdate, NULL, 2, true);
-  if(shadow->rc != NONE_ERROR) {
+  if(shadow->rc != SUCCESS) {
     char errmsg[255];
     sprintf(errmsg, "aws_iot_shadow_update error rc=%d", shadow->rc);
     shadow->onerror(shadow, errmsg);
+    return 1;
   }
+  return 0;
 }
 
-void passthru_shadow_disconnect(passthru_shadow *shadow) {
+int passthru_shadow_disconnect(passthru_shadow *shadow) {
   syslog(LOG_DEBUG, "passthru_shadow_disconnect");
   shadow->rc = aws_iot_shadow_disconnect(shadow->mqttClient);
-  if(shadow->rc != NONE_ERROR) {
+  if(shadow->rc != SUCCESS) {
     char errmsg[255];
     sprintf(errmsg, "aws_iot_shadow_disconnect error rc=%d", shadow->rc);
     shadow->onerror(shadow, errmsg);
+    return 1;
+  }
+  shadow->ondisconnect();
+}
+
+void passthru_shadow_destroy(passthru_shadow *shadow) {
+  syslog(LOG_DEBUG, "passthru_shadow_destroy: clientId=%s", shadow->clientId);
+  if(shadow->mqttClient != NULL) {
+    free(shadow->mqttClient);
+    shadow->mqttClient = NULL;
   }
 }
 
@@ -129,7 +143,7 @@ bool passthru_shadow_build_report_json(char *pJsonDocument, size_t maxSizeOfJson
 
   char tempClientTokenBuffer[MAX_SIZE_CLIENT_TOKEN_CLIENT_SEQUENCE];
 
-  if(aws_iot_fill_with_client_token(tempClientTokenBuffer, MAX_SIZE_CLIENT_TOKEN_CLIENT_SEQUENCE) != NONE_ERROR){
+  if(aws_iot_fill_with_client_token(tempClientTokenBuffer, MAX_SIZE_CLIENT_TOKEN_CLIENT_SEQUENCE) != SUCCESS){
     return false;
   }
 
