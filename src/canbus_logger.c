@@ -16,14 +16,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- #include "canbus_logger.h"
+#include "canbus_logger.h"
 
 unsigned int canbus_logger_run(canbus_logger *logger) {
   syslog(LOG_DEBUG, "canbus_logger_run: running");
-  canbus_filelogger_run(logger);
+  
+  canbus_init(logger->canbus);
+  canbus_connect(logger->canbus);
+  if(!canbus_isconnected(logger->canbus)) {
+    syslog(LOG_CRIT, "canbus_logger_run: unable to connect to CAN");
+    return 1;
+  }
+
+  if(logger->type & CANBUS_LOGTYPE_FILE) {
+    canbus_filelogger_run(logger);
+  }
+  else if(logger->type & CANBUS_LOGTYPE_AWSIOT) {
+    canbus_awsiotlogger_run(logger);
+  }
+  else {
+    syslog(LOG_ERR, "canbus_logger_run: invalid logger->type");
+  }
 }
 
 unsigned int canbus_logger_stop(canbus_logger *logger) {
   syslog(LOG_DEBUG, "canbus_logger_stop: stopping");
-  canbus_filelogger_stop(logger);
+  if(logger->canbus_thread != NULL) {
+    logger->isrunning = false;
+    while(canbus_isconnected(logger->canbus)) {
+      syslog(LOG_DEBUG, "canbus_awsiotlogger_stop: waiting for canbus connection to close");
+      sleep(1);
+    }
+    logger->canbus_thread = NULL;
+  }
+  return 0;
 }

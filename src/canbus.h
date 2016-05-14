@@ -35,7 +35,7 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#ifndef CAN_IFNAME
+#ifndef CAN_IFACE
   #define CAN_IFACE "vcan0"
 #endif
 

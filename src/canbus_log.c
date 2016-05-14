@@ -42,7 +42,7 @@ int canbus_log_write(char *data) {
     syslog(LOG_ERR, "canbus_log_write: data is larger than 255 bytes");
     return 1;
   }
-  char d[255];
+  char d[257];
   strncpy(d, data, strlen(data)+1);
   strcat(d, "\n");
   return fprintf(canbus_log, d);

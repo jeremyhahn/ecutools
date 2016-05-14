@@ -52,6 +52,13 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
 
       // report: log: LOG_FILE
       if(strncmp(message->state->reported->log, "LOG_FILE", strlen("LOG_FILE")) == 0) {
+        thing->logger->type = CANBUS_LOGTYPE_FILE;
+        canbus_logger_run(thing->logger);
+      }
+
+      // report: log: LOG_AWSIOT
+      if(strncmp(message->state->reported->log, "LOG_AWSIOT", strlen("LOG_AWSIOT")) == 0) {
+        thing->logger->type = CANBUS_LOGTYPE_AWSIOT;
         canbus_logger_run(thing->logger);
       }
 
@@ -59,7 +66,7 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
       if(strncmp(message->state->reported->log, "LOG_NONE", strlen("LOG_CANCEL")) == 0) {
         syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate:  LOG_NONE");
         if(thing->logger->isrunning) {
-          syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate:  cancelling logger thread");
+          syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: stopping logger thread");
           canbus_logger_stop(thing->logger);
         }
       }

@@ -16,24 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CANBUSLOGGERINTERFACE_H
-#define CANBUSLOGGERINTERFACE_H
+#ifndef CANBUSawsiotlogger_H
+#define CANBUSawsiotlogger_H
 
-#include <stdint.h>
-#include <pthread.h>
-#include <stdbool.h>
-#include "canbus.h"
+#include "canbus_logger_interface.h"
+#include "awsiot_client.h"
 
-#define CANBUS_LOGTYPE_FILE   (1 << 0)
-#define CANBUS_LOGTYPE_AWSIOT (1 << 1)
+unsigned int canbus_awsiotlogger_run(canbus_logger *logger);
+unsigned int canbus_awsiotlogger_stop(canbus_logger *logger);
 
-typedef struct {
-  uint8_t canbus_flags;
-  pthread_t canbus_thread;
-  struct canbus_filter *filters[10];
-  canbus_client *canbus;
-  bool isrunning;
-  unsigned int type;
-} canbus_logger;
-
-#endif
+ #endif

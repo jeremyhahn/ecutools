@@ -22,22 +22,24 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <syslog.h>
-#include "aws_iot_src/utils/aws_iot_error.h"
-#include "aws_iot_src/utils/aws_iot_log.h"
-#include "aws_iot_src/utils/aws_iot_version.h"
-#include "aws_iot_src/protocol/mqtt/aws_iot_mqtt_interface.h"
+#include <string.h>
+#include "aws_iot_src/include/aws_iot_error.h"
+#include "aws_iot_src/include/aws_iot_log.h"
+#include "aws_iot_src/include/aws_iot_version.h"
+#include "aws_iot_src/include/aws_iot_mqtt_client_interface.h"
 #include "aws_iot_config.h"
 
 typedef struct _awsiot_client {
-  MQTTSubscribeParams *subscribeParams;
-  MQTTPublishParams *publishParams;
+  char *clientId;
+  AWS_IoT_Client client;
+  IoT_Publish_Message_Params *publishParams;
   IoT_Error_t rc;
   pthread_t publish_thread;
   pthread_t subscribe_thread;
   pthread_mutex_t publish_lock;
   pthread_mutex_t subscribe_lock;
   void (*onopen)(struct _awsiot_client *);
-  void (*onmessage)(MQTTCallbackParams params);
+  void (*onmessage)(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData);
   void (*ondisconnect)(void);
   void (*onclose)(struct _awsiot_client *, const char *message);
   void (*onerror)(struct _awsiot_client *, const char *message);
