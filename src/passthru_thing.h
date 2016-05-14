@@ -33,11 +33,15 @@
 #define THING_STATE_DISCONNECTING (1 << 4) 
 #define THING_STATE_DISCONNECTED  (1 << 5)
 
+#define THING_LOGTYPE_FILE   (1 << 0)
+#define THING_LOGTYPE_AWSIOT (1 << 1)
+
 typedef struct {
   const char *name;
   uint8_t state;
   pthread_t yield_thread;
   passthru_shadow *shadow;
+  canbus_logger *logger;
 } passthru_thing;
 
 passthru_thing *thing;

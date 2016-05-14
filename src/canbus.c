@@ -50,19 +50,27 @@ int canbus_framecmp(struct can_frame *frame1, struct can_frame *frame2) {
   return strcmp((const char *)frame1->data, (const char *)frame2->data) == 0;
 }
 
+int canbus_init(canbus_client *canbus) {
+  syslog(LOG_DEBUG, "canbus_init: initializing canbus client");
+  canbus->socket = 0;
+  canbus->state = CANBUS_STATE_CLOSED;
+  canbus->flags = 0;
+}
+
 int canbus_connect(canbus_client *canbus) {
 
   if(canbus->socket > 0) {
-    syslog(LOG_CRIT, "canbus_connect: already connected to CAN");
-	return -1;
+    syslog(LOG_CRIT, "canbus_connect: CAN socket already connected. socket=%i", canbus->socket);
+	  return 1;
   }
 
   if(pthread_mutex_init(&canbus->lock, NULL) != 0) {
-    return -1;
+    return 2;
   }
+
   if(pthread_mutex_init(&canbus->rwlock, NULL) != 0) {
     syslog(LOG_ERR, "canbus_connect: unable to initialize canbus read/write mutex: %s", strerror(errno));
-    return -1;
+    return 3;
   }
 
   pthread_mutex_lock(&canbus->lock);
@@ -75,14 +83,14 @@ int canbus_connect(canbus_client *canbus) {
   can_err_mask_t err_mask = CAN_ERR_MASK;
 
   if((canbus->socket = socket(PF_CAN, SOCK_RAW, CAN_RAW)) == -1) {
-	syslog(LOG_CRIT, "canbus_connect: error opening socket");
-	return -1;
+	  syslog(LOG_CRIT, "canbus_connect: error opening socket");
+	  return -1;
   }
 
   strcpy(ifr.ifr_name, CAN_IFACE);
   if(ioctl(canbus->socket, SIOCGIFINDEX, &ifr) < 0) {
-	syslog(LOG_CRIT, "canbus_connect: unable to find CAN interface %s", CAN_IFACE);
-	exit(1);
+	  syslog(LOG_CRIT, "canbus_connect: unable to find CAN interface %s", CAN_IFACE);
+	  exit(1);
   }
 
   addr.can_family = AF_CAN;
@@ -176,5 +184,4 @@ void canbus_close(canbus_client *canbus) {
   pthread_mutex_lock(&canbus->lock);
   canbus->state = CANBUS_STATE_CLOSED;
   pthread_mutex_unlock(&canbus->lock);
-
 }

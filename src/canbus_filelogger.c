@@ -34,8 +34,7 @@ void *canbus_filelogger_thread(void *ptr) {
   char data[data_len];
   memset(data, 0, data_len);
 
-  while((pLogger->canbus->state & CANBUS_STATE_CONNECTED) &&
-    canbus_read(pLogger->canbus, &frame) > 0) {
+  while(canbus_isconnected(pLogger->canbus) && canbus_read(pLogger->canbus, &frame) > 0 && pLogger->isrunning) {
 
     memset(data, 0, data_len);
     canbus_framecpy(&frame, data);
@@ -47,24 +46,32 @@ void *canbus_filelogger_thread(void *ptr) {
 
     canbus_log_write(data);
   }
- 
-  canbus_log_close();
+
+  canbus_close(pLogger->canbus);
   syslog(LOG_DEBUG, "canbus_filelogger_thread: stopping");
   return NULL;
 }
 
 unsigned int canbus_filelogger_run(canbus_logger *logger) {
+  canbus_init(logger->canbus);
   canbus_connect(logger->canbus);
   if(!canbus_isconnected(logger->canbus)) {
     syslog(LOG_CRIT, "canbus_filelogger_run: unable to connect to CAN");
     return 1;
   }
+  logger->isrunning = true;
   pthread_create(&logger->canbus_thread, NULL, canbus_filelogger_thread, (void *)logger);
-  pthread_join(logger->canbus_thread, NULL);
-  syslog(LOG_DEBUG, "canbus_filelogger_run: logger closed");
   return 0;
 }
 
-unsigned int canbus_filelogger_cancel(canbus_logger *logger) {
-  return pthread_cancel(logger->canbus_thread);
+unsigned int canbus_filelogger_stop(canbus_logger *logger) {
+  if(logger->canbus_thread != NULL) {
+    logger->isrunning = false;
+    while(canbus_isconnected(logger->canbus)) {
+      syslog(LOG_DEBUG, "canbus_filelogger_stop: waiting for canbus connection to close");
+      sleep(1);
+    }
+    logger->canbus_thread = NULL;
+  }
+  return 0;
 }

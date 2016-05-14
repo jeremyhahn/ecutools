@@ -19,9 +19,11 @@
  #include "canbus_logger.h"
 
 unsigned int canbus_logger_run(canbus_logger *logger) {
+  syslog(LOG_DEBUG, "canbus_logger_run: running");
   canbus_filelogger_run(logger);
 }
 
-unsigned int canbus_logger_cancel(canbus_logger *logger) {
-  canbus_filelogger_run(logger);
+unsigned int canbus_logger_stop(canbus_logger *logger) {
+  syslog(LOG_DEBUG, "canbus_logger_stop: stopping");
+  canbus_filelogger_stop(logger);
 }

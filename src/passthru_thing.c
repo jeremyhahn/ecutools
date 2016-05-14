@@ -35,7 +35,7 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
   syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: pThingName=%s, pReceivedJsonDocument=%s, pContextData=%s", pThingName, pReceivedJsonDocument, (char *) pContextData);
 
   if(strncmp(pThingName, AWS_IOT_MY_THING_NAME, strlen(AWS_IOT_MY_THING_NAME)) == 0) { // Receiving message that was sent by this device
-    
+
     shadow_message *message = passthru_shadow_parser_parse(pReceivedJsonDocument);
 
     // report: connected
@@ -44,10 +44,28 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
       if(strncmp(message->state->reported->connected, "false", strlen("false")) == 0) {
         passthru_thing_disconnect();
       }
-      passthru_shadow_parser_free(message);
     }
 
-    // report: 
+    // report: log
+    if(message && message->state && message->state->reported && message->state->reported->log) {
+      syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: log=%s", message->state->reported->log);
+
+      // report: log: LOG_FILE
+      if(strncmp(message->state->reported->log, "LOG_FILE", strlen("LOG_FILE")) == 0) {
+        canbus_logger_run(thing->logger);
+      }
+
+      // report: log: LOG_NONE
+      if(strncmp(message->state->reported->log, "LOG_NONE", strlen("LOG_CANCEL")) == 0) {
+        syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate:  LOG_NONE");
+        if(thing->logger->isrunning) {
+          syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate:  cancelling logger thread");
+          canbus_logger_stop(thing->logger);
+        }
+      }
+    }
+
+    passthru_shadow_parser_free_message(message);
   }
 
   if(action == SHADOW_GET) {
@@ -102,7 +120,7 @@ void *passthru_thing_shadow_yield_thread(void *ptr) {
 
     if(messageArrivedOnDelta) {
       syslog(LOG_DEBUG, "Sending delta message to AWS IoT. message=%s", DELTA_REPORT);
-      passthru_shadow_update(&thing->shadow, DELTA_REPORT);
+      passthru_shadow_update(thing->shadow, DELTA_REPORT);
       messageArrivedOnDelta = false;
     }
 
@@ -114,7 +132,7 @@ void *passthru_thing_shadow_yield_thread(void *ptr) {
       }
     }
 
-    syslog(LOG_DEBUG, "passthru_thing_shadow_yield_thread: waiting for delta");
+    //syslog(LOG_DEBUG, "passthru_thing_shadow_yield_thread: waiting for delta");
     sleep(1);
   }
 
@@ -149,6 +167,8 @@ void passthru_thing_init(const char *thingId) {
   thing = malloc(sizeof(passthru_thing));
   thing->name = malloc(strlen(thingId)+1);
   strncpy(thing->name, thingId, strlen(thingId)+1);
+  thing->logger = malloc(sizeof(canbus_logger));
+  thing->logger->canbus = malloc(sizeof(canbus_client));
 
   thing->shadow = malloc(sizeof(passthru_shadow));
   memset(thing->shadow, 0, sizeof(passthru_shadow));
@@ -200,6 +220,8 @@ void passthru_thing_close() {
 void passthru_thing_destroy() {
   syslog(LOG_DEBUG, "passthru_thing_destroy");
   passthru_shadow_destroy(thing->shadow);
+  free(thing->logger->canbus);
+  free(thing->logger);
   free(thing->shadow);
   free(thing);
 }

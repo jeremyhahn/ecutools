@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include "canbus.h"
 
 typedef struct {
@@ -28,6 +29,7 @@ typedef struct {
   pthread_t canbus_thread;
   struct canbus_filter *filters[10];
   canbus_client *canbus;
+  bool isrunning;
 } canbus_logger;
 
 #endif

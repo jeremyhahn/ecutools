@@ -47,7 +47,7 @@
 #define CANBUS_FLAG_RECV_OWN_MSGS 0     // 0 = disable, 1 = enable
 
 typedef struct {
-  int socket;
+  unsigned int socket;
   uint8_t state;
   uint8_t flags;
   pthread_t thread;
