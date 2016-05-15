@@ -22,11 +22,12 @@
 #include <stdio.h>
 #include <syslog.h>
 #include <time.h>
+#include "canbus_logger.h"
 
 FILE *canbus_log;
 
-void canbus_log_open();
-int canbus_log_write(char *data);
+unsigned int canbus_log_open();
+unsigned int canbus_log_write(char *data);
 void canbus_log_close();
 
  #endif

@@ -34,15 +34,26 @@
 #define THING_STATE_DISCONNECTED  (1 << 5)
 
 typedef struct {
-  const char *name;
+  char *thingId;
+  char *iface;
+  char *logdir;
+} thing_init_params;
+
+typedef struct {
+  char *name;
   uint8_t state;
-  pthread_t yield_thread;
+  thing_init_params *params;
   passthru_shadow *shadow;
   canbus_logger *logger;
 } passthru_thing;
 
 passthru_thing *thing;
 
+void passthru_thing_init(thing_init_params *params);
+int passthru_thing_run();
+void passthru_thing_close();
+void passthru_thing_disconnect();
+void passthru_thing_destroy();
 int passthru_thing_send_connect_report();
 int passthru_thing_send_disconnect_report();
 
@@ -54,9 +65,5 @@ void passthru_thing_shadow_onget(const char *pJsonValueBuffer, uint32_t valueLen
 void passthru_thing_shadow_ondisconnect();
 void passthru_thing_shadow_onerror(passthru_shadow *shadow, const char *message);
 void *passthru_thing_shadow_yield_thread(void *ptr);
-void passthru_thing_init(const char *thingId);
-int passthru_thing_run();
-void passthru_thing_close();
-void passthru_thing_destroy();
 
 #endif

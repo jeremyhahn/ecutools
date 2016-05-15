@@ -118,7 +118,8 @@ void awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char 
 }
 
 void awsiot_client_close(awsiot_client *awsiot, const char *topic, const char *payload) {
-  if(payload != NULL) {
+  syslog(LOG_DEBUG, "awsiot_client_close: closing connection");
+  if(topic != NULL && payload != NULL) {
     awsiot_client_publish(awsiot, topic, payload);
   }
   awsiot->rc = aws_iot_mqtt_disconnect(&awsiot->client);

@@ -65,6 +65,7 @@ void *canbus_awsiotlogger_thread(void *ptr) {
     awsiot_client_publish(&iotlogger, "ecutools/datalogger", data);
   }
 
+  awsiot_client_close(&iotlogger, NULL, NULL);
   canbus_close(pLogger->canbus);
   syslog(LOG_DEBUG, "canbus_awsiotlogger_thread: stopping");
   return NULL;

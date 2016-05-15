@@ -44,7 +44,7 @@ unsigned int canbus_logger_stop(canbus_logger *logger) {
   if(logger->canbus_thread != NULL) {
     logger->isrunning = false;
     while(canbus_isconnected(logger->canbus)) {
-      syslog(LOG_DEBUG, "canbus_awsiotlogger_stop: waiting for canbus connection to close");
+      syslog(LOG_DEBUG, "canbus_logger_stop: waiting for canbus connection to close");
       sleep(1);
     }
     logger->canbus_thread = NULL;

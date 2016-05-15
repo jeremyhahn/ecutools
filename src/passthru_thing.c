@@ -167,15 +167,27 @@ int passthru_thing_send_disconnect_report() {
   return passthru_shadow_update(thing->shadow, pJsonDocument);
 }
 
-void passthru_thing_init(const char *thingId) {
-
-  syslog(LOG_DEBUG, "%s", thingId);
+void passthru_thing_init(thing_init_params *params) {
 
   thing = malloc(sizeof(passthru_thing));
-  thing->name = malloc(strlen(thingId)+1);
-  strncpy(thing->name, thingId, strlen(thingId)+1);
+  thing->params = params;
+
   thing->logger = malloc(sizeof(canbus_logger));
   thing->logger->canbus = malloc(sizeof(canbus_client));
+  thing->logger->canbus->iface = NULL;
+  thing->logger->logdir = NULL;
+  if(params->iface != NULL) {
+    thing->logger->canbus->iface = malloc(sizeof(char) * strlen(params->iface)+1);
+    strcpy(thing->logger->canbus->iface, params->iface);
+  }
+  if(params->logdir != NULL) {
+    thing->logger->logdir = malloc(sizeof(char) * strlen(params->logdir)+1);
+    strcpy(thing->logger->logdir, params->logdir);
+  }
+  else {
+    thing->logger->logdir = malloc(2);
+    strcpy(thing->logger->logdir, ".");
+  }
 
   thing->shadow = malloc(sizeof(passthru_shadow));
   memset(thing->shadow, 0, sizeof(passthru_shadow));
@@ -215,18 +227,27 @@ void passthru_thing_disconnect() {
 
 void passthru_thing_close() {
   if(!(thing->state & THING_STATE_CONNECTED)) return; 
-  syslog(LOG_DEBUG, "passthru_thing_close: closing thing. name=%s", thing->name);
+  syslog(LOG_DEBUG, "passthru_thing_close: closing thing. name=%s", thing->params->thingId);
   thing->state = THING_STATE_CLOSING;
   while(!(thing->state & THING_STATE_DISCONNECTED)) {
     syslog(LOG_DEBUG, "passthru_thing_close: waiting for thing to disconnect");
     sleep(1);
   }
+  if(thing->logger->isrunning) {
+    canbus_logger_stop(thing->logger);
+    while(thing->logger->isrunning) {
+      syslog(LOG_DEBUG, "passthru_thing_close: waiting for logger to close");
+      sleep(1);
+    }
+  }
+  thing->state = THING_STATE_CLOSED;
   syslog(LOG_DEBUG, "passthru_thing_close: closed");
 }
 
 void passthru_thing_destroy() {
   syslog(LOG_DEBUG, "passthru_thing_destroy");
   passthru_shadow_destroy(thing->shadow);
+  free(thing->logger->logdir);
   free(thing->logger->canbus);
   free(thing->logger);
   free(thing->shadow);

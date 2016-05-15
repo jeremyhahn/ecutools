@@ -20,11 +20,10 @@
 
 void *canbus_filelogger_thread(void *ptr) {
 
-  syslog(LOG_DEBUG, "canbus_filelogger_thread: running");
-
-  canbus_log_open();
-
   canbus_logger *pLogger = (canbus_logger *)ptr;
+  if(canbus_log_open(pLogger) != 0) return NULL;
+
+  syslog(LOG_DEBUG, "canbus_filelogger_thread: running");
 
   int can_frame_len = sizeof(struct can_frame);
   struct can_frame frame;
@@ -47,6 +46,7 @@ void *canbus_filelogger_thread(void *ptr) {
     canbus_log_write(data);
   }
 
+  canbus_log_close();
   canbus_close(pLogger->canbus);
   syslog(LOG_DEBUG, "canbus_filelogger_thread: stopping");
   return NULL;

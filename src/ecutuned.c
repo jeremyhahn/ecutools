@@ -23,9 +23,17 @@
 #include <string.h>
 #include "passthru_thing.h"
 
-int main_exit(int exit_status) {
-  syslog(LOG_DEBUG, "exiting ecutuned");
+int main_exit(int exit_status, thing_init_params *params) {
+  syslog(LOG_DEBUG, "exiting %s", params->thingId);
   closelog();
+  if(params->iface != NULL) {
+    free(params->iface);
+  }
+  if(params->logdir != NULL) {
+    free(params->logdir);
+  }
+  free(params->thingId);
+  free(params);
   return exit_status;
 }
 
@@ -77,9 +85,53 @@ void print_program_header() {
   fprintf(stdout, "\n");
 }
 
+void parse_args(int argc, char** argv, thing_init_params *params) {
+  int opt;
+  while((opt = getopt(argc, argv, "i:l:")) != -1) {
+    switch(opt) {
+      case 'i':
+        if(strlen(optarg) > 10) {
+          printf("ERROR: interface value must not exceed 10 chars");
+          main_exit(1, params);
+        }
+        params->iface = malloc(sizeof(char) * (strlen(optarg)+1));
+        strcpy(params->iface, optarg);
+        break;
+      case 'l':
+        if(strlen(optarg) > 255) {
+          printf("ERROR: log directory value must not exceed 255 chars");
+          main_exit(1, params);
+        }
+        params->logdir = malloc(sizeof(char) * (strlen(optarg)+1));
+        strcpy(params->logdir, optarg);
+        break;
+      case '?':
+        if(isprint(optopt)) {
+          syslog(LOG_WARNING, "Unknown option '-%c'.", optopt);
+        }
+        else {
+          syslog(LOG_WARNING, "Unknown option character '\\x%x'.", optopt);
+        }
+        main_exit(1, params);
+        break;
+      default:
+        syslog(LOG_ERR, "parse_args: error parsing command line arguments");
+        main_exit(1, params);
+        break;
+    }
+  }
+}
+
 int main(int argc, char **argv) {
 
   print_program_header();
+
+  thing_init_params *params = malloc(sizeof(thing_init_params));
+  params->thingId = malloc(sizeof(char) * 9);
+  params->logdir = NULL;
+  params->iface = NULL;
+  parse_args(argc, argv, params);
+  strcpy(params->thingId, "ecutuned");
 
   struct sigaction newSigAction;
   sigset_t newSigSet;
@@ -100,12 +152,13 @@ int main(int argc, char **argv) {
   sigaction(SIGINT, &newSigAction, NULL);
 
   setlogmask(LOG_UPTO(LOG_DEBUG));
-  openlog("ecutuned", LOG_CONS | LOG_PERROR, LOG_USER);
-  syslog(LOG_DEBUG, "starting ecutuned");
+  openlog(params->thingId, LOG_CONS | LOG_PERROR, LOG_USER);
+  syslog(LOG_DEBUG, "starting %s", params->thingId);
 
-  passthru_thing_init("ecutuned");
+  passthru_thing_init(params);
   passthru_thing_run();
   passthru_thing_close();
+  passthru_thing_destroy();
 
-  return main_exit(EXIT_SUCCESS);
+  return main_exit(EXIT_SUCCESS, params);
 }

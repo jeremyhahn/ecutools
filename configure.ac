@@ -21,6 +21,8 @@ AC_PROG_INSTALL
 AC_SEARCH_LIBS([floor], [m])
 AC_SEARCH_LIBS([timer_create], [rt])
 AC_SEARCH_LIBS([pthread_create], [pthread])
+AC_SEARCH_LIBS([curl_easy_perform], [curl])
+AC_SEARCH_LIBS([json_loads], [jansson])
 
 # Remember externally set CFLAGS
 EXTERNAL_CFLAGS="$CFLAGS"

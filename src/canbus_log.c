@@ -19,31 +19,40 @@
 #include "canbus_log.h"
 
 char* canbus_log_datestamp() {
-  char buf[1000];
+  char buf[100];
   time_t now = time(0);
   struct tm tm = *gmtime(&now);
-  strftime(buf, sizeof buf, "%a, %d %b %Y %H:%M:%S %Z", &tm);
+  strftime(buf, sizeof buf, "ecutuned_%m%d%Y_%H%M%S_%Z", &tm);
   return buf;
 }
 
-void canbus_log_open() {
-   char filename[1050];
-   snprintf(filename, 1000, canbus_log_datestamp());
+unsigned int canbus_log_open(canbus_logger *logger) {
+   char filename[360];
+   if(logger->logdir != NULL) {
+     strcpy(filename, logger->logdir);
+     if(filename[strlen(filename)] != '/') {
+       strcat(filename, "/");
+     }
+   }
+   strcat(filename, canbus_log_datestamp());
    strcat(filename, ".log");
+   syslog(LOG_DEBUG, "canbus_log_open: filename=%s", filename);
    canbus_log = fopen(filename, "w");
    if(canbus_log == NULL) {
-     syslog(LOG_ERR, "canbus_log_open: Unable to open log file: %s", filename);
-     return;
+     syslog(LOG_ERR, "canbus_log_open: Unable to open %s. error=%s", filename, strerror(errno));
+     return errno;
    }
+   return 0;
 }
 
-int canbus_log_write(char *data) {
+unsigned canbus_log_write(char *data) {
   if(strlen(data) > 255) {
-    syslog(LOG_ERR, "canbus_log_write: data is larger than 255 bytes");
+    syslog(LOG_ERR, "canbus_log_write: data must not be larger than 255 chars");
     return 1;
   }
   char d[257];
   strncpy(d, data, strlen(data)+1);
+  syslog(LOG_DEBUG, "canbus_log_write: %s", d);
   strcat(d, "\n");
   return fprintf(canbus_log, d);
 }

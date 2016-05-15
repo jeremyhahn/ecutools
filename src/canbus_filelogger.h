@@ -19,7 +19,7 @@
 #ifndef CANBUSFILELOGGER_H
 #define CANBUSFILELOGGER_H
 
-#include "canbus_logger_interface.h"
+#include "canbus_logger.h"
 
 unsigned int canbus_filelogger_run(canbus_logger *logger);
 unsigned int canbus_filelogger_stop(canbus_logger *logger);

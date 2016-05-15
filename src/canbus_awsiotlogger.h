@@ -19,7 +19,7 @@
 #ifndef CANBUSawsiotlogger_H
 #define CANBUSawsiotlogger_H
 
-#include "canbus_logger_interface.h"
+#include "canbus_logger.h"
 #include "awsiot_client.h"
 
 unsigned int canbus_awsiotlogger_run(canbus_logger *logger);

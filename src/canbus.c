@@ -55,6 +55,10 @@ int canbus_init(canbus_client *canbus) {
   canbus->socket = 0;
   canbus->state = CANBUS_STATE_CLOSED;
   canbus->flags = 0;
+  if(canbus->iface == NULL) {
+    canbus->iface = malloc(6);
+    strcpy(canbus->iface, "vcan0");
+  }
 }
 
 int canbus_connect(canbus_client *canbus) {
@@ -87,9 +91,9 @@ int canbus_connect(canbus_client *canbus) {
 	  return -1;
   }
 
-  strcpy(ifr.ifr_name, CAN_IFACE);
+  strcpy(ifr.ifr_name, canbus->iface);
   if(ioctl(canbus->socket, SIOCGIFINDEX, &ifr) < 0) {
-	  syslog(LOG_CRIT, "canbus_connect: unable to find CAN interface %s", CAN_IFACE);
+	  syslog(LOG_CRIT, "canbus_connect: unable to find CAN interface %s", canbus->iface);
 	  exit(1);
   }
 
@@ -184,4 +188,6 @@ void canbus_close(canbus_client *canbus) {
   pthread_mutex_lock(&canbus->lock);
   canbus->state = CANBUS_STATE_CLOSED;
   pthread_mutex_unlock(&canbus->lock);
+
+  free(canbus->iface);
 }

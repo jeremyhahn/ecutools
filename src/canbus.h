@@ -35,10 +35,6 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#ifndef CAN_IFACE
-  #define CAN_IFACE "vcan0"
-#endif
-
 #define CANBUS_STATE_CONNECTING (1 << 0)
 #define CANBUS_STATE_CONNECTED  (1 << 1)
 #define CANBUS_STATE_CLOSING    (1 << 2)
@@ -47,6 +43,7 @@
 #define CANBUS_FLAG_RECV_OWN_MSGS 0     // 0 = disable, 1 = enable
 
 typedef struct {
+  char *iface;
   unsigned int socket;
   uint8_t state;
   uint8_t flags;
