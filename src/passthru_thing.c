@@ -34,7 +34,28 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
 
   syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: pThingName=%s, pReceivedJsonDocument=%s, pContextData=%s", pThingName, pReceivedJsonDocument, (char *) pContextData);
 
-  if(strncmp(pThingName, AWS_IOT_MY_THING_NAME, strlen(AWS_IOT_MY_THING_NAME)) == 0) { // Receiving message that was sent by this device
+  if(action == SHADOW_GET) {
+    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: SHADOW_GET");
+  } 
+  else if(action == SHADOW_UPDATE) {
+    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: SHADOW_UPDATE");
+  } 
+  else if(action == SHADOW_DELETE) {
+    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: SHADOW_DELETE");
+  }
+
+  if (status == SHADOW_ACK_TIMEOUT) {
+    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: Update Timeout");
+  }
+  else if(status == SHADOW_ACK_REJECTED) {
+    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: Update Rejected");
+  }
+  else if(status == SHADOW_ACK_ACCEPTED) {
+    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: Update Accepted");
+  }
+
+  // Handle messages sent by this device
+  if(strncmp(pThingName, AWS_IOT_MY_THING_NAME, strlen(AWS_IOT_MY_THING_NAME)) == 0) {
 
     shadow_message *message = passthru_shadow_parser_parse(pReceivedJsonDocument);
 
@@ -48,52 +69,56 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
 
     // report: log
     if(message && message->state && message->state->reported && message->state->reported->log) {
-      syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: log=%s", message->state->reported->log);
+
+      syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: log->type=%s, log->file=%s", message->state->reported->log->type, message->state->reported->log->file);
+
+      if(message->state->reported->log->type == NULL) {
+        syslog(LOG_ERR, "passthru_thing_shadow_onupdate: log->type is null. aborting");
+        passthru_shadow_parser_free_message(message);
+        return;
+      }
 
       // report: log: LOG_FILE
-      if(strncmp(message->state->reported->log, "LOG_FILE", strlen("LOG_FILE")) == 0) {
+      if(strncmp(message->state->reported->log->type, "LOG_FILE", strlen("LOG_FILE")) == 0) {
         thing->logger->type = CANBUS_LOGTYPE_FILE;
         canbus_logger_run(thing->logger);
       }
 
       // report: log: LOG_AWSIOT
-      if(strncmp(message->state->reported->log, "LOG_AWSIOT", strlen("LOG_AWSIOT")) == 0) {
+      if(strncmp(message->state->reported->log->type, "LOG_AWSIOT", strlen("LOG_AWSIOT")) == 0 && 
+          strlen(message->state->reported->log->type) == strlen("LOG_AWSIOT")) {
+
         thing->logger->type = CANBUS_LOGTYPE_AWSIOT;
         canbus_logger_run(thing->logger);
       }
 
+      // report: log: LOG_AWSIOT_REPLAY
+      if(strncmp(message->state->reported->log->type, "LOG_AWSIOT_REPLAY", strlen("LOG_AWSIOT_REPLAY")) == 0) {
+        thing->logger->type = CANBUS_LOGTYPE_AWSIOT_REPLAY;
+        if(message->state->reported->log->file == NULL) {
+          syslog(LOG_ERR, "passthru_thing_shadow_onupdate: LOG_AWSIOT_REPLAY passed NULL log->file");
+        }
+        else {
+          thing->logger->logfile = malloc(sizeof(char)*strlen(message->state->reported->log->file)+1);
+          strcpy(thing->logger->logfile, message->state->reported->log->file);
+          canbus_awsiotlogger_replay(thing->logger);
+        }
+      }
+
       // report: log: LOG_NONE
-      if(strncmp(message->state->reported->log, "LOG_NONE", strlen("LOG_CANCEL")) == 0) {
-        syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate:  LOG_NONE");
+      if(strncmp(message->state->reported->log->type, "LOG_NONE", strlen("LOG_CANCEL")) == 0) {
+        syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: LOG_NONE");
         if(thing->logger->isrunning) {
           syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: stopping logger thread");
           canbus_logger_stop(thing->logger);
         }
       }
+
     }
 
     passthru_shadow_parser_free_message(message);
   }
 
-  if(action == SHADOW_GET) {
-    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: SHADOW_GET");
-  } 
-  else if(action == SHADOW_UPDATE) {
-    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: SHADOW_UPDATE");
-  } 
-  else if(action == SHADOW_DELETE) {
-    syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: SHADOW_DELETE");
-  }
-
-  if (status == SHADOW_ACK_TIMEOUT) {
-    syslog(LOG_DEBUG, "Update Timeout--");
-  }
-  else if(status == SHADOW_ACK_REJECTED) {
-    syslog(LOG_DEBUG, "Update Rejected");
-  }
-  else if(status == SHADOW_ACK_ACCEPTED) {
-    syslog(LOG_DEBUG, "Update Accepted !!");
-  }
 }
 
 void passthru_thing_shadow_onget(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t) {
@@ -176,6 +201,7 @@ void passthru_thing_init(thing_init_params *params) {
   thing->logger->canbus = malloc(sizeof(canbus_client));
   thing->logger->canbus->iface = NULL;
   thing->logger->logdir = NULL;
+  thing->logger->logfile = NULL;
   if(params->iface != NULL) {
     thing->logger->canbus->iface = malloc(sizeof(char) * strlen(params->iface)+1);
     strcpy(thing->logger->canbus->iface, params->iface);

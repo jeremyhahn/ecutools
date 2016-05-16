@@ -31,6 +31,9 @@ unsigned int canbus_logger_run(canbus_logger *logger) {
   if(logger->type & CANBUS_LOGTYPE_FILE) {
     canbus_filelogger_run(logger);
   }
+  else if(logger->type & CANBUS_LOGTYPE_AWSIOT_REPLAY) {
+    canbus_awsiotlogger_replay(logger); 
+  }
   else if(logger->type & CANBUS_LOGTYPE_AWSIOT) {
     canbus_awsiotlogger_run(logger);
   }
@@ -41,8 +44,8 @@ unsigned int canbus_logger_run(canbus_logger *logger) {
 
 unsigned int canbus_logger_stop(canbus_logger *logger) {
   syslog(LOG_DEBUG, "canbus_logger_stop: stopping");
+  logger->isrunning = false;
   if(logger->canbus_thread != NULL) {
-    logger->isrunning = false;
     while(canbus_isconnected(logger->canbus)) {
       syslog(LOG_DEBUG, "canbus_logger_stop: waiting for canbus connection to close");
       sleep(1);

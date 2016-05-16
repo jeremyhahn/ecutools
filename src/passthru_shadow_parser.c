@@ -48,52 +48,9 @@ shadow_message* passthru_shadow_parser_parse(const char *json) {
   if(json_is_object(reported)) {
     return passthru_shadow_parser_parse_reported(reported, message);
   }
-/*
-  json_t *log = json_object_get(state, "log");
-  if(json_is_object(log)) {
-    return passthru_shadow_parser_parse_log(log, message);
-  }
-*/
+
   syslog(LOG_ERR, "passthru_shadow_parser_parse: unable to parse state from json %s", json);
   return message;
-}
-
-shadow_kvpair* passthru_shadow_parser_parse_delta(const char *json) {
-  
-  syslog(LOG_DEBUG, "%s", json);
-
-  json_t *root;
-  json_error_t error;
-  
-  shadow_kvpair *kvpair = malloc(sizeof(shadow_kvpair));
-  kvpair->key = NULL;
-  kvpair->value = NULL;
-
-  root = json_loads(json, 0, &error);
-  if(!root) {
-    syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: unable to parse root node. line=%i, source=%s, text=%s", error.line, error.source, error.text);
-    return kvpair;
-  }
-
-  if(!json_is_object(root)) {
-    syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: Expected JSON root to be an object.");
-    json_decref(root);
-    return kvpair;
-  }
-
-  char state_key[100] = "log";
-  json_t *log = json_object_get(root, state_key);
-  if(json_is_string(log)) {
-    const char *json_val = json_string_value(log);
-    kvpair->key = malloc(strlen(state_key));
-    kvpair->value = malloc(strlen(json_val));
-    strncpy(kvpair->key, state_key, strlen(state_key)+1);
-    strncpy(kvpair->value, json_val, strlen(kvpair->value));
-    return kvpair;
-  }
-
-  syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: unable to parse delta from json %s", json);
-  return kvpair;
 }
 
 shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message) {
@@ -121,9 +78,25 @@ shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_messag
     }
 
     if(strncmp(key, "log", strlen(key)) == 0) {
-      const char *json_val = json_string_value(value);
-      message->state->reported->log = malloc(strlen(json_val));
-      strcpy(message->state->reported->log, json_val);
+
+      message->state->reported->log = malloc(sizeof(shadow_log));
+      message->state->reported->log->type = NULL;
+      message->state->reported->log->file = NULL;
+
+      json_t *file = json_object_get(value, "file");
+      json_t *type = json_object_get(value, "type");
+
+      if(json_is_string(file)) {
+        const char *file_val = json_string_value(file);
+        message->state->reported->log->file = malloc(strlen(file_val)+1);
+        strcpy(message->state->reported->log->file, file_val);
+      }
+
+      if(json_is_string(type)) {
+        const char *type_val = json_string_value(type);
+        message->state->reported->log->type = malloc(strlen(type_val)+1);
+        strcpy(message->state->reported->log->type, type_val);
+      }
     }
 
   }
@@ -146,6 +119,22 @@ void passthru_shadow_parser_free_kvpair(shadow_kvpair *kvpair) {
 }
 
 void passthru_shadow_parser_free_message(shadow_message *message) {
+
+  if(message->state->reported->log != NULL) {
+
+    if(message->state->reported->log->type != NULL) {
+      free(message->state->reported->log->type);
+      message->state->reported->log->type = NULL;
+    }
+
+    if(message->state->reported->log->file != NULL) {
+      free(message->state->reported->log->file);
+      message->state->reported->log->file = NULL;
+    }
+
+    free(message->state->reported->log);
+    message->state->reported->log = NULL;
+  }
 
   if(message->state->reported->connected != NULL) {
     free(message->state->reported->connected);

@@ -26,7 +26,7 @@ char* canbus_log_datestamp() {
   return buf;
 }
 
-unsigned int canbus_log_open(canbus_logger *logger) {
+unsigned int canbus_log_open(canbus_logger *logger, const char *mode) {
    char filename[360];
    if(logger->logdir != NULL) {
      strcpy(filename, logger->logdir);
@@ -34,15 +34,31 @@ unsigned int canbus_log_open(canbus_logger *logger) {
        strcat(filename, "/");
      }
    }
-   strcat(filename, canbus_log_datestamp());
-   strcat(filename, ".log");
+   if(logger->logfile == NULL) {
+     strcat(filename, canbus_log_datestamp());
+     strcat(filename, ".log");
+   }
+   else {
+     strcat(filename, logger->logfile);
+   }
    syslog(LOG_DEBUG, "canbus_log_open: filename=%s", filename);
-   canbus_log = fopen(filename, "w");
+   canbus_log = fopen(filename, mode);
    if(canbus_log == NULL) {
      syslog(LOG_ERR, "canbus_log_open: Unable to open %s. error=%s", filename, strerror(errno));
      return errno;
    }
    return 0;
+}
+
+unsigned int canbus_log_read(canbus_logger *logger) {
+  char * line = NULL;
+  size_t len = 0;
+  ssize_t read;
+  while ((read = getline(&line, &len, canbus_log)) != -1) {
+    syslog(LOG_DEBUG, "canbus_log_read: len=%zu, line=%s", read, line);
+    logger->onread(line);
+  }
+  return 0;
 }
 
 unsigned canbus_log_write(char *data) {

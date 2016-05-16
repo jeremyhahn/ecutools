@@ -31,7 +31,11 @@
 {
   "state": {
     "reported": {
-      "connected":"true"
+      "connected":"true",
+      "log": {
+        "type": "LOG_AWSIOT_REPLAY",
+        "file": "ecutuned_05162016_000557_GMT.log"
+      }
     }
   },
   "metadata": {
@@ -52,9 +56,14 @@ typedef struct _shadow_kvpair {
   char *value;
 } shadow_kvpair;
 
+typedef struct _shadow_log {
+  char *type;
+  char *file;
+} shadow_log;
+
 typedef struct _shadow_reported {
   char *connected;
-  char *log;
+  shadow_log *log;
 } shadow_report;
 
 typedef struct _shadow_metadata {
@@ -81,7 +90,7 @@ typedef struct _shadow_message {
 shadow_message* passthru_shadow_parser_parse(const char *json);
 shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message);
 
-shadow_kvpair* passthru_shadow_parser_parse_delta(const char *json);
+//shadow_kvpair* passthru_shadow_parser_parse_delta(const char *json);
 shadow_message* passthru_shadow_parser_parse_log(json_t *obj, shadow_message *message);
 
 #endif

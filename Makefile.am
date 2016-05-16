@@ -28,19 +28,6 @@ IOT_SRC_FILES += $(IOT_CLIENT_DIR)/external_libs/jsmn/jsmn.c
 IOT_SRC_FILES += $(PLATFORM_DIR)/network_mbedtls_wrapper.c
 IOT_SRC_FILES += $(PLATFORM_COMMON_DIR)/timer.c
 
-# MQTT Paho Embedded C client directory
-#MQTT_DIR = src/aws_mqtt_embedded_client_lib
-#MQTT_C_DIR = $(MQTT_DIR)/MQTTClient-C/src
-#MQTT_EMB_DIR = $(MQTT_DIR)/MQTTPacket/src
-
-#MQTT_INCLUDE_DIR =
-#MQTT_INCLUDE_DIR += -I $(MQTT_EMB_DIR)
-#MQTT_INCLUDE_DIR += -I $(MQTT_C_DIR)
-
-#MQTT_SRC_FILES =
-#MQTT_SRC_FILES += $(MQTT_EMB_DIR)/MQTTConnectClient.c $(MQTT_EMB_DIR)/MQTTDeserializePublish.c $(MQTT_EMB_DIR)/MQTTPacket.c $(MQTT_EMB_DIR)/MQTTSerializePublish.c $(MQTT_EMB_DIR)/MQTTSubscribeClient.c $(#MQTT_EMB_DIR)/MQTTUnsubscribeClient.c
-#MQTT_SRC_FILES += $(MQTT_C_DIR)/MQTTClient.c
-
 #TLS - mbedtls
 MBEDTLS_DIR = $(IOT_CLIENT_DIR)/external_libs/mbedTLS
 TLS_LIB_DIR = $(MBEDTLS_DIR)/library
@@ -62,10 +49,10 @@ SRC_FILES += $(CWEBSOCKET_SRC_FILES)
 SRC_FILES += $(ECUTOOLS_SRC_FILES)
 
 # AWS IoT Logging level control
-LOG_FLAGS = -DIOT_DEBUG
-LOG_FLAGS += -DIOT_INFO
-LOG_FLAGS += -DIOT_WARN
-LOG_FLAGS += -DIOT_ERROR
+#LOG_FLAGS = -DIOT_DEBUG
+#LOG_FLAGS += -DIOT_INFO
+#LOG_FLAGS += -DIOT_WARN
+#LOG_FLAGS += -DIOT_ERROR
 
 COMPILER_FLAGS = -g3
 COMPILER_FLAGS += $(LOG_FLAGS)

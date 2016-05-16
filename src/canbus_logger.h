@@ -19,8 +19,9 @@
 #ifndef CANBUSLOGGER_H
 #define CANBUSLOGGER_H
 
-#define CANBUS_LOGTYPE_FILE   (1 << 0)
-#define CANBUS_LOGTYPE_AWSIOT (1 << 1)
+#define CANBUS_LOGTYPE_FILE          (1 << 0)
+#define CANBUS_LOGTYPE_AWSIOT        (1 << 1)
+#define CANBUS_LOGTYPE_AWSIOT_REPLAY (1 << 2)
 
 #include <stdint.h>
 #include <pthread.h>
@@ -36,6 +37,9 @@ typedef struct {
   bool isrunning;
   unsigned int type;
   char *logdir;
+  pthread_t replay_thread;
+  char *logfile;
+  void (*onread)(const char *line);
 } canbus_logger;
 
 unsigned int canbus_logger_run(canbus_logger *logger);
