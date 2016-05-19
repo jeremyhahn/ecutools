@@ -21,7 +21,7 @@
 
 #include <stdbool.h>
 #include <syslog.h>
-#include "apigateway.h"
+#include "j2534/apigateway.h"
 
 // Return Values
 #define STATUS_NOERROR                   0x00000000  // Function completed successfully.

@@ -18,20 +18,23 @@
 
 #include "passthru_shadow_router.h"
 
+void passthru_shadow_router_route_reported(passthru_thing *thing, shadow_report *reported) {
+
+  if(reported->connection) {
+    syslog(LOG_DEBUG, "passthru_shadow_router_route_reported: connection=%i", reported->connection);
+    passthru_shadow_connection_handler_handle(reported->connection);
+    return;
+  }
+
+  if(reported->log) {
+    syslog(LOG_DEBUG, "passthru_shadow_router_route_reported: log->type=%i, log->file=%s", reported->log->type, reported->log->file);
+    passthru_shadow_log_handler_handle(thing->params->iface, thing->params->logdir, reported->log);
+    return;
+  }
+}
+
 void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message) {
-
-  // report: connection
-  if(message && message->state && message->state->reported && message->state->reported->connection) {
-    syslog(LOG_DEBUG, "passthru_shadow_router_route: connection=%i", message->state->reported->connection);
-    passthru_shadow_connection_handler_handle(message->state->reported->connection);
-    return;
+  if(message && message->state && message->state->reported) {
+    passthru_shadow_router_route_reported(thing, message->state->reported);
   }
-
-  // report: log
-  if(message && message->state && message->state->reported && message->state->reported->log != NULL) {
-    syslog(LOG_DEBUG, "passthru_shadow_router_route: log->type=%i, log->file=%s", message->state->reported->log->type, message->state->reported->log->file);
-    passthru_shadow_log_handler_handle(thing->params->iface, thing->params->logdir, message->state->reported->log);
-    return;
-  }
-
 }
