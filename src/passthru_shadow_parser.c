@@ -68,15 +68,14 @@ shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_messag
 
   message->state = malloc(sizeof(shadow_state));
   message->state->reported = malloc(sizeof(shadow_report));
-  message->state->reported->connected = NULL;
+  message->state->reported->connection = NULL;
   message->state->reported->log = NULL;
 
   json_object_foreach(obj, key, value) {
 
-    if(strncmp(key, "connected", strlen(key)) == 0) {
-      const char *json_val = json_string_value(value);
-      message->state->reported->connected = malloc(strlen(json_val));
-      strcpy(message->state->reported->connected, json_val);
+    if(strncmp(key, "connection", strlen(key)) == 0) {
+      message->state->reported->connection = malloc(sizeof(int));
+      message->state->reported->connection = json_integer_value(value);
     }
 
     if(strncmp(key, "log", strlen(key)) == 0) {
@@ -116,11 +115,6 @@ void passthru_shadow_parser_free_message(shadow_message *message) {
 
     free(message->state->reported->log);
     message->state->reported->log = NULL;
-  }
-
-  if(message->state->reported->connected != NULL) {
-    free(message->state->reported->connected);
-    message->state->reported->connected = NULL;
   }
 
   if(message->state->reported != NULL) {

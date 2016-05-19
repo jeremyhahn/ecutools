@@ -20,16 +20,18 @@
 
 void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message) {
 
-  // report: connected
-  if(message && message->state && message->state->reported && message->state->reported->connected) {
-    syslog(LOG_DEBUG, "passthru_shadow_router_route: connected=%s", message->state->reported->connected);
-    passthru_shadow_connection_handler_handle(message->state->reported->connected);
+  // report: connection
+  if(message && message->state && message->state->reported && message->state->reported->connection) {
+    syslog(LOG_DEBUG, "passthru_shadow_router_route: connection=%i", message->state->reported->connection);
+    passthru_shadow_connection_handler_handle(message->state->reported->connection);
+    return;
   }
 
   // report: log
-  if(message && message->state && message->state->reported && message->state->reported->log) {
+  if(message && message->state && message->state->reported && message->state->reported->log != NULL) {
     syslog(LOG_DEBUG, "passthru_shadow_router_route: log->type=%i, log->file=%s", message->state->reported->log->type, message->state->reported->log->file);
     passthru_shadow_log_handler_handle(thing->params->iface, thing->params->logdir, message->state->reported->log);
+    return;
   }
 
 }

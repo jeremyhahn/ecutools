@@ -18,9 +18,12 @@
 
 #include "passthru_shadow_connection_handler.h"
 
-void passthru_shadow_connection_handler_handle(const char *connected) {
 
-  if(strncmp(connected, "false", strlen("false")) == 0) {
+#include <syslog.h>
+
+void passthru_shadow_connection_handler_handle(int *connection) {
+
+  if(connection == PASSTHRU_CONNECTTYPE_DISCONNECT) {
     passthru_thing_disconnect();
   }
 

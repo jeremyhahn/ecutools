@@ -24,7 +24,7 @@
 #include <string.h>
 #include <jansson.h>
 #include "passthru_shadow.h"
-#include "passthru_logtypes.h"
+#include "passthru_defs.h"
 #include "canbus_logger_common.h"
 
 #define PASSTHRU_SHADOW_REPORTED_MAX_ELEMENTS 50

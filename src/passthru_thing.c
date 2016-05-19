@@ -117,18 +117,21 @@ void *passthru_thing_shadow_yield_thread(void *ptr) {
 }
 
 int passthru_thing_send_connect_report() {
+syslog(LOG_DEBUG, "sending connect report");
+
   char pJsonDocument[SHADOW_MAX_SIZE_OF_RX_BUFFER];
-  char state[255] = "{\"connected\": \"true\"}";
+  char state[255] = "{\"connection\": 1}";
   if(!passthru_shadow_build_report_json(pJsonDocument, SHADOW_MAX_SIZE_OF_RX_BUFFER, state, strlen(state))) {
     syslog(LOG_ERR, "passthru_thing_send_connect_report: failed to build JSON state message. state=%s", state);
     return 1;
   }
+syslog(LOG_DEBUG, "sending update");
   return passthru_shadow_update(thing->shadow, pJsonDocument);
 }
 
 int passthru_thing_send_disconnect_report() {
   char pJsonDocument[SHADOW_MAX_SIZE_OF_RX_BUFFER];
-  char state[255] = "{\"connected\": \"false\"}";
+  char state[255] = "{\"connection\": 2}";
   if(!passthru_shadow_build_report_json(pJsonDocument, SHADOW_MAX_SIZE_OF_RX_BUFFER, state, strlen(state))) {
     syslog(LOG_ERR, "passthru_thing_send_disconnect_report: failed to build JSON state message. state=%s", state);
     return 1;
@@ -171,6 +174,7 @@ int passthru_thing_run() {
 }
 
 void passthru_thing_disconnect() {
+  syslog(LOG_DEBUG, "passthru_thing_disconnect: disconnecting");
   thing->state = THING_STATE_DISCONNECTING;
   if(passthru_shadow_disconnect(thing->shadow) != 0) {
     syslog(LOG_ERR, "passthru_thing_disconnect: failed to disconnect from AWS IoT. rc=%d", thing->shadow->rc);

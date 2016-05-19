@@ -39,7 +39,7 @@ typedef struct _shadow_log {
 } shadow_log;
 
 typedef struct _shadow_reported {
-  char *connected;
+  int *connection;
   shadow_log *log;
 } shadow_report;
 
@@ -48,7 +48,7 @@ typedef struct _shadow_metadata {
 } shadow_metadata;
 
 typedef struct _shadow_desired {
-  char *connected;
+  char *connection;
 } shadow_desired;
 
 typedef struct _shadow_state {
