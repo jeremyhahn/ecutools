@@ -18,36 +18,36 @@
 
 #include "canbus_log.h"
 
-char* canbus_log_datestamp() {
-  char buf[100];
+unsigned int canbus_log_open(canbus_logger *logger, const char *mode) {
+
+  char datestamp[100];
   time_t now = time(0);
   struct tm tm = *gmtime(&now);
-  strftime(buf, sizeof buf, "ecutuned_%m%d%Y_%H%M%S_%Z", &tm);
-  return buf;
-}
+  strftime(datestamp, sizeof datestamp, "ecutuned_%m%d%Y_%H%M%S_%Z", &tm);
 
-unsigned int canbus_log_open(canbus_logger *logger, const char *mode) {
-   char filename[360];
-   if(logger->logdir != NULL) {
-     strcpy(filename, logger->logdir);
-     if(filename[strlen(filename)] != '/') {
-       strcat(filename, "/");
-     }
-   }
-   if(logger->logfile == NULL) {
-     strcat(filename, canbus_log_datestamp());
-     strcat(filename, ".log");
-   }
-   else {
-     strcat(filename, logger->logfile);
-   }
-   syslog(LOG_DEBUG, "canbus_log_open: filename=%s", filename);
-   canbus_log = fopen(filename, mode);
-   if(canbus_log == NULL) {
-     syslog(LOG_ERR, "canbus_log_open: Unable to open %s. error=%s", filename, strerror(errno));
-     return errno;
-   }
-   return 0;
+  char filename[360];
+  if(logger->logdir != NULL) {
+    strcpy(filename, logger->logdir);
+    if(filename[strlen(filename)] != '/') {
+      strcat(filename, "/");
+    }
+  }
+
+  if(logger->logfile == NULL) {
+    strcat(filename, datestamp);
+    strcat(filename, ".log");
+  }
+  else {
+    strcat(filename, logger->logfile);
+  }
+
+  syslog(LOG_DEBUG, "canbus_log_open: filename=%s", filename);
+  canbus_log = fopen(filename, mode);
+  if(canbus_log == NULL) {
+    syslog(LOG_ERR, "canbus_log_open: Unable to open %s. error=%s", filename, strerror(errno));
+    return errno;
+  }
+  return 0;
 }
 
 unsigned int canbus_log_read(canbus_logger *logger) {

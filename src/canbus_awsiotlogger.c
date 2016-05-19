@@ -67,8 +67,9 @@ void *canbus_awsiotlogger_thread(void *ptr) {
   }
 
   awsiot_client_close(&iotlogger, NULL, NULL);
-  canbus_close(pLogger->canbus);
   syslog(LOG_DEBUG, "canbus_awsiotlogger_thread: stopping");
+  pLogger->canbus_thread_state = CANBUS_LOGTHREAD_STOPPED;
+
   return NULL;
 }
 
@@ -113,7 +114,6 @@ void canbus_awsiotlogger_onread(const char *line) {
 }
 
 unsigned int canbus_awsiotlogger_replay(canbus_logger *logger) {
-
   canbus_awsiotlogger_init(logger);
   logger->onread = &canbus_awsiotlogger_onread;
   pthread_create(&logger->replay_thread, NULL, canbus_awsiotlogger_replay_thread, (void *)logger);

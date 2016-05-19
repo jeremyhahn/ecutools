@@ -25,6 +25,14 @@
 #include <syslog.h>
 #include "canbus.h"
 
+#define CANBUS_LOGTYPE_FILE          (1 << 0)
+#define CANBUS_LOGTYPE_AWSIOT        (1 << 1)
+#define CANBUS_LOGTYPE_AWSIOT_REPLAY (1 << 2)
+
+#define CANBUS_LOGTHREAD_RUNNING     (1 << 0)
+#define CANBUS_LOGTHREAD_STOPPING    (1 << 1)
+#define CANBUS_LOGTHREAD_STOPPED     (1 << 2)
+
 typedef struct {
   uint8_t canbus_flags;
   pthread_t canbus_thread;
@@ -36,6 +44,7 @@ typedef struct {
   char **logdir;
   pthread_t replay_thread;
   char *logfile;
+  uint8_t canbus_thread_state;
   void (*onread)(const char *line);
 } canbus_logger;
 

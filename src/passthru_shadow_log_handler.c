@@ -49,6 +49,11 @@ void passthru_shadow_log_handler_handle(const char *iface, const char *logdir, s
    syslog(LOG_DEBUG, "passthru_shadow_log_handler_handle: iface=%s, logidr=%s, log->type=%i, log->file=%s",
     iface, logdir, log->type, log->file);
 
+  if(logger != NULL && log->type != PASSTHRU_LOGTYPE_NONE) {
+    syslog(LOG_ERR, "passthru_shadow_log_handler_handle: logger already running! aborting");
+    return;
+  }
+
   // LOG_NONE
   if(log->type == PASSTHRU_LOGTYPE_NONE) {
     syslog(LOG_DEBUG, "passthru_shadow_log_handler_handle: LOG_NONE");

@@ -19,10 +19,6 @@
 #ifndef CANBUSLOGGER_H
 #define CANBUSLOGGER_H
 
-#define CANBUS_LOGTYPE_FILE          (1 << 0)
-#define CANBUS_LOGTYPE_AWSIOT        (1 << 1)
-#define CANBUS_LOGTYPE_AWSIOT_REPLAY (1 << 2)
-
 #include "canbus_logger_common.h"
 #include "canbus_filelogger.h"
 #include "canbus_awsiotlogger.h"

@@ -18,6 +18,8 @@
 
 #include "canbus.h"
 
+bool reading = false;
+
 void canbus_print_frame(struct can_frame *frame) {
   int i;
   printf("%04x: ", frame->can_id);
@@ -55,6 +57,7 @@ void canbus_init(canbus_client *canbus) {
   canbus->socket = 0;
   canbus->state = CANBUS_STATE_CLOSED;
   canbus->flags = 0;
+  canbus->reading = false;
   if(canbus->iface == NULL) {
     canbus->iface = malloc(6);
     strcpy(canbus->iface, "vcan0");
@@ -74,7 +77,7 @@ unsigned int canbus_connect(canbus_client *canbus) {
     return 2;
   }
 
-  if(pthread_mutex_init(&canbus->rwlock, NULL) != 0) {
+  if(pthread_mutex_init(&canbus->wlock, NULL) != 0) {
     syslog(LOG_ERR, "canbus_connect: unable to initialize canbus read/write mutex: %s", strerror(errno));
     return 3;
   }
@@ -137,6 +140,7 @@ ssize_t canbus_read(canbus_client *canbus, struct can_frame *frame) {
   }
 
   int nbytes = read(canbus->socket, frame, sizeof(struct can_frame));
+
   if(nbytes < 0) {
     syslog(LOG_CRIT, "canbus_read: %s", strerror(errno));
     return 2;
@@ -158,14 +162,14 @@ unsigned int canbus_write(canbus_client *canbus, struct can_frame *frame) {
     return 1;
   }
 
-  pthread_mutex_lock(&canbus->rwlock);
+  pthread_mutex_lock(&canbus->wlock);
 
   int bytes = write(canbus->socket, frame, sizeof(struct can_frame));
   if(bytes == -1) {
     syslog(LOG_ERR, "canbus_write: %s", strerror(errno));
   }
 
-  pthread_mutex_unlock(&canbus->rwlock);
+  pthread_mutex_unlock(&canbus->wlock);
 
   syslog(LOG_DEBUG, "canbus_write: wrote %d byte CAN frame", bytes);
 

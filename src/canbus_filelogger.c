@@ -47,8 +47,8 @@ void *canbus_filelogger_thread(void *ptr) {
   }
 
   canbus_log_close();
-  canbus_close(pLogger->canbus);
   syslog(LOG_DEBUG, "canbus_filelogger_thread: stopping");
+  pLogger->canbus_thread_state = CANBUS_LOGTHREAD_STOPPED;
   return NULL;
 }
 

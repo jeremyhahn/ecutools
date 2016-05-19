@@ -48,8 +48,9 @@ typedef struct {
   uint8_t state;
   uint8_t flags;
   pthread_t thread;
+  bool reading;
   pthread_mutex_t lock;
-  pthread_mutex_t rwlock;
+  pthread_mutex_t wlock;
 } canbus_client;
 
 void canbus_init(canbus_client *canbus);

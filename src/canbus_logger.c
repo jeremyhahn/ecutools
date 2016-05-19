@@ -40,17 +40,20 @@ void canbus_logger_run(canbus_logger *logger) {
   }
   else {
     syslog(LOG_ERR, "canbus_logger_run: invalid logger->type");
+    return;
   }
+
+  logger->canbus_thread_state = CANBUS_LOGTHREAD_RUNNING;
 }
 
 void canbus_logger_stop(canbus_logger *logger) {
   syslog(LOG_DEBUG, "canbus_logger_stop: stopping");
   logger->isrunning = false;
-  if(logger->canbus_thread != NULL) {
-    while(canbus_isconnected(logger->canbus)) {
-      syslog(LOG_DEBUG, "canbus_logger_stop: waiting for canbus connection to close");
-      sleep(1);
-    }
-    logger->canbus_thread = NULL;
+  logger->canbus_thread_state = CANBUS_LOGTHREAD_STOPPING;
+  while(!(logger->canbus_thread_state & CANBUS_LOGTHREAD_STOPPED)) {
+    syslog(LOG_DEBUG, "canbus_logger_stop: waiting for canbus connection to close");
+    sleep(1);
   }
+  canbus_close(logger->canbus);
+  logger->canbus_thread = NULL;
 }
