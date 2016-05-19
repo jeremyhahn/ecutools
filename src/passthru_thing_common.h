@@ -1,6 +1,6 @@
 /**
  * ecutools: IoT Automotive Tuning, Diagnostics & Analytics
- * Copyright (C) 2014  Jeremy Hahn
+ * Copyright (C) 2014 Jeremy Hahn
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CANBUSFILELOGGER_H
-#define CANBUSFILELOGGER_H
+#ifndef PASSTHRUTHINGCOMMON_H
+#define PASSTHRUTHINGCOMMON_H_
 
-#include "canbus_logger.h"
+#include "passthru_shadow.h"
 
-unsigned int canbus_filelogger_run(canbus_logger *logger);
-unsigned int canbus_filelogger_stop(canbus_logger *logger);
+typedef struct {
+  char *thingId;
+  char *iface;
+  char *logdir;
+} thing_init_params;
 
- #endif
+typedef struct {
+  char *name;
+  uint8_t state;
+  thing_init_params *params;
+  passthru_shadow *shadow;
+} passthru_thing;
+
+#endif

@@ -45,13 +45,13 @@ void canbus_framecpy(struct can_frame * frame, char *buf) {
   }
 }
 
-int canbus_framecmp(struct can_frame *frame1, struct can_frame *frame2) {
-  if(frame1->can_id != frame2->can_id) return -1;
+unsigned int canbus_framecmp(struct can_frame *frame1, struct can_frame *frame2) {
+  if(frame1->can_id != frame2->can_id) return 1;
   return strcmp((const char *)frame1->data, (const char *)frame2->data) == 0;
 }
 
-int canbus_init(canbus_client *canbus) {
-  syslog(LOG_DEBUG, "canbus_init: initializing canbus client");
+void canbus_init(canbus_client *canbus) {
+  syslog(LOG_DEBUG, "canbus_init: initializing canbus client. iface=%s", canbus->iface);
   canbus->socket = 0;
   canbus->state = CANBUS_STATE_CLOSED;
   canbus->flags = 0;
@@ -61,7 +61,9 @@ int canbus_init(canbus_client *canbus) {
   }
 }
 
-int canbus_connect(canbus_client *canbus) {
+unsigned int canbus_connect(canbus_client *canbus) {
+
+  syslog(LOG_DEBUG, "canbus_connect: socket=%i, iface=%s", canbus->socket, canbus->iface);
 
   if(canbus->socket > 0) {
     syslog(LOG_CRIT, "canbus_connect: CAN socket already connected. socket=%i", canbus->socket);
@@ -88,7 +90,7 @@ int canbus_connect(canbus_client *canbus) {
 
   if((canbus->socket = socket(PF_CAN, SOCK_RAW, CAN_RAW)) == -1) {
 	  syslog(LOG_CRIT, "canbus_connect: error opening socket");
-	  return -1;
+	  return 4;
   }
 
   strcpy(ifr.ifr_name, canbus->iface);
@@ -102,20 +104,20 @@ int canbus_connect(canbus_client *canbus) {
 
   if(bind(canbus->socket, (struct sockaddr *)&addr, sizeof(addr)) < -1) {
     printf("canbus_connect: error in socket bind");
-    return -1;
+    return 5;
   }
 
   if(setsockopt(canbus->socket, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &err_mask, sizeof(err_mask)) == -1) {
     syslog(LOG_ERR, "canbus_connect: unable to set CAN_RAW_ERR_FILTER socket option: %s", strerror(errno));
-    return -1;
+    return 6;
   }
 
   if(setsockopt(canbus->socket, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &recv_own_msgs, sizeof(recv_own_msgs)) == -1) {
     syslog(LOG_ERR, "canbus_connect: unable to set CAN_RAW_RECV_OWN_MSGS socket option: %s", strerror(errno));
-    return -1;
+    return 7;
   }
 
-  syslog(LOG_DEBUG, "canbus_connect: %s socket descriptor: %i", ifr.ifr_name, canbus->socket);
+  syslog(LOG_DEBUG, "canbus_connect: %s socket=%i", ifr.ifr_name, canbus->socket);
 
   pthread_mutex_lock(&canbus->lock);
   canbus->state = CANBUS_STATE_CONNECTED;
@@ -131,18 +133,18 @@ bool canbus_isconnected(canbus_client *canbus) {
 ssize_t canbus_read(canbus_client *canbus, struct can_frame *frame) {
   if((canbus->state & CANBUS_STATE_CONNECTED) == 0) {
     syslog(LOG_ERR, "canbus_read: CAN socket not connected");
-    return -1;
+    return 1;
   }
 
   int nbytes = read(canbus->socket, frame, sizeof(struct can_frame));
   if(nbytes < 0) {
     syslog(LOG_CRIT, "canbus_read: %s", strerror(errno));
-    return -1;
+    return 2;
   }
 
   if(nbytes < sizeof(struct can_frame)) {
     syslog(LOG_CRIT, "canbus_read: received incomplete CAN frame");
-    return -1;
+    return 3;
   }
 
   syslog(LOG_DEBUG, "canbus_read: read %i byte CAN frame", nbytes);
@@ -150,10 +152,10 @@ ssize_t canbus_read(canbus_client *canbus, struct can_frame *frame) {
   return nbytes;
 }
 
-int canbus_write(canbus_client *canbus, struct can_frame *frame) {
+unsigned int canbus_write(canbus_client *canbus, struct can_frame *frame) {
   if((canbus->state & CANBUS_STATE_CONNECTED) == 0) {
     syslog(LOG_ERR, "canbus_write: CAN socket not connected");
-    return -1;
+    return 1;
   }
 
   pthread_mutex_lock(&canbus->rwlock);
@@ -188,6 +190,11 @@ void canbus_close(canbus_client *canbus) {
   pthread_mutex_lock(&canbus->lock);
   canbus->state = CANBUS_STATE_CLOSED;
   pthread_mutex_unlock(&canbus->lock);
+}
 
-  free(canbus->iface);
+void canbus_free(canbus_client *canbus) {
+  if(canbus->iface != NULL) {
+    free(canbus->iface);
+    canbus->iface == NULL;
+  }
 }

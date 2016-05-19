@@ -1,6 +1,6 @@
 /**
  * ecutools: IoT Automotive Tuning, Diagnostics & Analytics
- * Copyright (C) 2014  Jeremy Hahn
+ * Copyright (C) 2014 Jeremy Hahn
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,13 @@
 #ifndef PASSTHRUTHING_H_
 #define PASSTHRUTHING_H_
 
+#include <stdint.h>
 #include <stddef.h>
 #include <signal.h>
 #include <pthread.h>
-#include "canbus_logger.h"
-#include "passthru_shadow.h"
+#include "passthru_thing_common.h"
 #include "passthru_shadow_parser.h"
+#include "passthru_shadow_router.h"
 
 #define THING_STATE_CONNECTING    (1 << 0)
 #define THING_STATE_CONNECTED     (1 << 1)
@@ -32,22 +33,6 @@
 #define THING_STATE_CLOSED        (1 << 3)
 #define THING_STATE_DISCONNECTING (1 << 4) 
 #define THING_STATE_DISCONNECTED  (1 << 5)
-
-typedef struct {
-  char *thingId;
-  char *iface;
-  char *logdir;
-} thing_init_params;
-
-typedef struct {
-  char *name;
-  uint8_t state;
-  thing_init_params *params;
-  passthru_shadow *shadow;
-  canbus_logger *logger;
-} passthru_thing;
-
-passthru_thing *thing;
 
 void passthru_thing_init(thing_init_params *params);
 int passthru_thing_run();

@@ -52,13 +52,14 @@ typedef struct {
   pthread_mutex_t rwlock;
 } canbus_client;
 
-int canbus_connect(canbus_client *canbus);
+void canbus_init(canbus_client *canbus);
+unsigned int canbus_connect(canbus_client *canbus);
 bool canbus_isconnected(canbus_client *canbus);
 ssize_t canbus_read(canbus_client *canbus, struct can_frame *frame);
-int canbus_write(canbus_client *canbus, struct can_frame *frame);
+unsigned int canbus_write(canbus_client *canbus, struct can_frame *frame);
 void canbus_close(canbus_client *canbus);
 void canbus_framecpy(struct can_frame * frame, char *buf);
-int canbus_framecmp(struct can_frame *frame1, struct can_frame *frame2);
+unsigned int canbus_framecmp(struct can_frame *frame1, struct can_frame *frame2);
 void canbus_print_frame(struct can_frame * frame);
 
 #endif

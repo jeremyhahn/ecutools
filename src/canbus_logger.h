@@ -23,26 +23,11 @@
 #define CANBUS_LOGTYPE_AWSIOT        (1 << 1)
 #define CANBUS_LOGTYPE_AWSIOT_REPLAY (1 << 2)
 
-#include <stdint.h>
-#include <pthread.h>
-#include <stdbool.h>
-#include <syslog.h>
- #include "canbus.h"
+#include "canbus_logger_common.h"
+#include "canbus_filelogger.h"
+#include "canbus_awsiotlogger.h"
 
-typedef struct {
-  uint8_t canbus_flags;
-  pthread_t canbus_thread;
-  struct canbus_filter *filters[10];
-  canbus_client *canbus;
-  bool isrunning;
-  unsigned int type;
-  char *logdir;
-  pthread_t replay_thread;
-  char *logfile;
-  void (*onread)(const char *line);
-} canbus_logger;
-
-unsigned int canbus_logger_run(canbus_logger *logger);
-unsigned int canbus_logger_stop(canbus_logger *logger);
+void canbus_logger_run(canbus_logger *logger);
+void canbus_logger_stop(canbus_logger *logger);
 
 #endif

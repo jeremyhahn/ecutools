@@ -18,11 +18,12 @@
 
 #include "canbus_logger.h"
 
-unsigned int canbus_logger_run(canbus_logger *logger) {
+void canbus_logger_run(canbus_logger *logger) {
+
   syslog(LOG_DEBUG, "canbus_logger_run: running");
-  
-  canbus_init(logger->canbus);
+
   canbus_connect(logger->canbus);
+
   if(!canbus_isconnected(logger->canbus)) {
     syslog(LOG_CRIT, "canbus_logger_run: unable to connect to CAN");
     return 1;
@@ -42,7 +43,7 @@ unsigned int canbus_logger_run(canbus_logger *logger) {
   }
 }
 
-unsigned int canbus_logger_stop(canbus_logger *logger) {
+void canbus_logger_stop(canbus_logger *logger) {
   syslog(LOG_DEBUG, "canbus_logger_stop: stopping");
   logger->isrunning = false;
   if(logger->canbus_thread != NULL) {
@@ -52,5 +53,4 @@ unsigned int canbus_logger_stop(canbus_logger *logger) {
     }
     logger->canbus_thread = NULL;
   }
-  return 0;
 }

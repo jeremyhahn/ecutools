@@ -1,6 +1,6 @@
 /**
  * ecutools: IoT Automotive Tuning, Diagnostics & Analytics
- * Copyright (C) 2014  Jeremy Hahn
+ * Copyright (C) 2014 Jeremy Hahn
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
  */
 
 #include "passthru_shadow_parser.h"
+
+shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message);
 
 shadow_message* passthru_shadow_parser_parse(const char *json) {
   
@@ -92,10 +94,9 @@ shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_messag
         strcpy(message->state->reported->log->file, file_val);
       }
 
-      if(json_is_string(type)) {
-        const char *type_val = json_string_value(type);
-        message->state->reported->log->type = malloc(strlen(type_val)+1);
-        strcpy(message->state->reported->log->type, type_val);
+      if(json_is_integer(type)) {
+        message->state->reported->log->type = malloc(sizeof(int));
+        message->state->reported->log->type = json_integer_value(type);
       }
     }
 
@@ -104,28 +105,9 @@ shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_messag
   return message;
 }
 
-void passthru_shadow_parser_free_kvpair(shadow_kvpair *kvpair) {
-  if(kvpair != NULL) {
-    if(kvpair->key != NULL) {
-      free(kvpair->key);
-      kvpair->key = NULL;
-    }
-    if(kvpair->value != NULL) {
-      free(kvpair->value);
-      kvpair->value = NULL;
-    }
-    free(kvpair);
-  }
-}
-
 void passthru_shadow_parser_free_message(shadow_message *message) {
 
   if(message->state->reported->log != NULL) {
-
-    if(message->state->reported->log->type != NULL) {
-      free(message->state->reported->log->type);
-      message->state->reported->log->type = NULL;
-    }
 
     if(message->state->reported->log->file != NULL) {
       free(message->state->reported->log->file);

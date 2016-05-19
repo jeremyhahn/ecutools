@@ -1,6 +1,6 @@
 /**
  * ecutools: IoT Automotive Tuning, Diagnostics & Analytics
- * Copyright (C) 2014  Jeremy Hahn
+ * Copyright (C) 2014 Jeremy Hahn
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
  */
 
 #include "passthru_thing.h"
+
+passthru_thing *thing;
 
 void passthru_thing_shadow_onopen(passthru_shadow *shadow) {
   syslog(LOG_DEBUG, "passthru_thing_shadow_onopen");
@@ -56,66 +58,8 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
 
   // Handle messages sent by this device
   if(strncmp(pThingName, AWS_IOT_MY_THING_NAME, strlen(AWS_IOT_MY_THING_NAME)) == 0) {
-
     shadow_message *message = passthru_shadow_parser_parse(pReceivedJsonDocument);
-
-    // report: connected
-    if(message && message->state && message->state->reported && message->state->reported->connected) {
-      syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: connected=%s", message->state->reported->connected);
-      if(strncmp(message->state->reported->connected, "false", strlen("false")) == 0) {
-        passthru_thing_disconnect();
-      }
-    }
-
-    // report: log
-    if(message && message->state && message->state->reported && message->state->reported->log) {
-
-      syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: log->type=%s, log->file=%s", message->state->reported->log->type, message->state->reported->log->file);
-
-      if(message->state->reported->log->type == NULL) {
-        syslog(LOG_ERR, "passthru_thing_shadow_onupdate: log->type is null. aborting");
-        passthru_shadow_parser_free_message(message);
-        return;
-      }
-
-      // report: log: LOG_FILE
-      if(strncmp(message->state->reported->log->type, "LOG_FILE", strlen("LOG_FILE")) == 0) {
-        thing->logger->type = CANBUS_LOGTYPE_FILE;
-        canbus_logger_run(thing->logger);
-      }
-
-      // report: log: LOG_AWSIOT
-      if(strncmp(message->state->reported->log->type, "LOG_AWSIOT", strlen("LOG_AWSIOT")) == 0 && 
-          strlen(message->state->reported->log->type) == strlen("LOG_AWSIOT")) {
-
-        thing->logger->type = CANBUS_LOGTYPE_AWSIOT;
-        canbus_logger_run(thing->logger);
-      }
-
-      // report: log: LOG_AWSIOT_REPLAY
-      if(strncmp(message->state->reported->log->type, "LOG_AWSIOT_REPLAY", strlen("LOG_AWSIOT_REPLAY")) == 0) {
-        thing->logger->type = CANBUS_LOGTYPE_AWSIOT_REPLAY;
-        if(message->state->reported->log->file == NULL) {
-          syslog(LOG_ERR, "passthru_thing_shadow_onupdate: LOG_AWSIOT_REPLAY passed NULL log->file");
-        }
-        else {
-          thing->logger->logfile = malloc(sizeof(char)*strlen(message->state->reported->log->file)+1);
-          strcpy(thing->logger->logfile, message->state->reported->log->file);
-          canbus_awsiotlogger_replay(thing->logger);
-        }
-      }
-
-      // report: log: LOG_NONE
-      if(strncmp(message->state->reported->log->type, "LOG_NONE", strlen("LOG_CANCEL")) == 0) {
-        syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: LOG_NONE");
-        if(thing->logger->isrunning) {
-          syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: stopping logger thread");
-          canbus_logger_stop(thing->logger);
-        }
-      }
-
-    }
-
+    passthru_shadow_router_route(thing, message);
     passthru_shadow_parser_free_message(message);
   }
 
@@ -197,24 +141,6 @@ void passthru_thing_init(thing_init_params *params) {
   thing = malloc(sizeof(passthru_thing));
   thing->params = params;
 
-  thing->logger = malloc(sizeof(canbus_logger));
-  thing->logger->canbus = malloc(sizeof(canbus_client));
-  thing->logger->canbus->iface = NULL;
-  thing->logger->logdir = NULL;
-  thing->logger->logfile = NULL;
-  if(params->iface != NULL) {
-    thing->logger->canbus->iface = malloc(sizeof(char) * strlen(params->iface)+1);
-    strcpy(thing->logger->canbus->iface, params->iface);
-  }
-  if(params->logdir != NULL) {
-    thing->logger->logdir = malloc(sizeof(char) * strlen(params->logdir)+1);
-    strcpy(thing->logger->logdir, params->logdir);
-  }
-  else {
-    thing->logger->logdir = malloc(2);
-    strcpy(thing->logger->logdir, ".");
-  }
-
   thing->shadow = malloc(sizeof(passthru_shadow));
   memset(thing->shadow, 0, sizeof(passthru_shadow));
 
@@ -259,13 +185,6 @@ void passthru_thing_close() {
     syslog(LOG_DEBUG, "passthru_thing_close: waiting for thing to disconnect");
     sleep(1);
   }
-  if(thing->logger->isrunning) {
-    canbus_logger_stop(thing->logger);
-    while(thing->logger->isrunning) {
-      syslog(LOG_DEBUG, "passthru_thing_close: waiting for logger to close");
-      sleep(1);
-    }
-  }
   thing->state = THING_STATE_CLOSED;
   syslog(LOG_DEBUG, "passthru_thing_close: closed");
 }
@@ -273,9 +192,6 @@ void passthru_thing_close() {
 void passthru_thing_destroy() {
   syslog(LOG_DEBUG, "passthru_thing_destroy");
   passthru_shadow_destroy(thing->shadow);
-  free(thing->logger->logdir);
-  free(thing->logger->canbus);
-  free(thing->logger);
   free(thing->shadow);
   free(thing);
 }

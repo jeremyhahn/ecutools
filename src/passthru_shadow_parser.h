@@ -1,6 +1,6 @@
 /**
  * ecutools: IoT Automotive Tuning, Diagnostics & Analytics
- * Copyright (C) 2014  Jeremy Hahn
+ * Copyright (C) 2014 Jeremy Hahn
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,11 +23,15 @@
 #include <stdint.h>
 #include <string.h>
 #include <jansson.h>
+#include "passthru_shadow.h"
+#include "passthru_logtypes.h"
+#include "canbus_logger_common.h"
 
 #define PASSTHRU_SHADOW_REPORTED_MAX_ELEMENTS 50
 #define PASSTHRU_SHADOW_DESIRED_MAX_ELEMENTS 50
 
 /*
+Shadow:
 {
   "state": {
     "reported": {
@@ -50,47 +54,22 @@
   "clientToken": "VirtualDataLogger-0"
 }
 */
-
-typedef struct _shadow_kvpair {
-  char *key;
-  char *value;
-} shadow_kvpair;
-
-typedef struct _shadow_log {
-  char *type;
-  char *file;
-} shadow_log;
-
-typedef struct _shadow_reported {
-  char *connected;
-  shadow_log *log;
-} shadow_report;
-
-typedef struct _shadow_metadata {
-  shadow_report *reported;
-} shadow_metadata;
-
-typedef struct _shadow_desired {
-  char *connected;
-} shadow_desired;
-
-typedef struct _shadow_state {
-  shadow_report *reported;
-  shadow_desired *desired;
-} shadow_state;
-
-typedef struct _shadow_message {
-  shadow_state *state;
-  shadow_metadata *metadata;
-  uint64_t version;
-  uint64_t timestamp;
-  char *clientToken;
-} shadow_message;
+/*
+Delta:
+{
+  "state": {
+    "desired": {
+      "connected":"true",
+      "log": {
+        "type": "LOG_AWSIOT_REPLAY",
+        "file": "ecutuned_05162016_000557_GMT.log"
+      }
+    }
+  }
+}
+*/
 
 shadow_message* passthru_shadow_parser_parse(const char *json);
-shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message);
-
-//shadow_kvpair* passthru_shadow_parser_parse_delta(const char *json);
-shadow_message* passthru_shadow_parser_parse_log(json_t *obj, shadow_message *message);
+void passthru_shadow_parser_free_message(shadow_message *message);
 
 #endif

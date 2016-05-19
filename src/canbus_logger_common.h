@@ -16,12 +16,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CANBUSFILELOGGER_H
-#define CANBUSFILELOGGER_H
+#ifndef CANBUSLOGGERCOMMON_H
+#define CANBUSLOGGERCOMMON_H
 
-#include "canbus_logger.h"
+#include <stdint.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <syslog.h>
+#include "canbus.h"
 
-unsigned int canbus_filelogger_run(canbus_logger *logger);
-unsigned int canbus_filelogger_stop(canbus_logger *logger);
+typedef struct {
+  uint8_t canbus_flags;
+  pthread_t canbus_thread;
+  struct canbus_filter *filters[10];
+  canbus_client *canbus;
+  bool isrunning;
+  unsigned int type;
+  char **iface;
+  char **logdir;
+  pthread_t replay_thread;
+  char *logfile;
+  void (*onread)(const char *line);
+} canbus_logger;
 
- #endif
+#endif

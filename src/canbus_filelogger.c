@@ -53,14 +53,6 @@ void *canbus_filelogger_thread(void *ptr) {
 }
 
 unsigned int canbus_filelogger_run(canbus_logger *logger) {
-/*
-  canbus_init(logger->canbus);
-  canbus_connect(logger->canbus);
-  if(!canbus_isconnected(logger->canbus)) {
-    syslog(LOG_CRIT, "canbus_filelogger_run: unable to connect to CAN");
-    return 1;
-  }
-*/
   logger->isrunning = true;
   pthread_create(&logger->canbus_thread, NULL, canbus_filelogger_thread, (void *)logger);
   return 0;

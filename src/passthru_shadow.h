@@ -1,6 +1,6 @@
 /**
  * ecutools: IoT Automotive Tuning, Diagnostics & Analytics
- * Copyright (C) 2014  Jeremy Hahn
+ * Copyright (C) 2014 Jeremy Hahn
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,37 @@
 
 char DELTA_REPORT[SHADOW_MAX_SIZE_OF_RX_BUFFER];
 bool messageArrivedOnDelta;
+
+typedef struct _shadow_log {
+  int *type;
+  char *file;
+} shadow_log;
+
+typedef struct _shadow_reported {
+  char *connected;
+  shadow_log *log;
+} shadow_report;
+
+typedef struct _shadow_metadata {
+  shadow_report *reported;
+} shadow_metadata;
+
+typedef struct _shadow_desired {
+  char *connected;
+} shadow_desired;
+
+typedef struct _shadow_state {
+  shadow_report *reported;
+  shadow_desired *desired;
+} shadow_state;
+
+typedef struct _shadow_message {
+  shadow_state *state;
+  shadow_metadata *metadata;
+  uint64_t version;
+  uint64_t timestamp;
+  char *clientToken;
+} shadow_message;
 
 typedef struct _passthru_shadow {
   char *clientId;
