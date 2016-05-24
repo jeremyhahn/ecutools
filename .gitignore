@@ -1,3 +1,5 @@
 certs/*
 *.log
 logs/*
+*.gem
+Gemfile.lock

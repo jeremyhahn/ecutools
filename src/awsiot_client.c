@@ -107,6 +107,7 @@ void awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char 
   paramsQOS0.qos = QOS0;
   paramsQOS0.payloadLen = payload_len;
   paramsQOS0.payload = (void *) payload;
+  paramsQOS0.isRetained = 0;
 
   awsiot->rc = aws_iot_mqtt_publish(&awsiot->client, topic, strlen(topic), &paramsQOS0);
   if(SUCCESS != awsiot->rc) {

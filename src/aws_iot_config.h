@@ -25,11 +25,11 @@
 // =================================================
 #define AWS_IOT_MQTT_HOST              "A3CKMD3JLUQS8G.iot.us-east-1.amazonaws.com"
 #define AWS_IOT_MQTT_PORT              8883
-#define AWS_IOT_MQTT_CLIENT_ID         "VirtualDataLogger"
-#define AWS_IOT_MY_THING_NAME          "VirtualDataLogger"
-#define AWS_IOT_ROOT_CA_FILENAME       "root-CA.crt"
-#define AWS_IOT_CERTIFICATE_FILENAME   "05aba7f296-certificate.pem.crt"
-#define AWS_IOT_PRIVATE_KEY_FILENAME   "05aba7f296-private.pem.key"
+#define AWS_IOT_MQTT_CLIENT_ID         ""
+#define AWS_IOT_MY_THING_NAME          ""
+#define AWS_IOT_ROOT_CA_FILENAME       ""
+#define AWS_IOT_CERTIFICATE_FILENAME   ""
+#define AWS_IOT_PRIVATE_KEY_FILENAME   ""
 // =================================================
 
 // MQTT PubSub

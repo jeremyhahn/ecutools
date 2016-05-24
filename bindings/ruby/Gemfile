@@ -1,0 +1,6 @@
+source 'https://rubygems.org'
+
+# Specify your gem's dependencies in awskit.gemspec
+gemspec
+
+gem "ecutools", :path => "../../cli"
