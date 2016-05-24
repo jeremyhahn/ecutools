@@ -1,6 +1,6 @@
 /**
  * ecutools: IoT Automotive Tuning, Diagnostics & Analytics
- * Copyright (C) 2014  Jeremy Hahn
+ * Copyright (C) 2014 Jeremy Hahn
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -272,9 +272,6 @@ long PassThruGetNextDevice(SDEVICE *psDevice) {
  *     STATUS_NOERROR                 Function call was successful
  */
 long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
-
-  // TODO: J2534-1 doesnt seem to define how PassThruOpen knows which SDEVICE is "selected". Using the
-  // global variable workaround commented on in PassThruScanForDevices for now.
 
   int api_call = 733;
 

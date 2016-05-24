@@ -93,25 +93,39 @@ module Ecutools::Awsiot
     end
 
     def config_h
-      config = "#{Ecutools.home}/../../src/aws_iot_config.h"
-      contents = File.read(config)
+      contents = File.read(config_h_file)
       newconfig = contents.sub(/#define\s+AWS_IOT_MQTT_CLIENT_ID.*$/, "#define AWS_IOT_MQTT_CLIENT_ID         \"#{thing_name}\"")
       newconfig = newconfig.sub(/#define\s+AWS_IOT_MY_THING_NAME.*$/, "#define AWS_IOT_MY_THING_NAME          \"#{thing_name}\"")
       newconfig = newconfig.sub(/#define\s+AWS_IOT_ROOT_CA_FILENAME.*$/, "#define AWS_IOT_ROOT_CA_FILENAME       \"ca.crt\"")
       newconfig = newconfig.sub(/#define\s+AWS_IOT_CERTIFICATE_FILENAME.*$/, "#define AWS_IOT_CERTIFICATE_FILENAME   \"#{thing_name}.crt.pem\"")
       newconfig = newconfig.sub(/#define\s+AWS_IOT_PRIVATE_KEY_FILENAME.*$/, "#define AWS_IOT_PRIVATE_KEY_FILENAME   \"#{thing_name}.key.pem\"")
-      File.write(config, newconfig)
+      File.write(config_h_file, newconfig)
+    end
+
+    def empty_config_h
+      contents = File.read(config_h_file)
+      newconfig = contents.sub(/#define\s+AWS_IOT_MQTT_CLIENT_ID.*$/, "#define AWS_IOT_MQTT_CLIENT_ID         \"\"")
+      newconfig = newconfig.sub(/#define\s+AWS_IOT_MY_THING_NAME.*$/, "#define AWS_IOT_MY_THING_NAME          \"\"")
+      newconfig = newconfig.sub(/#define\s+AWS_IOT_ROOT_CA_FILENAME.*$/, "#define AWS_IOT_ROOT_CA_FILENAME       \"\"")
+      newconfig = newconfig.sub(/#define\s+AWS_IOT_CERTIFICATE_FILENAME.*$/, "#define AWS_IOT_CERTIFICATE_FILENAME   \"\"")
+      newconfig = newconfig.sub(/#define\s+AWS_IOT_PRIVATE_KEY_FILENAME.*$/, "#define AWS_IOT_PRIVATE_KEY_FILENAME   \"\"")
+      File.write(config_h_file, newconfig)
     end
 
     def delete_certificates
       FileUtils.rm "#{certs_dir}/#{thing_name}.crt.pem"
       FileUtils.rm "#{certs_dir}/#{thing_name}.key.pem"
+      empty_config_h
     end
 
   private
 
     def policy_body
       (policy && File.exist?(policy)) ? File.read(policy) : File.read("#{Ecutools.home}/ecutools/awsiot/default-policy.json")
+    end
+
+    def config_h_file
+      "#{Ecutools.home}/../../src/aws_iot_config.h"
     end
 
     def certs_dir
