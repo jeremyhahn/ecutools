@@ -82,7 +82,7 @@ check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
 check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
 
 config:
-	ecutools awsiot create-thing --name myj2534 --acct default
+	cli/bin/ecutools awsiot create-thing --name myj2534 --acct default
 
 gems:
 	gem build bindings/ruby/ecutools-j2534.gemspec
@@ -90,5 +90,4 @@ gems:
 
 clean:
 	rm -rf compile config.h.in config.h config.cache configure install-sh aclocal.m4 autom4te.cache/ config.log config.status Debug/ depcomp .deps/ m4/ Makefile Makefile.in missing stamp-h1 *.o src/*.o src/.deps/ src/.dirstamp config.guess config.sub .libs libj2534.* libtool ar-lib *.lo *~ ltmain.sh ecutuned check_j2534* test-driver test-suite.log COPYING INSTALL /usr/local/lib/libj2534.* *.gem bindings/ruby/*.gem bindings/ruby/Gemfile.lock cli/Gemfile.lock
-	ecutools awsiot delete-thing --name myj2534
-
+	cli/bin/ecutools awsiot delete-thing --name myj2534
