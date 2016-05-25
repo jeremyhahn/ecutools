@@ -113,3 +113,5 @@ clean: clean-gems
 clean-devenv: clean-mbedtls clean-thing clean
 
 devenv: ecutune install-thing
+	make
+
