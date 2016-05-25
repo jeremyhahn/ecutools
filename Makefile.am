@@ -60,7 +60,7 @@ COMPILER_FLAGS += $(LOG_FLAGS)
 # ecutools
 LD_FLAG += -lpthread -lssl -lcurl -ljansson
 
-AM_CFLAGS = -DUSESSL -DTHREADED $(INCLUDE_ALL_DIRS) $(COMPILER_FLAGS)
+AM_CFLAGS = -DSHARED=1 -DUSESSL -DTHREADED $(INCLUDE_ALL_DIRS) $(COMPILER_FLAGS)
 AM_LDFLAGS = $(LD_FLAG) $(EXTERNAL_LIBS)
 
 include_HEADERS = src/j2534.h
@@ -81,6 +81,9 @@ check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
 
 mbedtls:
 	cd src/aws_iot_src/external_libs/mbedTLS && make && cd -
+
+ecutune: mbedtls
+	make
 
 build-gems:
 	gem build bindings/ruby/ecutools-j2534.gemspec
@@ -107,7 +110,6 @@ clean-mbedtls:
 clean: clean-gems
 	rm -rf compile config.h.in config.h config.cache configure install-sh aclocal.m4 autom4te.cache/ config.log config.status Debug/ depcomp .deps/ m4/ Makefile Makefile.in missing stamp-h1 *.o src/*.o src/.deps/ src/.dirstamp config.guess config.sub .libs libj2534.* libtool ar-lib *.lo *~ ltmain.sh ecutuned check_j2534* test-driver test-suite.log COPYING INSTALL /usr/local/lib/libj2534.*
 
-clean-all: clean-mbedtls clean-thing clean
+clean-devenv: clean-mbedtls clean-thing clean
 
-install-deps: mbedtls install-thing
-
+devenv: ecutune install-thing

@@ -41,13 +41,33 @@ ECU Tools is developed with the following platforms in mind:
 2. [x86_64](http://en.wikipedia.org/wiki/X86-64)
 3. [ARM](http://en.wikipedia.org/wiki/ARM_architecture)
 
+#### Dependencies
+
+Included in the ecutools source and are statically linked during build: 
+
+1. [mbedTLS](https://tls.mbed.org/)
+2. [aws-iot-device-sdk-embedded-C](https://github.com/aws/aws-iot-device-sdk-embedded-C)
+
+Dynamic libraries (not included):
+
+1. [Jansson](http://www.digip.org/jansson/)
+2. [libcurl](https://curl.haxx.se/libcurl/)
+
 To install,
 
         ./autogen.sh
         ./configure
+	make mbedtls
         make
-        make install
+        sudo make install
 
 ## Development
 
+Change the hard coded device / account id in Makefile.am `install-thing` and `clean-thing` targets.
+
+	./autogen.sh
+	./configure
+	make devenv
+
 Got skills? Clone the repo and join the Slack channel to help create the future of open source connected cars.
+
