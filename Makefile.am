@@ -79,6 +79,9 @@ check_PROGRAMS = check_j2534
 check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
 check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
 
+mbedtls:
+	cd src/aws_iot_src/external_libs/mbedTLS && make && cd -
+
 build-gems:
 	gem build bindings/ruby/ecutools-j2534.gemspec
 	gem build cli/ecutools.gemspec
@@ -98,10 +101,13 @@ clean-thing:
 clean-gems:
 	rm -rf *.gem bindings/ruby/*.gem bindings/ruby/Gemfile.lock cli/Gemfile.lock
 
+clean-mbedtls:
+	cd src/aws_iot_src/external_libs/mbedTLS && make clean && cd -
+
 clean: clean-gems
 	rm -rf compile config.h.in config.h config.cache configure install-sh aclocal.m4 autom4te.cache/ config.log config.status Debug/ depcomp .deps/ m4/ Makefile Makefile.in missing stamp-h1 *.o src/*.o src/.deps/ src/.dirstamp config.guess config.sub .libs libj2534.* libtool ar-lib *.lo *~ ltmain.sh ecutuned check_j2534* test-driver test-suite.log COPYING INSTALL /usr/local/lib/libj2534.*
 
-clean-all: clean-thing clean
+clean-all: clean-mbedtls clean-thing clean
 
-install-deps: install-thing install-gems
+install-deps: mbedtls install-thing
 
