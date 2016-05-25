@@ -104,7 +104,7 @@ int passthru_shadow_report_delta(passthru_shadow *shadow) {
 }
 
 void passthru_shadow_get(passthru_shadow *shadow) {
-  syslog(LOG_DEBUG, "passthru_shadow_get: %s", DELTA_REPORT);
+  syslog(LOG_DEBUG, "passthru_shadow_get");
   shadow->rc = aws_iot_shadow_get(shadow->mqttClient, AWS_IOT_MY_THING_NAME, shadow->onget, NULL, 2, true);
   if(shadow->rc != SUCCESS) {
     char errmsg[255];
@@ -155,7 +155,7 @@ bool passthru_shadow_build_report_json(char *pJsonDocument, size_t maxSizeOfJson
 
   char tempClientTokenBuffer[MAX_SIZE_CLIENT_TOKEN_CLIENT_SEQUENCE];
 
-  if(aws_iot_fill_with_client_token(tempClientTokenBuffer, MAX_SIZE_CLIENT_TOKEN_CLIENT_SEQUENCE) != SUCCESS){
+  if(aws_iot_fill_with_client_token(tempClientTokenBuffer, MAX_SIZE_CLIENT_TOKEN_CLIENT_SEQUENCE) != SUCCESS) {
     return false;
   }
 

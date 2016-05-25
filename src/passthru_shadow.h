@@ -30,33 +30,41 @@
 #include "aws_iot_src/include/aws_iot_shadow_interface.h"
 #include "aws_iot_config.h"
 
+#define PASSTHRU_SHADOW_UPDATE_TOPIC          "$aws/things/%s/shadow/update"
+#define PASSTHRU_SHADOW_UPDATE_ACCEPTED_TOPIC "$aws/things/%s/shadow/update/accepted"
+#define PASSTHRU_SHADOW_GET_TOPIC             "$aws/things/%s/shadow/get"
+#define PASSTHRU_SHADOW_GET_ACCEPTED_TOPIC    "$aws/things/%s/shadow/get/accepted"
+
 char DELTA_REPORT[SHADOW_MAX_SIZE_OF_RX_BUFFER];
 bool messageArrivedOnDelta;
 
-typedef struct _shadow_log {
+typedef struct {
   int *type;
   char *file;
 } shadow_log;
 
-typedef struct _shadow_reported {
-  int *connection;
+typedef struct {
+  char *connection;
+  int *j2534;
   shadow_log *log;
 } shadow_report;
 
-typedef struct _shadow_metadata {
+typedef struct {
   shadow_report *reported;
 } shadow_metadata;
 
-typedef struct _shadow_desired {
-  char *connection;
+typedef struct {
+  int *connection;
+  int *j2534;
+  shadow_log *log;
 } shadow_desired;
 
-typedef struct _shadow_state {
+typedef struct {
   shadow_report *reported;
   shadow_desired *desired;
 } shadow_state;
 
-typedef struct _shadow_message {
+typedef struct {
   shadow_state *state;
   shadow_metadata *metadata;
   uint64_t version;

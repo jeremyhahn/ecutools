@@ -27,12 +27,13 @@
 #include "passthru_shadow_parser.h"
 #include "passthru_shadow_router.h"
 
-#define THING_STATE_CONNECTING    (1 << 0)
-#define THING_STATE_CONNECTED     (1 << 1)
-#define THING_STATE_CLOSING       (1 << 2)
-#define THING_STATE_CLOSED        (1 << 3)
-#define THING_STATE_DISCONNECTING (1 << 4) 
-#define THING_STATE_DISCONNECTED  (1 << 5)
+#define THING_STATE_INITIALIZING  (1 << 0)
+#define THING_STATE_CONNECTING    (1 << 1)
+#define THING_STATE_CONNECTED     (1 << 2)
+#define THING_STATE_CLOSING       (1 << 3)
+#define THING_STATE_CLOSED        (1 << 4)
+#define THING_STATE_DISCONNECTING (1 << 5) 
+#define THING_STATE_DISCONNECTED  (1 << 6)
 
 void passthru_thing_init(thing_init_params *params);
 int passthru_thing_run();

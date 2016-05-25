@@ -3,7 +3,8 @@ sudo apt-get install libjansson-dev libcurl4-openssl-dev can-utils
 
 # compile mbedTLS
 cd src/aws_iot_src/external_libs/mbedTLS
-make
+cmake .
+make SHARED=1
 cd -
 
 # build ecutools

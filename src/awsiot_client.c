@@ -18,7 +18,7 @@
 
 #include "awsiot_client.h"
 
-void awsiot_client_connect(awsiot_client *awsiot) {
+unsigned int awsiot_client_connect(awsiot_client *awsiot) {
 
   char errmsg[255];
   char rootCA[255];
@@ -54,8 +54,9 @@ void awsiot_client_connect(awsiot_client *awsiot) {
   mqttInitParams.disconnectHandlerData = (void *)&awsiot->client;
 
   awsiot->rc = aws_iot_mqtt_init(&awsiot->client, &mqttInitParams);
-  if(awsiot->rc == SUCCESS) {
-    syslog(LOG_ERR, "aws_iot_mqtt_init returned error : %d ", awsiot->rc);
+  if(awsiot->rc != SUCCESS) {
+    syslog(LOG_ERR, "awsiot_client_connect: aws_iot_mqtt_init error=%d", awsiot->rc);
+    return 1;
   }
 
   IoT_Client_Connect_Params connectParams = iotClientConnectParamsDefault;
@@ -68,37 +69,42 @@ void awsiot_client_connect(awsiot_client *awsiot) {
 
   awsiot->rc = aws_iot_mqtt_connect(&awsiot->client, &connectParams);
   if(awsiot->rc != SUCCESS) {
-    sprintf(errmsg, "Error(%d) connecting to %s:%d", awsiot->rc, mqttInitParams.pHostURL, mqttInitParams.port);
-    awsiot->onerror(awsiot, errmsg);
-    return;
+    sprintf(errmsg, "awsiot_client_connect: Error(%d) connecting to %s:%d", awsiot->rc, mqttInitParams.pHostURL, mqttInitParams.port);
+    if(awsiot->onerror) awsiot->onerror(awsiot, errmsg);
+    return 2;
   }
 
   awsiot->rc = aws_iot_mqtt_autoreconnect_set_status(&awsiot->client, true);
   if(SUCCESS != awsiot->rc) {
-    sprintf(errmsg, "Unable to set Auto Reconnect to true. IoT_Error_t=%d", awsiot->rc);
-    awsiot->onerror(awsiot, errmsg);
-    return;
+    sprintf(errmsg, "awsiot_client_connect: Unable to set autoreconnect to true. error=%d", awsiot->rc);
+    if(awsiot->onerror) awsiot->onerror(awsiot, errmsg);
+    return 3;
   }
 
-  awsiot->onopen(awsiot);
+  if(awsiot->onopen != NULL) {
+    awsiot->onopen(awsiot);
+  }
+
+  return 0;
 }
 
 bool awsiot_client_isconnected(awsiot_client *awsiot) {
   return (awsiot->rc == NETWORK_RECONNECTED || awsiot->rc == SUCCESS);
 }
 
-void awsiot_client_subscribe(awsiot_client *awsiot, const char *topic) {
+unsigned int awsiot_client_subscribe(awsiot_client *awsiot, const char *topic) {
   syslog(LOG_DEBUG, "awsiot_client_subscribe: subscribing to topic %s.", topic);
   awsiot->rc = aws_iot_mqtt_subscribe(&awsiot->client, topic, strlen(topic), QOS0, awsiot->onmessage, NULL);
   if (SUCCESS != awsiot->rc) {
     char errmsg[255];
     sprintf(errmsg, "awsiot_client_subscribe: error subscribing to topic %s. IoT_Error_t: %d", topic, awsiot->rc);
-    awsiot->onerror(awsiot, errmsg);
-    return;
+    if(awsiot->onerror) awsiot->onerror(awsiot, errmsg);
+    return 1;
   }
+  return 0;
 }
 
-void awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char *payload) {
+unsigned int awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char *payload) {
 
   int payload_len = strlen(payload) + 1;
   syslog(LOG_DEBUG, "awsiot_client_publish: topic=%s, payload_len=%d, payload=%s", topic, payload_len, payload);
@@ -113,9 +119,10 @@ void awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char 
   if(SUCCESS != awsiot->rc) {
     char errmsg[255];
     sprintf(errmsg, "awsiot_client_publish: error publishing to topic %s. IoT_Error_t: %d", topic, awsiot->rc);
-    awsiot->onerror(awsiot, errmsg);
-    return;
+    if(awsiot->onerror) awsiot->onerror(awsiot, errmsg);
+    return 1;
   }
+  return 0;
 }
 
 void awsiot_client_close(awsiot_client *awsiot, const char *topic, const char *payload) {
@@ -124,5 +131,6 @@ void awsiot_client_close(awsiot_client *awsiot, const char *topic, const char *p
     awsiot_client_publish(awsiot, topic, payload);
   }
   awsiot->rc = aws_iot_mqtt_disconnect(&awsiot->client);
-  awsiot->onclose(awsiot, payload);
+  if(awsiot->onclose) awsiot->onclose(awsiot, payload);
 }
+

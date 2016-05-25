@@ -18,23 +18,40 @@
 
 #include "passthru_shadow_router.h"
 
-void passthru_shadow_router_route_reported(passthru_thing *thing, shadow_report *reported) {
-
-  if(reported->connection) {
-    syslog(LOG_DEBUG, "passthru_shadow_router_route_reported: connection=%i", reported->connection);
-    passthru_shadow_connection_handler_handle(reported->connection);
-    return;
-  }
-
-  if(reported->log) {
-    syslog(LOG_DEBUG, "passthru_shadow_router_route_reported: log->type=%i, log->file=%s", reported->log->type, reported->log->file);
-    passthru_shadow_log_handler_handle(thing->params->iface, thing->params->logdir, reported->log);
-    return;
+void passthru_shadow_router_route_log(passthru_thing *thing, shadow_state *state) {
+  if(state->reported->log) {
+    syslog(LOG_DEBUG, "passthru_shadow_router_route_log: type=%i, file=%s", state->reported->log->type, state->reported->log->file);
+    passthru_shadow_log_handler_handle(thing->params->iface, thing->params->logdir, state->reported->log);
   }
 }
 
 void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message) {
-  if(message && message->state && message->state->reported) {
-    passthru_shadow_router_route_reported(thing, message->state->reported);
+
+  if(message == NULL || message->state == NULL) return;
+
+  passthru_shadow_router_print_message(message);
+
+  if(message->state->reported && message->state->reported->connection) {
+    return  passthru_shadow_connection_handler_handle(message->state->reported->connection);
   }
+
+  if(message->state->desired->log || message->state->reported->log) {
+    return passthru_shadow_router_route_log(thing, message->state);
+  }
+
+  if(message->state->desired->j2534 || message->state->reported->j2534) {
+    return passthru_shadow_j2534_handler_handle(message->state);
+  }
+}
+
+void passthru_shadow_router_print_message(shadow_message *message) {
+
+  char strmessage[1000] = "";
+
+  sprintf(strmessage, "reported->connection=%i, desired->j2534=%i, reported->j2534=%i ", 
+    message->state->reported->connection, 
+    message->state->desired->j2534, message->state->reported->j2534
+  );
+
+  syslog(LOG_DEBUG, "passthru_shadow_router_print_message: %s", strmessage);
 }

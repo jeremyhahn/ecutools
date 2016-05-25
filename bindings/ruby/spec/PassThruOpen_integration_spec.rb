@@ -21,14 +21,15 @@ describe Ecutools::J2534 do
   include_context 'J2534' do
     context 'PassThruOpen' do
 
-      it 'PassThruOpen returns success when it finds VirtualDataLogger' do
-        expect(ecutools.PassThruOpen("VirtualDataLogger", deviceId)).to eq(0)
+      it 'PassThruOpen returns true when a connection is opened' do
+      	things.test(1) {
+          expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
+        }
       end
 
-      it 'PassThruOpen throws EcutoolsError when it doesnt find the requested device' do
-        expect { ecutools.PassThruOpen(deviceName, deviceId) }.to raise_error EcutoolsError
+      it 'PassThruOpen raises an exception when failing to open a connection' do
+        expect(j2534.PassThruOpen("foo", 1)).to raise_error(J2534Error, /ERR_DEVICE_NOT_CONNECTED/)
       end
-
 
     end
   end

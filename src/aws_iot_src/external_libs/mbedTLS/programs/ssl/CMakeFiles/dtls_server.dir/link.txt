@@ -1,0 +1,1 @@
+/usr/bin/cc   -fPIC -Wall -Wextra -W -Wdeclaration-after-statement -Wwrite-strings -Wlogical-op -Wshadow    CMakeFiles/dtls_server.dir/dtls_server.c.o  -o dtls_server -rdynamic ../../library/libmbedtls.so.2.1.1 ../../library/libmbedx509.so.2.1.1 ../../library/libmbedcrypto.so.2.1.1 -Wl,-rpath,/home/jhahn/sources/ecutools/src/aws_iot_src/external_libs/mbedTLS/library: 

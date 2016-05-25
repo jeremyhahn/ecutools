@@ -5,8 +5,10 @@ APP_INCLUDE_DIRS = -I$(top_srcdir)/include -I$(APP_DIR)
 
 ECUTOOLS_SRC_FILES = src/canbus.c src/awsiot_client.c
 ECUTOOLS_SRC_FILES += src/passthru_shadow.c src/passthru_thing.c src/passthru_shadow_parser.c src/passthru_shadow_router.c
-ECUTOOLS_SRC_FILES += src/passthru_shadow_connection_handler.c src/passthru_shadow_log_handler.c
+ECUTOOLS_SRC_FILES += src/passthru_shadow_connection_handler.c src/passthru_shadow_log_handler.c src/passthru_shadow_j2534_handler.c
 ECUTOOLS_SRC_FILES += src/canbus_logger.c src/canbus_log.c src/canbus_filelogger.c src/canbus_awsiotlogger.c
+
+J2534_SRC_FILES = src/awsiot_client.c src/j2534.c src/j2534/apigateway.c
 
 ECUTOOLS_TEST_FILES = tests/check_j2534.c
 
@@ -40,14 +42,10 @@ LD_FLAG += -ldl $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS
 
 # Aggregate all include and src directories
 INCLUDE_ALL_DIRS = $(IOT_INCLUDE_DIRS) 
-INCLUDE_ALL_DIRS += $(MQTT_INCLUDE_DIR) 
 INCLUDE_ALL_DIRS += $(TLS_INCLUDE_DIR)
 INCLUDE_ALL_DIRS += $(APP_INCLUDE_DIRS)
 
-SRC_FILES =
-SRC_FILES += $(MQTT_SRC_FILES)
-SRC_FILES += $(IOT_SRC_FILES)
-SRC_FILES += $(CWEBSOCKET_SRC_FILES)
+SRC_FILES = $(IOT_SRC_FILES)
 SRC_FILES += $(ECUTOOLS_SRC_FILES)
 
 # AWS IoT Logging level control
@@ -68,7 +66,7 @@ AM_LDFLAGS = $(LD_FLAG) $(EXTERNAL_LIBS)
 include_HEADERS = src/j2534.h
 
 lib_LTLIBRARIES = libj2534.la
-libj2534_la_SOURCES = src/j2534.c src/j2534/apigateway.c
+libj2534_la_SOURCES = $(IOT_SRC_FILES) $(J2534_SRC_FILES)
 libj2534_la_LDFLAGS = $(LD_FLAG) -version-info 0:0:0 -shared
 
 bin_PROGRAMS = ecutuned
@@ -81,13 +79,29 @@ check_PROGRAMS = check_j2534
 check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
 check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
 
-config:
-	cli/bin/ecutools awsiot create-thing --name myj2534 --acct default
-
-gems:
+build-gems:
 	gem build bindings/ruby/ecutools-j2534.gemspec
 	gem build cli/ecutools.gemspec
 
-clean:
-	rm -rf compile config.h.in config.h config.cache configure install-sh aclocal.m4 autom4te.cache/ config.log config.status Debug/ depcomp .deps/ m4/ Makefile Makefile.in missing stamp-h1 *.o src/*.o src/.deps/ src/.dirstamp config.guess config.sub .libs libj2534.* libtool ar-lib *.lo *~ ltmain.sh ecutuned check_j2534* test-driver test-suite.log COPYING INSTALL /usr/local/lib/libj2534.* *.gem bindings/ruby/*.gem bindings/ruby/Gemfile.lock cli/Gemfile.lock
-	cli/bin/ecutools awsiot delete-thing --name myj2534
+install-gems: build-gems
+	gem install ecutools-*.gem
+
+uninstall-gems:
+	gem uninstall ecutools ecutools-j2534
+
+install-thing:
+	cd cli && bundle install && bundle exec bin/ecutools awsiot create-thing --name myj2534 --acct default && cd -
+
+clean-thing:
+	cd cli && bundle exec bin/ecutools awsiot delete-thing --name myj2534 && cd -
+
+clean-gems:
+	rm -rf *.gem bindings/ruby/*.gem bindings/ruby/Gemfile.lock cli/Gemfile.lock
+
+clean: clean-gems
+	rm -rf compile config.h.in config.h config.cache configure install-sh aclocal.m4 autom4te.cache/ config.log config.status Debug/ depcomp .deps/ m4/ Makefile Makefile.in missing stamp-h1 *.o src/*.o src/.deps/ src/.dirstamp config.guess config.sub .libs libj2534.* libtool ar-lib *.lo *~ ltmain.sh ecutuned check_j2534* test-driver test-suite.log COPYING INSTALL /usr/local/lib/libj2534.*
+
+clean-all: clean-thing clean
+
+install-deps: install-thing install-gems
+

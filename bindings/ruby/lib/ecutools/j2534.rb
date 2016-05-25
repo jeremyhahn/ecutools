@@ -20,12 +20,9 @@ require "ecutools/j2534/version"
 require 'ecutools/j2534/libj2534'
 require 'ecutools/j2534/structs'
 require 'ecutools/j2534/models'
-require 'ecutools/j2534/errors'
 
 module Ecutools
   module J2534
-
-   class J2534Error < StandardError; end
 
    include Ecutools::J2534::Structs
    include Ecutools::J2534::Models
@@ -49,10 +46,10 @@ module Ecutools
 
    def PassThruOpen(name, deviceId)
      pName = FFI::MemoryPointer.from_string(name)
-     pDeviceId = FFI::MemoryPointer.new(:ulong, 1)
-     rc = Libj2534.PassThruOpen(pName, pDeviceId)
-     raise J2534Error, "PassThruOpen: error=#{rc}" unless rc == 0
-     rc
+     pDeviceId = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, 1)
+     response = Libj2534.PassThruOpen(pName, pDeviceId)
+     raise J2534Error, Error[response] unless response == 0
+     true
    end
 
   private

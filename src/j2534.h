@@ -21,7 +21,29 @@
 
 #include <stdbool.h>
 #include <syslog.h>
+#include "passthru_shadow_parser.h"
+#include "awsiot_client.h"
 #include "j2534/apigateway.h"
+
+#define J2534_PassThruScanForDevices        1
+#define J2534_PassThruGetNextDevice         2
+#define J2534_PassThruOpen                  3
+#define J2534_PassThruClose                 4
+#define J2534_PassThruConnect               5
+#define J2534_PassThruDisconnect            6
+#define J2534_PassThruLogicalConnect        7
+#define J2534_PassThruLogicalDisconnect     8
+#define J2534_PassThruSelect                9
+#define J2534_PassThruReadMsgs              10
+#define J2534_PassThruQueueMsgs             11
+#define J2534_PassThruStartPeriodicMsg      12
+#define J2534_PassThruStopPeriodicMsg       13
+#define J2534_PassThruStartMsgFilter        14
+#define J2534_PassThruStopMsgFilter         15
+#define J2534_PassThruSetProgrammingVoltage 16
+#define J2534_PassThruReadVersion           17
+#define J2534_PassThruGetLastError          18
+#define J2534_PassThruIoctl                 19
 
 // Return Values
 #define STATUS_NOERROR                   0x00000000  // Function completed successfully.

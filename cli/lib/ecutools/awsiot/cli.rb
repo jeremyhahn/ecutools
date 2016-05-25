@@ -22,7 +22,7 @@ module Ecutools::Awsiot
       thing_arn = awsiot.create_thing
 
       config_h = ask("Would you like to update ecutools src/aws_iot_config.h?")
-      if config_h
+      if config_h == "y"
         awsiot.config_h
       end
 
@@ -36,7 +36,7 @@ module Ecutools::Awsiot
       awsiot.delete_thing
 
       delcerts = ask("Would you like to delete certificates from ecutools/certs?")
-      if delcerts
+      if delcerts == "y"
         awsiot.delete_certificates
       end
 

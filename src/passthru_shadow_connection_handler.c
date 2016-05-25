@@ -17,8 +17,6 @@
  */
 
 #include "passthru_shadow_connection_handler.h"
-
-
 #include <syslog.h>
 
 void passthru_shadow_connection_handler_handle(int *connection) {

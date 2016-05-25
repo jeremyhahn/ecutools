@@ -64,6 +64,7 @@ Delta:
         "type": "LOG_AWSIOT_REPLAY",
         "file": "ecutuned_05162016_000557_GMT.log"
       }
+      "j2534": "PassThruOpen"
     }
   }
 }

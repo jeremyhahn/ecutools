@@ -18,15 +18,32 @@
 
 #include "j2534.h"
 
+awsiot_client awsiot;
+
 static bool j2534_is_connected = false;
 static char j2534_last_error[80] = {0};
 static int j2534_current_api_call = 0;
+
+unsigned int j2534_opened = 0;
 
 long j2534_device_count = 0;
 SDEVICE j2534_device_list[25] = {0};
 SDEVICE *j2534_device_selected;
 
+char j2534_shadow_get_topic[121];
+char j2534_shadow_update_topic[121];
+char j2534_shadow_update_accepted_topic[121];
+
 unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call);
+
+void j2534_onmessage(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
+  syslog(LOG_DEBUG, "j2534_onmessage: topicName=%s, topicNameLen=%u, pData=%s", topicName, (unsigned int)topicNameLen, (char *)pData);
+  j2534_opened = 1;
+}
+
+void j2534_onerror(awsiot_client *awsiot, const char *message) {
+  syslog(LOG_ERR, "j2534_onerror: message=%s", message);
+}
 
 /**
  * 7.3.1 PassThruScanForDevices
@@ -63,8 +80,8 @@ unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call
  *   STATUS_NOERROR            Function call was successful
  */
 long PassThruScanForDevices(unsigned long *pDeviceCount) {
- 
-  j2534_current_api_call = 731;
+  unsigned int api_call = J2534_PassThruScanForDevices;
+  j2534_current_api_call = api_call;
 
   openlog("ecutools-j2534", LOG_CONS | LOG_PERROR, LOG_USER);
 
@@ -139,11 +156,9 @@ long PassThruScanForDevices(unsigned long *pDeviceCount) {
   }
 
   *pDeviceCount = j2534_device_count;
+  syslog(LOG_DEBUG, "PassThruScanForDevices: pDeviceCount=%d, j2534_device_list[0].DeviceName=%s", (*pDeviceCount), j2534_device_list[0].DeviceName);
 
-  syslog(LOG_DEBUG, "PassThruScanForDevices: pDeviceCount=%d", (*pDeviceCount));
-  syslog(LOG_DEBUG, "PassThruScanForDevices: j2534_device_list[0].DeviceName=%s", j2534_device_list[0].DeviceName);
-
-  return unless_concurrent_call(STATUS_NOERROR, 731);
+  return unless_concurrent_call(STATUS_NOERROR, api_call);
 }
 
 /**
@@ -189,7 +204,7 @@ long PassThruScanForDevices(unsigned long *pDeviceCount) {
  *   STATUS_NOERROR               Function call was successful
  */
 long PassThruGetNextDevice(SDEVICE *psDevice) {
-  int api_call = 732;
+  int api_call = J2534_PassThruGetNextDevice;
   j2534_current_api_call = api_call;
   if(psDevice == NULL) {
     return unless_concurrent_call(ERR_NULL_PARAMETER, api_call);
@@ -272,34 +287,56 @@ long PassThruGetNextDevice(SDEVICE *psDevice) {
  *     STATUS_NOERROR                 Function call was successful
  */
 long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
-
-  int api_call = 733;
-
-  openlog("ecutools-j2534", LOG_CONS | LOG_PERROR, LOG_USER);
-  syslog(LOG_DEBUG, "PassThruOpen: j2534_device_count=%d, j2534_device_selected=%s, pName=%s, pDeviceId=%d", 
-       j2534_device_count, j2534_device_selected->DeviceName, pName, pDeviceID);
+  int api_call = J2534_PassThruOpen;
+  j2534_current_api_call = api_call;
 
   if(pName == NULL || pDeviceID == NULL) {
     return unless_concurrent_call(ERR_NULL_PARAMETER, api_call);
   }
 
-  // Return all physical & logical communication channel pins to default state
+  if(j2534_opened == 1) return ERR_DEVICE_IN_USE;
 
+  snprintf(j2534_shadow_update_topic, 120, PASSTHRU_SHADOW_UPDATE_TOPIC, pName);
+  snprintf(j2534_shadow_update_accepted_topic, 120, PASSTHRU_SHADOW_UPDATE_ACCEPTED_TOPIC, pName);
 
-  int i;
-  for(i=0; i<j2534_device_count; i++) {
+  char json[AWS_IOT_MQTT_RX_BUF_LEN - 100];
+  sprintf(json, "{\"state\":{\"desired\": {\"j2534\": %i } } }", J2534_PassThruOpen);
 
-    syslog(LOG_DEBUG, "PassThruOpen: inspecting device %s", j2534_device_list[i].DeviceName);
-    if(strcmp(j2534_device_list[i].DeviceName, j2534_device_selected->DeviceName) == 0) {
+  awsiot.onmessage = &j2534_onmessage;
+  awsiot.onerror = &j2534_onerror;
 
-      syslog(LOG_DEBUG, "PassThruOpen: Found device %s", pName);
-      return STATUS_NOERROR;
-    }
-
+  if(awsiot_client_connect(&awsiot) != 0) {
+    syslog(LOG_ERR, "PassThruOpen: failed to connect awsiot_client");
+    return ERR_DEVICE_NOT_CONNECTED;
   }
 
-  closelog();
-  return ERR_OPEN_FAILED;
+  if(awsiot_client_subscribe(&awsiot, j2534_shadow_update_accepted_topic) != 0) {
+    syslog(LOG_ERR, "PassThruOpen: failed to subscribe to j2534_shadow_update_accepted_topic %s", j2534_shadow_update_accepted_topic); 
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
+  if(awsiot_client_publish(&awsiot, j2534_shadow_update_topic, (const char *)json) != 0) {
+    syslog(LOG_ERR, "PassThruOpen: failed to publish to j2534_shadow_update_topic %s", j2534_shadow_update_topic);  
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
+  unsigned int i = 0;
+  while(j2534_opened == 0) {
+
+    // timeout if no response from device
+    if(i == 10000000) return ERR_DEVICE_NOT_CONNECTED;
+
+    awsiot.rc = aws_iot_mqtt_yield(&awsiot.client, 200);
+    if(awsiot.rc == NETWORK_ATTEMPTING_RECONNECT) {
+      syslog(LOG_DEBUG, "PassThruOpen: waiting for network to reconnect");
+      sleep(1);
+      continue;
+    }
+
+    i++;
+  }
+
+  return STATUS_NOERROR;
 }
 
 /**
@@ -1422,3 +1459,4 @@ unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call
   }
   return status;
 }
+

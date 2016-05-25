@@ -18,14 +18,26 @@
 
 #include "passthru_shadow_parser.h"
 
-shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message);
+void passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message);
+void passthru_shadow_parser_parse_desired(json_t *obj, shadow_message *message);
 
 shadow_message* passthru_shadow_parser_parse(const char *json) {
-  
+ 
   json_t *root;
   json_error_t error;
-  
+
   shadow_message *message = malloc(sizeof(shadow_message));
+  message->state = malloc(sizeof(shadow_state));
+
+  message->state->reported = malloc(sizeof(shadow_report));
+  message->state->reported->connection = NULL;
+  message->state->reported->log = NULL;
+  message->state->reported->j2534 = NULL;
+
+  message->state->desired = malloc(sizeof(shadow_desired));
+  message->state->desired->connection = NULL;
+  message->state->desired->log = NULL;
+  message->state->desired->j2534 = NULL;
 
   root = json_loads(json, 0, &error);
   if(!root) {
@@ -48,14 +60,18 @@ shadow_message* passthru_shadow_parser_parse(const char *json) {
 
   json_t *reported = json_object_get(state, "reported");
   if(json_is_object(reported)) {
-    return passthru_shadow_parser_parse_reported(reported, message);
+    passthru_shadow_parser_parse_reported(reported, message);
   }
 
-  syslog(LOG_ERR, "passthru_shadow_parser_parse: unable to parse state from json %s", json);
+  json_t *desired = json_object_get(state, "desired");
+  if(json_is_object(desired)) {
+    passthru_shadow_parser_parse_desired(desired, message);
+  }
+
   return message;
 }
 
-shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message) {
+void passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message) {
 
   size_t obj_len = json_object_size(obj);
   if(obj_len > PASSTHRU_SHADOW_REPORTED_MAX_ELEMENTS) {
@@ -66,16 +82,16 @@ shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_messag
   const char *key;
   json_t *element, *value;
 
-  message->state = malloc(sizeof(shadow_state));
-  message->state->reported = malloc(sizeof(shadow_report));
-  message->state->reported->connection = NULL;
-  message->state->reported->log = NULL;
-
   json_object_foreach(obj, key, value) {
 
     if(strncmp(key, "connection", strlen(key)) == 0) {
       message->state->reported->connection = malloc(sizeof(int));
       message->state->reported->connection = json_integer_value(value);
+    }
+
+    if(strncmp(key, "j2534", strlen(key)) == 0) {
+      message->state->reported->j2534 = malloc(sizeof(int));
+      message->state->reported->j2534 = json_integer_value(value);
     }
 
     if(strncmp(key, "log", strlen(key)) == 0) {
@@ -100,26 +116,106 @@ shadow_message* passthru_shadow_parser_parse_reported(json_t *obj, shadow_messag
     }
 
   }
+}
 
-  return message;
+void passthru_shadow_parser_parse_desired(json_t *obj, shadow_message *message) {
+
+  size_t obj_len = json_object_size(obj);
+  if(obj_len > PASSTHRU_SHADOW_REPORTED_MAX_ELEMENTS) {
+    syslog(LOG_ERR, "passthru_shadow_parser_parse_desired: payload too large. len=%zu, PASSTHRU_SHADOW_REPORTED_MAX_ELEMENTS=%d", obj_len, PASSTHRU_SHADOW_REPORTED_MAX_ELEMENTS);
+    return NULL;
+  }
+
+  const char *key;
+  json_t *element, *value;
+
+  json_object_foreach(obj, key, value) {
+
+    if(strncmp(key, "connection", strlen(key)) == 0) {
+      message->state->desired->connection = malloc(sizeof(int));
+      message->state->desired->connection = json_integer_value(value);
+    }
+
+    if(strncmp(key, "j2534", strlen(key)) == 0) {
+      message->state->desired->j2534 = malloc(sizeof(int));
+      message->state->desired->j2534 = json_integer_value(value);
+    }
+
+    if(strncmp(key, "log", strlen(key)) == 0) {
+
+      message->state->desired->log = malloc(sizeof(shadow_log));
+      message->state->desired->log->type = NULL;
+      message->state->desired->log->file = NULL;
+
+      json_t *file = json_object_get(value, "file");
+      json_t *type = json_object_get(value, "type");
+
+      if(json_is_string(file)) {
+        const char *file_val = json_string_value(file);
+        message->state->desired->log->file = malloc(strlen(file_val)+1);
+        strcpy(message->state->desired->log->file, file_val);
+      }
+
+      if(json_is_integer(type)) {
+        message->state->desired->log->type = malloc(sizeof(int));
+        message->state->desired->log->type = json_integer_value(type);
+      }
+    }
+
+  }
 }
 
 void passthru_shadow_parser_free_message(shadow_message *message) {
 
-  if(message->state->reported->log != NULL) {
-
-    if(message->state->reported->log->file != NULL) {
+  if(message->state->reported->log) {
+    if(message->state->reported->log->file) {
       free(message->state->reported->log->file);
       message->state->reported->log->file = NULL;
     }
-
+    if(message->state->reported->log->type) {
+      free(message->state->reported->log->type);
+      message->state->reported->log->type = NULL;
+    }
     free(message->state->reported->log);
     message->state->reported->log = NULL;
   }
-
-  if(message->state->reported != NULL) {
+  if(message->state->reported->j2534) {
+    //free(message->state->reported->j2534); i think json_integer_value is overwriting malloc pointer
+    message->state->reported->j2534 = NULL;
+  }
+  if(message->state->reported->connection) {
+    //free(message->state->reported->connection);
+    message->state->reported->connection = NULL;
+  }
+  if(message->state->reported) {
     free(message->state->reported);
     message->state->reported = NULL;
+  }
+
+  if(message->state->desired->log) {
+    if(message->state->desired->log->file) {
+      free(message->state->desired->log->file);
+      message->state->desired->log->file = NULL;
+    }
+    if(message->state->desired->log->type) {
+      free(message->state->desired->log->type);
+      message->state->desired->log->type = NULL;
+    }
+    free(message->state->desired->log);
+    message->state->desired->log = NULL;
+  }
+
+  if(message->state->desired->j2534 != NULL) {
+    //free(message->state->desired->j2534);
+    message->state->desired->j2534 = NULL;
+  }
+  if(message->state->desired->connection) {
+    //free(message->state->desired->connection);
+    message->state->desired->connection = NULL;
+  }
+  if(message->state->desired != NULL) {
+    free(message->state->desired);
+    message->state->desired = NULL;
   }
 
   if(message->state != NULL) {

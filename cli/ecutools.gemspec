@@ -32,4 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rspec", "~> 3.0"
 
   spec.add_runtime_dependency 'stackit', "~> 0"
+  spec.add_runtime_dependency 'ecutools-j2534', "~> 0"
 end

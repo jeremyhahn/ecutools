@@ -16,9 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+$LOAD_PATH.unshift File.expand_path('../../../cli/lib', __FILE__)
+
 require 'ecutools/j2534'
 require 'ecutools'
-require 'ecutools/iot/service'
+require 'ecutools/awsiot/service'
 require 'awsclient'
 require 'pp'
 
@@ -39,7 +41,7 @@ class Things
   def create!(num = 1)
     num.times do |i|
       thing_name = "#{thing_id}-#{i}"
-      certificate_id = Ecutools::Iot::Service.new(
+      certificate_id = Ecutools::Awsiot::Service.new(
         name: thing_name,
         acct: random_id
       ).create_thing
@@ -52,7 +54,7 @@ class Things
 
   def delete!
     things.each do |thing|
-      Ecutools::Iot::Service.new(
+      Ecutools::Awsiot::Service.new(
         name: thing[:name],
         certificate_id: thing[:certificate_id]
       ).delete_thing

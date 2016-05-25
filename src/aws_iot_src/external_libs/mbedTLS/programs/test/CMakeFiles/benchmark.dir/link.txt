@@ -1,0 +1,1 @@
+/usr/bin/cc   -fPIC -Wall -Wextra -W -Wdeclaration-after-statement -Wwrite-strings -Wlogical-op -Wshadow    CMakeFiles/benchmark.dir/benchmark.c.o  -o benchmark -rdynamic ../../library/libmbedtls.so.2.1.1 ../../library/libmbedx509.so.2.1.1 ../../library/libmbedcrypto.so.2.1.1 -Wl,-rpath,/home/jhahn/sources/ecutools/src/aws_iot_src/external_libs/mbedTLS/library: 

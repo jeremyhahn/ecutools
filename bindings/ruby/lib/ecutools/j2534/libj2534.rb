@@ -15,11 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+require_relative 'error'
+
+def lib2534_so
+  return @lib unless @lib.nil?
+  if File.exist?('/usr/local/lib/libj2534.so')
+    @lib = '/usr/local/lib/libj2534.so'
+  elsif File.exist?('../.libs/libj2534.so')
+    @lib = '../.libs/libj2534.so'
+  elsif File.exist?('../../.libs/libj2534.so')
+    @lib = '../../.libs/libj2534.so'
+  end
+  raise Ecutools::J2534Error, 'Unable to locate ecutools lib2534.so' unless @lib
+  @lib
+end
+
 module Ecutools::J2534::Libj2534
   extend FFI::Library
   ffi_lib 'c'
-  #ffi_lib '/usr/local/lib/libj2534.so'
-  ffi_lib '../../.libs/libj2534.so'
+  ffi_lib lib2534_so
   attach_function :PassThruScanForDevices, [ :pointer ], :long
   attach_function :PassThruGetNextDevice, [ :pointer ], :long
   attach_function :PassThruOpen, [ :pointer, :pointer ], :long
