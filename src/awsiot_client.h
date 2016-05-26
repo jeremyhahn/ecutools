@@ -31,7 +31,7 @@
 
 typedef struct _awsiot_client {
   char *clientId;
-  AWS_IoT_Client client;
+  AWS_IoT_Client *client;
   IoT_Error_t rc;
   pthread_t publish_thread;
   pthread_t subscribe_thread;

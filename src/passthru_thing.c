@@ -19,7 +19,7 @@
 #include "passthru_thing.h"
 
 passthru_thing *thing;
-awsiot_client mqtt;
+awsiot_client *awsiot;
 
 static char my_shadow_get_topic[121];
 static char my_shadow_update_topic[121];
@@ -27,6 +27,7 @@ static char my_shadow_get_accepted_topic[121];
 
 void passthru_thing_sync_initial_state(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
   syslog(LOG_DEBUG, "passthru_thing_initial_state_callback: topicName=%s, topicNameLen=%u, pData=%s", topicName, (unsigned int)topicNameLen, (char *)pData);
+
   thing->state = THING_STATE_CONNECTING;
 
   size_t json_len = strlen(topicName)-topicNameLen;
@@ -35,11 +36,13 @@ void passthru_thing_sync_initial_state(AWS_IoT_Client *pClient, char *topicName,
   json[json_len] = '\0';
 
   shadow_message *message = passthru_shadow_parser_parse(json);
-  if(message->state->reported->connection) {
-    message->state->reported->connection = NULL;
-  }
+  // clear connection=2 to prevent connection handler from disconnecting
+  if(message->state->reported->connection) message->state->reported->connection = NULL;
   passthru_shadow_router_route(thing, message);
   passthru_shadow_parser_free_message(message);
+
+  //free(awsiot->client); segfault?
+  free(awsiot);
 }
 
 unsigned int passthru_thing_set_initial_state() {
@@ -48,11 +51,13 @@ unsigned int passthru_thing_set_initial_state() {
 
   thing->state = THING_STATE_INITIALIZING;
 
-  mqtt.onmessage = &passthru_thing_sync_initial_state;
-  awsiot_client_connect(&mqtt);
-  awsiot_client_subscribe(&mqtt, my_shadow_get_accepted_topic);
-  awsiot_client_publish(&mqtt, my_shadow_get_topic, "{}");
-  awsiot_client_publish(&mqtt, my_shadow_update_topic, "{\"state\":{\"desired\":{\"j2534\":null},\"reported\":{\"j2534\":null}}}");
+  awsiot = malloc(sizeof(awsiot_client));
+  awsiot->client = malloc(sizeof(AWS_IoT_Client));
+  awsiot->onmessage = &passthru_thing_sync_initial_state;
+  awsiot_client_connect(awsiot);
+  awsiot_client_subscribe(awsiot, my_shadow_get_accepted_topic);
+  awsiot_client_publish(awsiot, my_shadow_get_topic, "{}");
+  awsiot_client_publish(awsiot, my_shadow_update_topic, "{\"state\":{\"desired\":{\"j2534\":null},\"reported\":{\"j2534\":null}}}");
 
   unsigned int i = 0;
   while(thing->state & THING_STATE_INITIALIZING) {
@@ -62,8 +67,8 @@ unsigned int passthru_thing_set_initial_state() {
       return 1;
     }
 
-    mqtt.rc = aws_iot_mqtt_yield(&mqtt.client, 200);
-    if(mqtt.rc == NETWORK_ATTEMPTING_RECONNECT) {
+    aws_iot_mqtt_yield(awsiot->client, 200);
+    if(awsiot->rc == NETWORK_ATTEMPTING_RECONNECT) {
       syslog(LOG_DEBUG, "passthru_thing_set_initial_state: waiting for network to reconnect");
       sleep(1);
       continue;
@@ -196,8 +201,8 @@ void passthru_thing_init(thing_init_params *params) {
   strcpy(thing->name, AWS_IOT_MY_THING_NAME);
 
   thing->shadow = malloc(sizeof(passthru_shadow));
-  memset(thing->shadow, 0, sizeof(passthru_shadow));
   thing->shadow->mqttClient = malloc(sizeof(AWS_IoT_Client));
+  thing->shadow->clientId = thing->name;
 
   thing->shadow->onopen = &passthru_thing_shadow_onopen;
   thing->shadow->ondelta = &passthru_thing_shadow_ondelta;

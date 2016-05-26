@@ -25,26 +25,6 @@
 #include "awsiot_client.h"
 #include "j2534/apigateway.h"
 
-#define J2534_PassThruScanForDevices        1
-#define J2534_PassThruGetNextDevice         2
-#define J2534_PassThruOpen                  3
-#define J2534_PassThruClose                 4
-#define J2534_PassThruConnect               5
-#define J2534_PassThruDisconnect            6
-#define J2534_PassThruLogicalConnect        7
-#define J2534_PassThruLogicalDisconnect     8
-#define J2534_PassThruSelect                9
-#define J2534_PassThruReadMsgs              10
-#define J2534_PassThruQueueMsgs             11
-#define J2534_PassThruStartPeriodicMsg      12
-#define J2534_PassThruStopPeriodicMsg       13
-#define J2534_PassThruStartMsgFilter        14
-#define J2534_PassThruStopMsgFilter         15
-#define J2534_PassThruSetProgrammingVoltage 16
-#define J2534_PassThruReadVersion           17
-#define J2534_PassThruGetLastError          18
-#define J2534_PassThruIoctl                 19
-
 // Return Values
 #define STATUS_NOERROR                   0x00000000  // Function completed successfully.
 #define ERR_NOT_SUPPORTED                0x00000001  // Device does not support the API function. A fully compliant SAE J2534-1 Pass-Thru Interface shall never return ERR_NOT_SUPPORTED.
@@ -316,5 +296,38 @@ long PassThruSetProgrammingVoltage(unsigned long DeviceID, RESOURCE_STRUCT Resou
 long PassThruReadVersion(unsigned long DeviceID, char *pFirmwareVersion, char *pDllVersion, char *pApiVersion);
 long PassThruGetLastError(char *pErrorDescription);
 long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *InputPtr, void *OutputPtr);
+
+// non-J2534 spec (implementation specific)
+#define J2534_STATE_OPENED                  (1 << 0)
+#define J2534_STATE_CLOSED                  (1 << 1)
+
+#define J2534_PassThruScanForDevices        1
+#define J2534_PassThruGetNextDevice         2
+#define J2534_PassThruOpen                  3
+#define J2534_PassThruClose                 4
+#define J2534_PassThruConnect               5
+#define J2534_PassThruDisconnect            6
+#define J2534_PassThruLogicalConnect        7
+#define J2534_PassThruLogicalDisconnect     8
+#define J2534_PassThruSelect                9
+#define J2534_PassThruReadMsgs              10
+#define J2534_PassThruQueueMsgs             11
+#define J2534_PassThruStartPeriodicMsg      12
+#define J2534_PassThruStopPeriodicMsg       13
+#define J2534_PassThruStartMsgFilter        14
+#define J2534_PassThruStopMsgFilter         15
+#define J2534_PassThruSetProgrammingVoltage 16
+#define J2534_PassThruReadVersion           17
+#define J2534_PassThruGetLastError          18
+#define J2534_PassThruIoctl                 19
+
+typedef struct {
+  char *name;
+  unsigned int deviceId;
+  uint8_t state;
+  SDEVICE *device;
+  awsiot_client *awsiot;
+} j2534_client;
+// end non-J2534 spec
 
 #endif

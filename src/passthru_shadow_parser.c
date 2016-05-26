@@ -85,12 +85,10 @@ void passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message)
   json_object_foreach(obj, key, value) {
 
     if(strncmp(key, "connection", strlen(key)) == 0) {
-      message->state->reported->connection = malloc(sizeof(int));
       message->state->reported->connection = json_integer_value(value);
     }
 
     if(strncmp(key, "j2534", strlen(key)) == 0) {
-      message->state->reported->j2534 = malloc(sizeof(int));
       message->state->reported->j2534 = json_integer_value(value);
     }
 
@@ -132,12 +130,10 @@ void passthru_shadow_parser_parse_desired(json_t *obj, shadow_message *message) 
   json_object_foreach(obj, key, value) {
 
     if(strncmp(key, "connection", strlen(key)) == 0) {
-      message->state->desired->connection = malloc(sizeof(int));
       message->state->desired->connection = json_integer_value(value);
     }
 
     if(strncmp(key, "j2534", strlen(key)) == 0) {
-      message->state->desired->j2534 = malloc(sizeof(int));
       message->state->desired->j2534 = json_integer_value(value);
     }
 
