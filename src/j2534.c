@@ -589,6 +589,8 @@ long PassThruConnect(unsigned long DeviceID, unsigned long ProtocolID, unsigned 
     return unless_concurrent_call(ERR_PIN_NOT_SUPPORTED, J2534_PassThruConnect);
   }
 
+  j2534client->channelId = *pChannelID;
+
   return unless_concurrent_call(
     j2534_publish_state(j2534client, J2534_PassThruConnect),
     J2534_PassThruConnect
@@ -638,7 +640,21 @@ long PassThruConnect(unsigned long DeviceID, unsigned long ProtocolID, unsigned 
  *   STATUS_NOERROR               Function call was successful
  */
 long PassThruDisconnect(unsigned long ChannelID) {
-  return ERR_NOT_SUPPORTED;
+
+  j2534_current_api_call = J2534_PassThruDisconnect;
+
+  if(!j2534_isopen()) {
+    return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, J2534_PassThruDisconnect);
+  }
+
+  if(ChannelID != j2534client->channelId) {
+    return unless_concurrent_call(ERR_INVALID_CHANNEL_ID, J2534_PassThruDisconnect);
+  }
+
+  return unless_concurrent_call(
+    j2534_publish_state(j2534client, J2534_PassThruDisconnect),
+    J2534_PassThruDisconnect
+  );
 }
 
 /**

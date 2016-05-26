@@ -62,11 +62,17 @@ module Ecutools
    def PassThruConnect(deviceId, protocolId, flags, baudRate, resource, channelId)
     raise Ecutools::J2534Error, 'resource must be an instance of Ecutools::Models::Resource' unless resource.instance_of?(Ecutools::J2534::Models::Resource)
      resourceStruct = Ecutools::J2534::Structs::RESOURCE_STRUCT.new
-     resourceStruct[:Connector] = resource.Connector
+     resourceStruct[:Connector] = resource.Connector || 0
      resourceStruct[:NumOfResources] = resource.NumOfResources || 0
      resourceStruct[:ResourceListPtr] = resource.ResourceListPtr || 0
      pChannelID = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, channelId)
      response = Libj2534.PassThruConnect(deviceId, protocolId, flags, baudRate, resourceStruct, pChannelID)
+     raise Ecutools::J2534Error, Error[response] unless response == 0
+     true
+   end
+
+   def PassThruDisconnect(channelId)
+     response = Libj2534.PassThruDisconnect(channelId)
      raise Ecutools::J2534Error, Error[response] unless response == 0
      true
    end

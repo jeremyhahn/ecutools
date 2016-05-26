@@ -319,6 +319,7 @@ long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *Inp
 typedef struct {
   char *name;
   unsigned int deviceId;
+  unsigned int channelId;
   int *state;
   SDEVICE *device;
   awsiot_client *awsiot;

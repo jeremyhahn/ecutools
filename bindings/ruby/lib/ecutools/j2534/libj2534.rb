@@ -40,4 +40,5 @@ module Ecutools::J2534::Libj2534
   attach_function :PassThruOpen, [ :pointer, :pointer ], :long
   attach_function :PassThruClose, [ :ulong ], :long
   attach_function :PassThruConnect, [:ulong, :ulong, :ulong, :ulong, Ecutools::J2534::Structs::RESOURCE_STRUCT.by_value, :pointer ], :long
+  attach_function :PassThruDisconnect, [:ulong ], :long
 end
