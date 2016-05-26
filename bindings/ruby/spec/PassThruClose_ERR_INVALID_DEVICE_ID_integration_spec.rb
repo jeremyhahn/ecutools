@@ -19,11 +19,12 @@ require 'spec_helper'
 
 describe Ecutools::J2534 do
   include_context 'J2534' do
-    context 'PassThruOpen' do
+    context 'PassThruClose' do
 
-      it 'returns true when a connection is opened' do
-      	things.test_with_ecutuned {
+      it 'raises ERR_INVALID_DEVICE_ID when device is opened successfully then given an invalid device id' do
+        things.test_with_ecutuned {
           expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
+          expect{j2534.PassThruClose(2)}.to raise_error(Ecutools::J2534Error, /ERR_INVALID_DEVICE_ID/)
         }
       end
 

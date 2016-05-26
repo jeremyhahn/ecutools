@@ -23,6 +23,8 @@
 #include <string.h>
 #include "passthru_thing.h"
 
+int daemonize = 0;
+
 int main_exit(int exit_status, thing_init_params *params) {
   syslog(LOG_DEBUG, "exiting %s", params->thingId);
   closelog();
@@ -39,19 +41,19 @@ int main_exit(int exit_status, thing_init_params *params) {
 
 void signal_handler(int sig) {
   switch(sig) {
-	case SIGHUP:
-	  syslog(LOG_DEBUG, "Received SIGHUP signal");
-	  // Reload config and reopen files
-	  break;
-	case SIGINT:
+  case SIGHUP:
+    syslog(LOG_DEBUG, "Received SIGHUP signal");
+    // Reload config and reopen files
+    break;
+  case SIGINT:
     passthru_thing_close();
     break;
-	case SIGTERM:
-	  passthru_thing_close();
+  case SIGTERM:
+    passthru_thing_close();
     break;
-	default:
-	  syslog(LOG_WARNING, "Unhandled signal %s\n", strsignal(sig));
-	  break;
+  default:
+    syslog(LOG_WARNING, "Unhandled signal %s\n", strsignal(sig));
+    break;
   }
 }
 
@@ -87,8 +89,16 @@ void print_program_header() {
 
 void parse_args(int argc, char** argv, thing_init_params *params) {
   int opt;
-  while((opt = getopt(argc, argv, "i:l:")) != -1) {
+  while((opt = getopt(argc, argv, "n:i:l:d")) != -1) {
     switch(opt) {
+      case 'n':
+        if(strlen(optarg) > 80) {
+          printf("ERROR: Thing name must not exceed 80 chars");
+          main_exit(1, params);
+        }
+        params->thingId = malloc(sizeof(char) * (strlen(optarg)+1));
+        strcpy(params->thingId, optarg);
+        break;
       case 'i':
         if(strlen(optarg) > 10) {
           printf("ERROR: interface value must not exceed 10 chars");
@@ -104,6 +114,9 @@ void parse_args(int argc, char** argv, thing_init_params *params) {
         }
         params->logdir = malloc(sizeof(char) * (strlen(optarg)+1));
         strcpy(params->logdir, optarg);
+        break;
+      case 'd':
+        daemonize = 1;
         break;
       case '?':
         if(isprint(optopt)) {
@@ -127,11 +140,14 @@ int main(int argc, char **argv) {
   print_program_header();
 
   thing_init_params *params = malloc(sizeof(thing_init_params));
-  params->thingId = malloc(sizeof(char) * 9);
+  params->thingId = NULL;
   params->logdir = NULL;
   params->iface = NULL;
   parse_args(argc, argv, params);
-  strcpy(params->thingId, "ecutuned");
+  if(params->thingId == NULL) {
+    params->thingId = malloc(sizeof(char) * 8);
+    strcpy(params->thingId, "myj2534");
+  }
 
   struct sigaction newSigAction;
   sigset_t newSigSet;
@@ -153,7 +169,9 @@ int main(int argc, char **argv) {
 
   setlogmask(LOG_UPTO(LOG_DEBUG));
   openlog(params->thingId, LOG_CONS | LOG_PERROR, LOG_USER);
-  syslog(LOG_DEBUG, "starting %s", params->thingId);
+  syslog(LOG_DEBUG, "Starting IoT PassThru Thing: %s", params->thingId);
+
+  if(daemonize) daemon(1, 0);
 
   passthru_thing_init(params);
   passthru_thing_run();

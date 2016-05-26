@@ -21,9 +21,10 @@ describe Ecutools::J2534 do
   include_context 'J2534' do
     context 'PassThruOpen' do
 
-      it 'returns true when a connection is opened' do
+      it 'raises ERR_NULL_PARAMETER when passed a NULL name or device id' do
       	things.test_with_ecutuned {
-          expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
+          expect{j2534.PassThruOpen(things[0][:name], nil)}.to raise_error(Ecutools::J2534Error, /ERR_NULL_PARAMETER/)
+          expect{j2534.PassThruOpen(0, 0)}.to raise_error(Ecutools::J2534Error, /ERR_NULL_PARAMETER/)
         }
       end
 

@@ -19,11 +19,12 @@ require 'spec_helper'
 
 describe Ecutools::J2534 do
   include_context 'J2534' do
-    context 'PassThruOpen' do
+    context 'PassThruClose' do
 
-      it 'returns true when a connection is opened' do
-      	things.test_with_ecutuned {
+      it 'PassThruClose returns STATUS_NOERROR when successfully closed' do
+        things.test_with_ecutuned {
           expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
+          expect(j2534.PassThruClose(1)).to eq(true)
         }
       end
 

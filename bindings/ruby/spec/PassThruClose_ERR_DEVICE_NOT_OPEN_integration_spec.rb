@@ -19,11 +19,11 @@ require 'spec_helper'
 
 describe Ecutools::J2534 do
   include_context 'J2534' do
-    context 'PassThruOpen' do
+    context 'PassThruClose' do
 
-      it 'returns true when a connection is opened' do
-      	things.test_with_ecutuned {
-          expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
+      it 'raises ERR_DEVICE_NOT_OPEN when not open and asked to close' do
+        things.test_with_ecutuned {
+          expect{j2534.PassThruClose(1)}.to raise_error(Ecutools::J2534Error, /ERR_DEVICE_NOT_OPEN/)
         }
       end
 

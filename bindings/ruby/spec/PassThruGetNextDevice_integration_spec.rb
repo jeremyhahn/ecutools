@@ -44,7 +44,7 @@ describe Ecutools::J2534 do
           response = j2534.PassThruGetNextDevice(device)
           expect(response.DeviceName).to eq(things[0][:name])
 
-          expect(j2534.PassThruGetNextDevice(response)).to raise_error(J2534Error, /ERR_EXCEEDED_LIMIT/)
+          expect(j2534.PassThruGetNextDevice(response)).to raise_error(Ecutools::J2534Error, /ERR_EXCEEDED_LIMIT/)
         }
       end
 
@@ -55,14 +55,14 @@ describe Ecutools::J2534 do
           expect(deviceCount).to be 0
 
           device = Ecutools::J2534::Models::Device.new
-          expect(j2534.PassThruGetNextDevice(device)).to raise_error(J2534Error, /ERR_BUFFER_EMPTY/)
+          expect(j2534.PassThruGetNextDevice(device)).to raise_error(Ecutools::J2534Error, /ERR_BUFFER_EMPTY/)
         }
       end
 
       it 'responds with ERR_BUFFER_EMPTY when devices are present but PassThruScanForDevices hasnt been called' do
         things.test(1) {
           device = Ecutools::J2534::Models::Device.new
-          expect(j2534.PassThruGetNextDevice(device)).to raise_error(J2534Error, /ERR_BUFFER_EMPTY/)
+          expect(j2534.PassThruGetNextDevice(device)).to raise_error(Ecutools::J2534Error, /ERR_BUFFER_EMPTY/)
         }
       end
 

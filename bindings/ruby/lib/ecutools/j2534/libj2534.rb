@@ -37,4 +37,5 @@ module Ecutools::J2534::Libj2534
   attach_function :PassThruScanForDevices, [ :pointer ], :long
   attach_function :PassThruGetNextDevice, [ :pointer ], :long
   attach_function :PassThruOpen, [ :pointer, :pointer ], :long
+  attach_function :PassThruClose, [ :ulong ], :long
 end

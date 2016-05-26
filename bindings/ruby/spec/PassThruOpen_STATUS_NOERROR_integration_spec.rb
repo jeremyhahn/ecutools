@@ -21,10 +21,10 @@ describe Ecutools::J2534 do
   include_context 'J2534' do
     context 'PassThruOpen' do
 
-      it 'returns true when a connection is opened' do
+      it 'raises ERR_DEVICE_NOT_CONNECTED when no response received from PassThru device' do
       	things.test_with_ecutuned {
-          expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
-        }
+      	  expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
+      	}
       end
 
     end

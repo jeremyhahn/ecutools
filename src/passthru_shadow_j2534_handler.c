@@ -32,4 +32,8 @@ void passthru_shadow_j2534_handler_handle(shadow_state *state) {
     syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_handle: PassThruOpen!");
   }
 
+  if(state->reported->j2534 == J2534_PassThruClose) {
+    syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_handle: PassThruClose!");
+  }
+
 }

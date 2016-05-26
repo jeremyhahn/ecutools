@@ -102,13 +102,14 @@ void passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message)
       json_t *type = json_object_get(value, "type");
 
       if(json_is_string(file)) {
-        const char *file_val = json_string_value(file);
-        message->state->reported->log->file = malloc(strlen(file_val)+1);
-        strcpy(message->state->reported->log->file, file_val);
+       const char *file_val = json_string_value(file);
+        int file_val_len = strlen(file_val);
+        message->state->reported->log->file = malloc(file_val_len+1);
+        strncpy(message->state->reported->log->file, file_val, file_val_len);
+        message->state->reported->log->file[file_val_len] = '\0';
       }
 
       if(json_is_integer(type)) {
-        message->state->reported->log->type = malloc(sizeof(int));
         message->state->reported->log->type = json_integer_value(type);
       }
     }
@@ -148,16 +149,16 @@ void passthru_shadow_parser_parse_desired(json_t *obj, shadow_message *message) 
 
       if(json_is_string(file)) {
         const char *file_val = json_string_value(file);
-        message->state->desired->log->file = malloc(strlen(file_val)+1);
-        strcpy(message->state->desired->log->file, file_val);
+        int file_val_len = strlen(file_val);
+        message->state->desired->log->file = malloc(file_val_len+1);
+        strncpy(message->state->desired->log->file, file_val, file_val_len);
+        message->state->desired->log->file[file_val_len] = '\0';
       }
 
       if(json_is_integer(type)) {
-        message->state->desired->log->type = malloc(sizeof(int));
         message->state->desired->log->type = json_integer_value(type);
       }
     }
-
   }
 }
 
@@ -169,18 +170,15 @@ void passthru_shadow_parser_free_message(shadow_message *message) {
       message->state->reported->log->file = NULL;
     }
     if(message->state->reported->log->type) {
-      free(message->state->reported->log->type);
       message->state->reported->log->type = NULL;
     }
     free(message->state->reported->log);
     message->state->reported->log = NULL;
   }
   if(message->state->reported->j2534) {
-    //free(message->state->reported->j2534); i think json_integer_value is overwriting malloc pointer
     message->state->reported->j2534 = NULL;
   }
   if(message->state->reported->connection) {
-    //free(message->state->reported->connection);
     message->state->reported->connection = NULL;
   }
   if(message->state->reported) {
@@ -194,7 +192,6 @@ void passthru_shadow_parser_free_message(shadow_message *message) {
       message->state->desired->log->file = NULL;
     }
     if(message->state->desired->log->type) {
-      free(message->state->desired->log->type);
       message->state->desired->log->type = NULL;
     }
     free(message->state->desired->log);
@@ -202,11 +199,9 @@ void passthru_shadow_parser_free_message(shadow_message *message) {
   }
 
   if(message->state->desired->j2534 != NULL) {
-    //free(message->state->desired->j2534);
     message->state->desired->j2534 = NULL;
   }
   if(message->state->desired->connection) {
-    //free(message->state->desired->connection);
     message->state->desired->connection = NULL;
   }
   if(message->state->desired != NULL) {

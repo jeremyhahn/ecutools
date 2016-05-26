@@ -26,23 +26,20 @@ static char my_shadow_update_topic[121];
 static char my_shadow_get_accepted_topic[121];
 
 void passthru_thing_sync_initial_state(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
+ 
   syslog(LOG_DEBUG, "passthru_thing_initial_state_callback: topicName=%s, topicNameLen=%u, pData=%s", topicName, (unsigned int)topicNameLen, (char *)pData);
 
   thing->state = THING_STATE_CONNECTING;
 
-  size_t json_len = strlen(topicName)-topicNameLen;
-  char json[json_len+1];
-  memcpy(json, &topicName[topicNameLen], json_len);
-  json[json_len] = '\0';
+  char json[params->payloadLen];
+  memcpy(json, params->payload, params->payloadLen);
+  json[params->payloadLen] = '\0';
 
   shadow_message *message = passthru_shadow_parser_parse(json);
   // clear connection=2 to prevent connection handler from disconnecting
   if(message->state->reported->connection) message->state->reported->connection = NULL;
   passthru_shadow_router_route(thing, message);
   passthru_shadow_parser_free_message(message);
-
-  //free(awsiot->client); segfault?
-  free(awsiot);
 }
 
 unsigned int passthru_thing_set_initial_state() {
@@ -56,15 +53,14 @@ unsigned int passthru_thing_set_initial_state() {
   awsiot->onmessage = &passthru_thing_sync_initial_state;
   awsiot_client_connect(awsiot);
   awsiot_client_subscribe(awsiot, my_shadow_get_accepted_topic);
-  awsiot_client_publish(awsiot, my_shadow_get_topic, "{}");
   awsiot_client_publish(awsiot, my_shadow_update_topic, "{\"state\":{\"desired\":{\"j2534\":null},\"reported\":{\"j2534\":null}}}");
 
   unsigned int i = 0;
   while(thing->state & THING_STATE_INITIALIZING) {
 
-    if(i == 10) { // timeout
+    if(i == 5) {
       syslog(LOG_DEBUG, "passthru_thing_set_initial_state: no state to sync");
-      return 1;
+      break;
     }
 
     aws_iot_mqtt_yield(awsiot->client, 200);
@@ -76,6 +72,11 @@ unsigned int passthru_thing_set_initial_state() {
 
     i++;
   }
+
+  syslog(LOG_DEBUG, "passthru_thing_set_initial_state: done initializing");
+
+  free(awsiot->client);
+  free(awsiot);
 
   return 0;
 }
@@ -197,10 +198,10 @@ void passthru_thing_init(thing_init_params *params) {
 
   thing = malloc(sizeof(passthru_thing));
   thing->params = params;
-  thing->name = malloc(sizeof(char) * strlen(AWS_IOT_MY_THING_NAME)+1);
-  strcpy(thing->name, AWS_IOT_MY_THING_NAME);
+  thing->name = params->thingId;
 
   thing->shadow = malloc(sizeof(passthru_shadow));
+  memset(thing->shadow, 0, sizeof(passthru_shadow));
   thing->shadow->mqttClient = malloc(sizeof(AWS_IoT_Client));
   thing->shadow->clientId = thing->name;
 
@@ -257,7 +258,6 @@ void passthru_thing_close() {
 void passthru_thing_destroy() {
   syslog(LOG_DEBUG, "passthru_thing_destroy");
   passthru_shadow_destroy(thing->shadow);
-  free(thing->name);
   free(thing->shadow->mqttClient);
   free(thing->shadow);
   free(thing);

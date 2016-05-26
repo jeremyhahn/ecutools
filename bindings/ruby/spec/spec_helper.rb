@@ -25,7 +25,6 @@ require 'awsclient'
 require 'pp'
 
 RSpec.shared_context 'J2534' do
-
    let(:j2534) { Class.new { include Ecutools::J2534 }.new }
    let(:things) { Things.new }
 end
@@ -33,9 +32,11 @@ end
 class Things
 
   attr_accessor :things
+  attr_accessor :thing_name
 
-  def initialize
+  def initialize(options = {})
     self.things = []
+    self.thing_name = options[:thing_name]
   end
 
   def create!(num = 1)
@@ -71,8 +72,22 @@ class Things
       block.call
     rescue => e
       Stackit.logger.error e.message
-      puts e.backtrace unless e.instance_of?(Ecutools::J2534::J2534Error)
+      puts e.backtrace unless e.instance_of?(Ecutools::J2534Error)
     end
+    delete!
+  end
+
+  def test_with_ecutuned(&block)
+    create!
+    `../../ecutuned -n #{things[0][:name]} -d`
+    sleep(5)
+    begin
+      block.call
+    rescue => e
+      Stackit.logger.error e.message
+      puts e.backtrace unless e.instance_of?(Ecutools::J2534Error)
+    end
+    `killall -9 ecutuned`
     delete!
   end
 
@@ -83,6 +98,6 @@ private
   end
 
   def thing_id
-    "rspec-#{random_id}"
+    thing_name || "rspec-#{random_id}"
   end
 end

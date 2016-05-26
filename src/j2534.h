@@ -298,9 +298,6 @@ long PassThruGetLastError(char *pErrorDescription);
 long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *InputPtr, void *OutputPtr);
 
 // non-J2534 spec (implementation specific)
-#define J2534_STATE_OPENED                  (1 << 0)
-#define J2534_STATE_CLOSED                  (1 << 1)
-
 #define J2534_PassThruScanForDevices        1
 #define J2534_PassThruGetNextDevice         2
 #define J2534_PassThruOpen                  3
@@ -324,7 +321,7 @@ long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *Inp
 typedef struct {
   char *name;
   unsigned int deviceId;
-  uint8_t state;
+  int *state;
   SDEVICE *device;
   awsiot_client *awsiot;
 } j2534_client;

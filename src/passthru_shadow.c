@@ -64,7 +64,7 @@ int passthru_shadow_connect(passthru_shadow *shadow) {
   }
 
   ShadowConnectParameters_t scp = ShadowConnectParametersDefault;
-  scp.pMyThingName = AWS_IOT_MY_THING_NAME;
+  scp.pMyThingName = shadow->clientId;
   scp.pMqttClientId = AWS_IOT_MQTT_CLIENT_ID;
 
   shadow->rc = aws_iot_shadow_connect(shadow->mqttClient, &scp);
@@ -105,7 +105,7 @@ int passthru_shadow_report_delta(passthru_shadow *shadow) {
 
 void passthru_shadow_get(passthru_shadow *shadow) {
   syslog(LOG_DEBUG, "passthru_shadow_get");
-  shadow->rc = aws_iot_shadow_get(shadow->mqttClient, AWS_IOT_MY_THING_NAME, shadow->onget, NULL, 2, true);
+  shadow->rc = aws_iot_shadow_get(shadow->mqttClient, shadow->clientId, shadow->onget, NULL, 2, true);
   if(shadow->rc != SUCCESS) {
     char errmsg[255];
     sprintf(errmsg, "aws_iot_shadow_get error rc=%d", shadow->rc);
@@ -115,7 +115,7 @@ void passthru_shadow_get(passthru_shadow *shadow) {
 
 int passthru_shadow_update(passthru_shadow *shadow, char *message) {
   syslog(LOG_DEBUG, "passthru_shadow_update: message=%s", message);
-  shadow->rc = aws_iot_shadow_update(shadow->mqttClient, AWS_IOT_MY_THING_NAME, message, shadow->onupdate, NULL, 2, true);
+  shadow->rc = aws_iot_shadow_update(shadow->mqttClient, shadow->clientId, message, shadow->onupdate, NULL, 2, true);
   if(shadow->rc != SUCCESS) {
     char errmsg[255];
     sprintf(errmsg, "aws_iot_shadow_update error rc=%d", shadow->rc);

@@ -31,24 +31,30 @@ module Ecutools
    def PassThruScanForDevices
      pDeviceCount = FFI::MemoryPointer.new(:ulong, 1)
      response = Libj2534.PassThruScanForDevices(pDeviceCount)
-     raise J2534Error, Error[response] if response != 0
+     raise Ecutools::J2534Error, Error[response] if response != 0
      pDeviceCount.read_long
    end
 
    def PassThruGetNextDevice(device)
-     raise J2534Error, 'Device must be an instance of Ecutools::Models::Device' unless device.instance_of?(Ecutools::J2534::Models::Device)
+     raise Ecutools::J2534Error, 'Device must be an instance of Ecutools::Models::Device' unless device.instance_of?(Ecutools::J2534::Models::Device)
      sdevice = Ecutools::J2534::Structs::SDEVICE.new
      sdevice[:DeviceName].to_ptr.put_string(0, device.DeviceName) if device.DeviceName
      response = Libj2534.PassThruGetNextDevice(sdevice)
-     raise J2534Error, Error[response] if response != 0
+     raise Ecutools::J2534Error, Error[response] if response != 0
      map_sdevice_to_model(sdevice, device)
    end
 
    def PassThruOpen(name, deviceId)
      pName = FFI::MemoryPointer.from_string(name)
-     pDeviceId = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, 1)
+     pDeviceId = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, deviceId)
      response = Libj2534.PassThruOpen(pName, pDeviceId)
-     raise J2534Error, Error[response] unless response == 0
+     raise Ecutools::J2534Error, Error[response] unless response == 0
+     true
+   end
+
+   def PassThruClose(deviceId)
+     response = Libj2534.PassThruClose(deviceId)
+     raise Ecutools::J2534Error, Error[response] unless response == 0
      true
    end
 

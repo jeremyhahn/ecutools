@@ -18,11 +18,13 @@
 
 #include "j2534.h"
 
-awsiot_client awsiot;
+// not j2534 spec
+static awsiot_client awsiot;
+static j2534_client *j2534client = NULL;
 
 static bool j2534_is_connected = false;
 static char j2534_last_error[80] = {0};
-static int j2534_current_api_call = 0;
+static unsigned int j2534_current_api_call = 0;
 
 static long j2534_device_count = 0;
 static SDEVICE j2534_device_list[25] = {0};
@@ -32,19 +34,68 @@ static char j2534_shadow_get_topic[121];
 static char j2534_shadow_update_topic[121];
 static char j2534_shadow_update_accepted_topic[121];
 
-static j2534_client *j2534client = NULL;
-
-unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call);
+unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call) {
+  syslog(LOG_DEBUG, "unless_concurrent_call: status=%x, api_call=%d", status, api_call);
+  if(j2534_current_api_call != api_call) {
+    strcpy(j2534_last_error, "ERR_CONCURRENT_API_CALL");
+    return ERR_CONCURRENT_API_CALL;
+  }
+  return status;
+}
 
 void j2534_onmessage(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
-  syslog(LOG_DEBUG, "j2534_onmessage: topicName=%s, topicNameLen=%u, pData=%s", topicName, (unsigned int)topicNameLen, (char *)pData);
 
-  j2534client->state = J2534_STATE_OPENED;
+  syslog(LOG_DEBUG, "j2534_onmessage: topicName=%s, topicNameLen=%u, payload=%s, payload_len=%i, pData=%s", topicName, 
+    (unsigned int)topicNameLen, params->payload, params->payloadLen, (char *)pData);
+
+  char json[params->payloadLen];
+  memcpy(json, params->payload, params->payloadLen);
+  json[params->payloadLen] = '\0';
+
+  shadow_message *message = passthru_shadow_parser_parse(json);
+  j2534client->state = message->state->reported->j2534;
+  passthru_shadow_parser_free_message(message);
 }
 
 void j2534_onerror(awsiot_client *awsiot, const char *message) {
   syslog(LOG_ERR, "j2534_onerror: message=%s", message);
 }
+
+unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
+
+  unsigned int json_len = 34;
+  char json[json_len+1];
+  snprintf(json, json_len, "{\"state\":{\"desired\":{\"j2534\":%i}}}", desired_state);
+  json[json_len] = '\0';
+
+  if(awsiot_client_subscribe(client->awsiot, j2534_shadow_update_accepted_topic) != 0) {
+    syslog(LOG_ERR, "j2534_publish_and_wait: failed to subscribe to j2534_shadow_update_accepted_topic %s. rc=%d", j2534_shadow_update_accepted_topic, client->awsiot->rc);
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
+  if(awsiot_client_publish(client->awsiot, j2534_shadow_update_topic, (const char *)json) != 0) {
+    syslog(LOG_ERR, "j2534_publish_and_wait: failed to publish to j2534_shadow_update_topic %s. rc=%d", j2534_shadow_update_topic, client->awsiot->rc);
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
+  unsigned int i = 0;
+  while(j2534client->state != desired_state) {
+
+    // timeout if no response from device
+    if(i == 10) return ERR_DEVICE_NOT_CONNECTED;
+
+    client->awsiot->rc = aws_iot_mqtt_yield(client->awsiot->client, 200);
+    if(client->awsiot->rc == NETWORK_ATTEMPTING_RECONNECT) {
+      syslog(LOG_DEBUG, "j2534_publish_and_wait: waiting for network to reconnect");
+      sleep(1);
+      continue;
+    }
+
+    i++;
+  }
+
+  return STATUS_NOERROR;
+} // end not J2534 spec
 
 /**
  * 7.3.1 PassThruScanForDevices
@@ -205,7 +256,7 @@ long PassThruScanForDevices(unsigned long *pDeviceCount) {
  *   STATUS_NOERROR               Function call was successful
  */
 long PassThruGetNextDevice(SDEVICE *psDevice) {
-  int api_call = J2534_PassThruGetNextDevice;
+  unsigned int api_call = J2534_PassThruGetNextDevice;
   j2534_current_api_call = api_call;
   if(psDevice == NULL) {
     return unless_concurrent_call(ERR_NULL_PARAMETER, api_call);
@@ -289,72 +340,53 @@ long PassThruGetNextDevice(SDEVICE *psDevice) {
  */
 long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
 
-  int api_call = J2534_PassThruOpen;
+  syslog(LOG_ERR, "PassThruOpen: pName=%s, pDeviceID=%d", pName, *pDeviceID);
+
+  unsigned int api_call = J2534_PassThruOpen;
   j2534_current_api_call = api_call;
 
   if(pName == NULL || pDeviceID == NULL) {
     return unless_concurrent_call(ERR_NULL_PARAMETER, api_call);
   }
 
-  if(j2534client == NULL) {
-    j2534client = malloc(sizeof(j2534_client));
+  if(j2534client != NULL) return unless_concurrent_call(ERR_DEVICE_IN_USE, api_call);
 
-    j2534client->name = malloc(sizeof(char) * strlen(pName)+1);
-    memcpy(j2534client->name, pName, strlen(pName));
-    j2534client->name[strlen(pName)] = '\0';
+  snprintf(j2534_shadow_update_topic, 120, PASSTHRU_SHADOW_UPDATE_TOPIC, pName);
+  snprintf(j2534_shadow_update_accepted_topic, 120, PASSTHRU_SHADOW_UPDATE_ACCEPTED_TOPIC, pName);
 
-    j2534client->device = malloc(sizeof(SDEVICE));
-    j2534client->awsiot = malloc(sizeof(awsiot_client));
-    j2534client->awsiot->client = malloc(sizeof(AWS_IoT_Client));
-    j2534client->deviceId = *pDeviceID;
-    j2534client->state = J2534_STATE_CLOSED;
-  }
+  j2534client = malloc(sizeof(j2534_client));
+
+  j2534client->name = malloc(sizeof(char) * strlen(pName)+1);
+  memcpy(j2534client->name, pName, strlen(pName));
+  j2534client->name[strlen(pName)] = '\0';
+
+  j2534client->device = malloc(sizeof(SDEVICE));
+  j2534client->awsiot = malloc(sizeof(awsiot_client));
+  j2534client->awsiot->client = malloc(sizeof(AWS_IoT_Client));
+  j2534client->deviceId = *pDeviceID;
+  j2534client->state = NULL;
+
+  j2534client->awsiot->onopen = NULL;
+  j2534client->awsiot->onclose = NULL;
+  j2534client->awsiot->ondisconnect = NULL;
+  j2534client->awsiot->onmessage = &j2534_onmessage;
+  j2534client->awsiot->onerror = &j2534_onerror;
 
   // TODO: Check for ERR_OPEN_FAILED conditions: firmware/DLL mismatch, API Designation not supported, etc
   // TODO: Set all pins to default state, disconnect physical and logical channels
   // TODO: Detect and report disconnects
 
-  if(j2534client->state & J2534_STATE_OPENED) return ERR_DEVICE_IN_USE;
-
-  snprintf(j2534_shadow_update_topic, 120, PASSTHRU_SHADOW_UPDATE_TOPIC, pName);
-  snprintf(j2534_shadow_update_accepted_topic, 120, PASSTHRU_SHADOW_UPDATE_ACCEPTED_TOPIC, pName);
-
-  char json[AWS_IOT_MQTT_RX_BUF_LEN - 100];
-  sprintf(json, "{\"state\":{\"desired\": {\"j2534\": %i } } }", J2534_PassThruOpen);
-
-  j2534client->awsiot->onmessage = &j2534_onmessage;
-  j2534client->awsiot->onerror = &j2534_onerror;
+  if(j2534client->state == J2534_PassThruOpen) return ERR_DEVICE_IN_USE;
 
   if(awsiot_client_connect(j2534client->awsiot) != 0) {
     syslog(LOG_ERR, "PassThruOpen: failed to awsiot_client_connect. rc=%d", j2534client->awsiot->rc);
     return ERR_DEVICE_NOT_CONNECTED;
   }
 
-  if(awsiot_client_subscribe(j2534client->awsiot, j2534_shadow_update_accepted_topic) != 0) {
-    syslog(LOG_ERR, "PassThruOpen: failed to subscribe to j2534_shadow_update_accepted_topic %s. rc=%d", j2534_shadow_update_accepted_topic, j2534client->awsiot->rc); 
-    return ERR_DEVICE_NOT_CONNECTED;
-  }
-
-  if(awsiot_client_publish(j2534client->awsiot, j2534_shadow_update_topic, (const char *)json) != 0) {
-    syslog(LOG_ERR, "PassThruOpen: failed to publish to j2534_shadow_update_topic %s. rc=%d", j2534_shadow_update_topic, j2534client->awsiot->rc);
-    return ERR_DEVICE_NOT_CONNECTED;
-  }
-
-  unsigned int i = 0;
-  while(!(j2534client->state & J2534_STATE_OPENED)) {
-
-    // timeout if no response from device
-    if(i == 10000000) return ERR_DEVICE_NOT_CONNECTED;
-
-    j2534client->awsiot->rc = aws_iot_mqtt_yield(j2534client->awsiot->client, 200);
-    if(j2534client->awsiot->rc == NETWORK_ATTEMPTING_RECONNECT) {
-      syslog(LOG_DEBUG, "PassThruOpen: waiting for network to reconnect");
-      sleep(1);
-      continue;
-    }
-
-    i++;
-  }
+  return unless_concurrent_call(
+    j2534_publish_state(j2534client, J2534_PassThruOpen),
+    api_call
+  );
 
   return STATUS_NOERROR;
 }
@@ -394,7 +426,45 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
  * 	 STATUS_NOERROR                 Function call was successful
  */
 long PassThruClose(unsigned long DeviceID) {
-  return ERR_FAILED;
+
+  unsigned int api_call = J2534_PassThruClose;
+  j2534_current_api_call = api_call;
+
+  if(j2534client == NULL) return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, api_call);
+
+  if(j2534client->state != J2534_PassThruOpen &&
+     j2534client->state != J2534_PassThruConnect &&
+     j2534client->state != J2534_PassThruDisconnect &&
+     j2534client->state != J2534_PassThruLogicalConnect &&
+     j2534client->state != J2534_PassThruLogicalDisconnect &&
+     j2534client->state != J2534_PassThruSelect &&
+     j2534client->state != J2534_PassThruReadMsgs &&
+     j2534client->state != J2534_PassThruQueueMsgs &&
+     j2534client->state != J2534_PassThruStartPeriodicMsg &&
+     j2534client->state != J2534_PassThruStopPeriodicMsg &&
+     j2534client->state != J2534_PassThruStartMsgFilter &&
+     j2534client->state != J2534_PassThruStopMsgFilter &&
+     j2534client->state != J2534_PassThruSetProgrammingVoltage &&
+     j2534client->state != J2534_PassThruReadVersion &&
+     j2534client->state != J2534_PassThruGetLastError &&
+     j2534client->state != J2534_PassThruIoctl &&
+     j2534client->state != J2534_PassThruStopMsgFilter) {
+
+    return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, api_call);
+  }
+
+  if(j2534client->deviceId != DeviceID) {
+    return unless_concurrent_call(ERR_INVALID_DEVICE_ID, api_call);
+  }
+
+  unsigned long publish_state = j2534_publish_state(j2534client, J2534_PassThruClose);
+
+  free(j2534client->name);
+  free(j2534client->device);
+  free(j2534client->awsiot);
+  free(j2534client);
+
+  return unless_concurrent_call(publish_state, api_call);
 }
 
 /**
@@ -1469,14 +1539,3 @@ long PassThruGetLastError(char *pErrorDescription) {
 long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *InputPtr, void *OutputPtr) {
   return ERR_NOT_SUPPORTED;
 }
-
-// private helpers; not part of j2534 spec
-unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call) {
-  syslog(LOG_DEBUG, "unless_concurrent_call: status=%lu, api_call=%d", status, api_call);
-  if(j2534_current_api_call != api_call) {
-    strcpy(j2534_last_error, "ERR_CONCURRENT_API_CALL");
-    return ERR_CONCURRENT_API_CALL;
-  }
-  return status;
-}
-

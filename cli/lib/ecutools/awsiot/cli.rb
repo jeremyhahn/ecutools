@@ -29,7 +29,7 @@ module Ecutools::Awsiot
       say_status 'OK', thing_arn
     end
 
-    desc 'delete-thing', 'Creates a new AWS PassThru Thing, policy, and certificate'
+    desc 'delete-thing', 'Deletes an AWS PassThru Thing, policy, and certificate'
     method_option :name, :aliases => '-n', :desc => 'The name of the new passthru thing', :required => true
     def delete_thing
       awsiot = Service.new(options)
@@ -41,6 +41,19 @@ module Ecutools::Awsiot
       end
 
       say_status 'OK', "Successfully deleted #{options[:name]}"
+    end
+
+    desc 'delete-things', 'Deletes all AWS PassThru Things, policies, and certificates'
+    def delete_things
+      awsiot = Service.new(options)
+      i = 0
+      awsiot.list_things.each do |thing|
+        next if thing == "myj2534"
+        awsiot.thing_name = thing
+        awsiot.delete_thing
+        i = i + 1
+      end
+      say_status 'OK', "Successfully deleted #{i} PassThru Things"
     end
 
     desc 'list-things', 'Displays a list of J2534 PassThru Things'
