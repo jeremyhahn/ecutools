@@ -43,6 +43,34 @@ unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call
   return status;
 }
 
+bool j2534_isopen() {
+  if(j2534client == NULL) return false;
+  return (
+    j2534client->state == J2534_PassThruOpen ||
+    j2534client->state == J2534_PassThruConnect ||
+    j2534client->state == J2534_PassThruDisconnect ||
+    j2534client->state == J2534_PassThruLogicalConnect ||
+    j2534client->state == J2534_PassThruLogicalDisconnect ||
+    j2534client->state == J2534_PassThruSelect ||
+    j2534client->state == J2534_PassThruReadMsgs ||
+    j2534client->state == J2534_PassThruQueueMsgs ||
+    j2534client->state == J2534_PassThruStartPeriodicMsg ||
+    j2534client->state == J2534_PassThruStopPeriodicMsg ||
+    j2534client->state == J2534_PassThruStartMsgFilter ||
+    j2534client->state == J2534_PassThruStopMsgFilter ||
+    j2534client->state == J2534_PassThruSetProgrammingVoltage ||
+    j2534client->state == J2534_PassThruReadVersion ||
+    j2534client->state == J2534_PassThruGetLastError ||
+    j2534client->state == J2534_PassThruIoctl ||
+    j2534client->state == J2534_PassThruStopMsgFilter
+  );
+}
+
+bool j2534_is_valid_device_id(unsigned long DeviceID) {
+  if(j2534client == NULL) return false;
+  if(j2534client->deviceId != DeviceID) return false;
+}
+
 void j2534_onmessage(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
 
   syslog(LOG_DEBUG, "j2534_onmessage: topicName=%s, topicNameLen=%u, payload=%s, payload_len=%i, pData=%s", topicName, 
@@ -132,8 +160,7 @@ unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
  *   STATUS_NOERROR            Function call was successful
  */
 long PassThruScanForDevices(unsigned long *pDeviceCount) {
-  unsigned int api_call = J2534_PassThruScanForDevices;
-  j2534_current_api_call = api_call;
+  j2534_current_api_call = J2534_PassThruScanForDevices;
 
   openlog("ecutools-j2534", LOG_CONS | LOG_PERROR, LOG_USER);
 
@@ -210,7 +237,7 @@ long PassThruScanForDevices(unsigned long *pDeviceCount) {
   *pDeviceCount = j2534_device_count;
   syslog(LOG_DEBUG, "PassThruScanForDevices: pDeviceCount=%d, j2534_device_list[0].DeviceName=%s", (*pDeviceCount), j2534_device_list[0].DeviceName);
 
-  return unless_concurrent_call(STATUS_NOERROR, api_call);
+  return unless_concurrent_call(STATUS_NOERROR, J2534_PassThruScanForDevices);
 }
 
 /**
@@ -256,29 +283,28 @@ long PassThruScanForDevices(unsigned long *pDeviceCount) {
  *   STATUS_NOERROR               Function call was successful
  */
 long PassThruGetNextDevice(SDEVICE *psDevice) {
-  unsigned int api_call = J2534_PassThruGetNextDevice;
-  j2534_current_api_call = api_call;
+  j2534_current_api_call = J2534_PassThruGetNextDevice;
   if(psDevice == NULL) {
-    return unless_concurrent_call(ERR_NULL_PARAMETER, api_call);
+    return unless_concurrent_call(ERR_NULL_PARAMETER, J2534_PassThruGetNextDevice);
   }
   if(j2534_device_count == 0) {
-    return unless_concurrent_call(ERR_BUFFER_EMPTY, api_call);
+    return unless_concurrent_call(ERR_BUFFER_EMPTY, J2534_PassThruGetNextDevice);
   }
   if(psDevice->DeviceName == NULL || (strncmp("", psDevice->DeviceName, 2) == 0)) {
     *psDevice = j2534_device_list[0];
-    return unless_concurrent_call(STATUS_NOERROR, api_call);
+    return unless_concurrent_call(STATUS_NOERROR, J2534_PassThruGetNextDevice);
   }
   int i;
   for(i=0; i<j2534_device_count; i++) {
     if(strcmp(j2534_device_list[i].DeviceName, psDevice->DeviceName) == 0) {
       if(i+1 >= j2534_device_count) {
-        return unless_concurrent_call(ERR_EXCEEDED_LIMIT, api_call);
+        return unless_concurrent_call(ERR_EXCEEDED_LIMIT, J2534_PassThruGetNextDevice);
       }
       *psDevice = j2534_device_list[i+1];
-      return unless_concurrent_call(STATUS_NOERROR, api_call);
+      return unless_concurrent_call(STATUS_NOERROR, J2534_PassThruGetNextDevice);
     }
   }
-  return unless_concurrent_call(ERR_BUFFER_EMPTY, api_call);
+  return unless_concurrent_call(ERR_BUFFER_EMPTY, J2534_PassThruGetNextDevice);
 }
 
 /**
@@ -342,14 +368,15 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
 
   syslog(LOG_ERR, "PassThruOpen: pName=%s, pDeviceID=%d", pName, *pDeviceID);
 
-  unsigned int api_call = J2534_PassThruOpen;
-  j2534_current_api_call = api_call;
+  j2534_current_api_call = J2534_PassThruOpen;
 
   if(pName == NULL || pDeviceID == NULL) {
-    return unless_concurrent_call(ERR_NULL_PARAMETER, api_call);
+    return unless_concurrent_call(ERR_NULL_PARAMETER, J2534_PassThruOpen);
   }
 
-  if(j2534client != NULL) return unless_concurrent_call(ERR_DEVICE_IN_USE, api_call);
+  if(j2534client != NULL) {
+    return unless_concurrent_call(ERR_DEVICE_IN_USE, J2534_PassThruOpen);
+  }
 
   snprintf(j2534_shadow_update_topic, 120, PASSTHRU_SHADOW_UPDATE_TOPIC, pName);
   snprintf(j2534_shadow_update_accepted_topic, 120, PASSTHRU_SHADOW_UPDATE_ACCEPTED_TOPIC, pName);
@@ -376,19 +403,19 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
   // TODO: Set all pins to default state, disconnect physical and logical channels
   // TODO: Detect and report disconnects
 
-  if(j2534client->state == J2534_PassThruOpen) return ERR_DEVICE_IN_USE;
+  if(j2534client->state == J2534_PassThruOpen) {
+    return unless_concurrent_call(ERR_DEVICE_IN_USE, J2534_PassThruOpen);
+  }
 
   if(awsiot_client_connect(j2534client->awsiot) != 0) {
     syslog(LOG_ERR, "PassThruOpen: failed to awsiot_client_connect. rc=%d", j2534client->awsiot->rc);
-    return ERR_DEVICE_NOT_CONNECTED;
+    return unless_concurrent_call(ERR_DEVICE_NOT_CONNECTED, J2534_PassThruOpen);
   }
 
   return unless_concurrent_call(
     j2534_publish_state(j2534client, J2534_PassThruOpen),
-    api_call
+    J2534_PassThruOpen
   );
-
-  return STATUS_NOERROR;
 }
 
 /**
@@ -427,34 +454,18 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
  */
 long PassThruClose(unsigned long DeviceID) {
 
-  unsigned int api_call = J2534_PassThruClose;
-  j2534_current_api_call = api_call;
+  j2534_current_api_call = J2534_PassThruClose;
 
-  if(j2534client == NULL) return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, api_call);
-
-  if(j2534client->state != J2534_PassThruOpen &&
-     j2534client->state != J2534_PassThruConnect &&
-     j2534client->state != J2534_PassThruDisconnect &&
-     j2534client->state != J2534_PassThruLogicalConnect &&
-     j2534client->state != J2534_PassThruLogicalDisconnect &&
-     j2534client->state != J2534_PassThruSelect &&
-     j2534client->state != J2534_PassThruReadMsgs &&
-     j2534client->state != J2534_PassThruQueueMsgs &&
-     j2534client->state != J2534_PassThruStartPeriodicMsg &&
-     j2534client->state != J2534_PassThruStopPeriodicMsg &&
-     j2534client->state != J2534_PassThruStartMsgFilter &&
-     j2534client->state != J2534_PassThruStopMsgFilter &&
-     j2534client->state != J2534_PassThruSetProgrammingVoltage &&
-     j2534client->state != J2534_PassThruReadVersion &&
-     j2534client->state != J2534_PassThruGetLastError &&
-     j2534client->state != J2534_PassThruIoctl &&
-     j2534client->state != J2534_PassThruStopMsgFilter) {
-
-    return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, api_call);
+  if(j2534client == NULL) {
+    return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, J2534_PassThruClose);
   }
 
-  if(j2534client->deviceId != DeviceID) {
-    return unless_concurrent_call(ERR_INVALID_DEVICE_ID, api_call);
+  if(!j2534_isopen()) {
+    return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, J2534_PassThruClose);
+  }
+
+  if(!j2534_is_valid_device_id(DeviceID)) {
+    return unless_concurrent_call(ERR_INVALID_DEVICE_ID, J2534_PassThruClose);
   }
 
   unsigned long publish_state = j2534_publish_state(j2534client, J2534_PassThruClose);
@@ -464,7 +475,7 @@ long PassThruClose(unsigned long DeviceID) {
   free(j2534client->awsiot);
   free(j2534client);
 
-  return unless_concurrent_call(publish_state, api_call);
+  return unless_concurrent_call(publish_state, J2534_PassThruClose);
 }
 
 /**
@@ -522,10 +533,10 @@ long PassThruClose(unsigned long DeviceID) {
  *   <ResourceStruct>                is an input structure, set by the application, which contains connector/pin-out information. Figure 32
  *                                   identifies the specific values that shall be used by an SAE J2534-1 Interface.
  *                                   The RESOURCE_STRUCT, defined in Section 9.18, where:
- *   <Connector>                     is an input, set by the application, which identifies the connector to be used.
- *                                   Figure 30 specifies the list of valid connectors.
- *   <NumOfResources>                is an input, set by the application, which indicates the number of items in the array pointed to by <ResourceListPtr>.
- *   <ResourceListPtr>               is an input, set by the application, which points to an array of unsigned longs
+ *       <Connector>                     is an input, set by the application, which identifies the connector to be used.
+ *                                       Figure 30 specifies the list of valid connectors.
+ *       <NumOfResources>                is an input, set by the application, which indicates the number of items in the array pointed to by <ResourceListPtr>.
+ *       <ResourceListPtr>               is an input, set by the application, which points to an array of unsigned longs
  *                                   also allocated by the application. This array represents the pins used by the
  *                                   protocol. In the array, offset 0 will contain the primary pin and the remainder of
  *                                   the array (starting at offset 1) will contain the secondary/additional pins (if
@@ -553,11 +564,35 @@ long PassThruClose(unsigned long DeviceID) {
  */
 long PassThruConnect(unsigned long DeviceID, unsigned long ProtocolID, unsigned long Flags, unsigned long BaudRate, RESOURCE_STRUCT ResourceStruct, unsigned long *pChannelID) {
 
+  j2534_current_api_call = J2534_PassThruConnect;
+
   if(pChannelID == NULL) {
-    return ERR_NULL_PARAMETER;
+    return unless_concurrent_call(ERR_NULL_PARAMETER, J2534_PassThruConnect);
   }
 
-  return ERR_NOT_SUPPORTED;
+  if(!j2534_isopen()) {
+    return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, J2534_PassThruConnect);
+  }
+
+  if(!j2534_is_valid_device_id(DeviceID)) {
+    return unless_concurrent_call(ERR_INVALID_DEVICE_ID, J2534_PassThruConnect);
+  }
+
+  if(ProtocolID != J1850VPW && ProtocolID != J1850PWM && ProtocolID != ISO9141 &&
+     ProtocolID != ISO14230 && ProtocolID != CAN && ProtocolID != J2610 &&
+     ProtocolID != ISO15765_LOGICAL) {
+
+    return unless_concurrent_call(ERR_PROTOCOL_ID_NOT_SUPPORTED, J2534_PassThruConnect);
+  }
+
+  if(ResourceStruct.Connector != J1962_CONNECTOR) {
+    return unless_concurrent_call(ERR_PIN_NOT_SUPPORTED, J2534_PassThruConnect);
+  }
+
+  return unless_concurrent_call(
+    j2534_publish_state(j2534client, J2534_PassThruConnect),
+    J2534_PassThruConnect
+  );
 }
 
 /**

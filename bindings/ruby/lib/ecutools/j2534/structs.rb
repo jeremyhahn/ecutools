@@ -27,4 +27,10 @@ module Ecutools::J2534::Structs
            :DirectSignalStrength, :ulong
   end
 
+  class RESOURCE_STRUCT < FFI::Struct
+    layout :Connector, :ulong,
+           :NumOfResources, :ulong,
+           :ResourceListPtr, :pointer
+  end
+
 end

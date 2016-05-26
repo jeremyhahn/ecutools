@@ -87,13 +87,13 @@
 
 // Values for <ProtocolID>
 //Reserved for SAE J2534-1 0x00000000
-#define J1850VPW           0x00000001
-#define J1850PWM           0x00000002
-#define ISO9141            0x00000003
-#define ISO14230           0x00000004
-#define CAN                0x00000005
+#define J1850VPW           0x00000001    // GM / Chrysler CLASS2
+#define J1850PWM           0x00000002    // Ford SCP
+#define ISO9141            0x00000003    // ISO 9141 and ISO 9141-2
+#define ISO14230           0x00000004    // ISO 14230 (Keyword Protocol 2000)
+#define CAN                0x00000005    // CAN Frames (no transport layer)
 //Reserved for SAE J2534-1 0x00000006
-#define J2610              0x00000007
+#define J2610              0x00000007    // SAE J2610 (Chrysler SCI) for: Configuration A for engine, Configuration A for transmission, Configuration B for engine, Configuration B for transmission
 //Reserved for physical communication channels 0x00000008 - 0x00000001FF
 #define ISO15765_LOGICAL   0x00000200
 //Reserved for logical communication channels 0x00000201 - 0x000003FF
@@ -101,18 +101,16 @@
 //Reserved for SAE - 0x00008000 - 0xFFFFFFFF
 
 // Values for <Flags>
-/*
-Reserved for SAE 31-16
-Reserved for SAE J2534-1 15-13
-K_LINE_ONLY 12
-CAN_ID_BOTH 11
-Reserved for SAE 10
-CHECKSUM_DISABLED 9
-CAN_29BIT_ID 8
-Reserved for SAE J2534-1 2-7
-Reserved for SAE 1
-FULL_DUPLEX 0
-*/
+//Reserved for SAE          31-16
+//Reserved for SAE J2534-1  15-13
+#define K_LINE_ONLY         (0 << 12)
+#define CAN_ID_BOTH         (0 << 11)
+//Reserved for SAE          10
+#define CHECKSUM_DISABLED   (0 << 9)
+#define CAN_29BIT_ID        (0 << 8)
+//Reserved for SAE J2534-1  2-7
+//Reserved for SAE          1
+#define FULL_DUPLEX         (0 << 0)
 
 // Values for <Connector>
 #define J1962_CONNECTOR 0x00000001

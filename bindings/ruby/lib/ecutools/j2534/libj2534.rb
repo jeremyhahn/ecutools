@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require_relative 'error'
+require_relative 'structs'
 
 def lib2534_so
   return @lib unless @lib.nil?
@@ -38,4 +39,5 @@ module Ecutools::J2534::Libj2534
   attach_function :PassThruGetNextDevice, [ :pointer ], :long
   attach_function :PassThruOpen, [ :pointer, :pointer ], :long
   attach_function :PassThruClose, [ :ulong ], :long
+  attach_function :PassThruConnect, [:ulong, :ulong, :ulong, :ulong, Ecutools::J2534::Structs::RESOURCE_STRUCT.by_value, :pointer ], :long
 end

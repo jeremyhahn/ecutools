@@ -17,13 +17,14 @@
 
 require 'ffi'
 require "ecutools/j2534/version"
+require 'ecutools/j2534/constants'
 require 'ecutools/j2534/libj2534'
-require 'ecutools/j2534/structs'
 require 'ecutools/j2534/models'
 
 module Ecutools
   module J2534
 
+   include Ecutools::J2534::Constants
    include Ecutools::J2534::Structs
    include Ecutools::J2534::Models
    include Ecutools::J2534::Error
@@ -54,6 +55,18 @@ module Ecutools
 
    def PassThruClose(deviceId)
      response = Libj2534.PassThruClose(deviceId)
+     raise Ecutools::J2534Error, Error[response] unless response == 0
+     true
+   end
+
+   def PassThruConnect(deviceId, protocolId, flags, baudRate, resource, channelId)
+    raise Ecutools::J2534Error, 'resource must be an instance of Ecutools::Models::Resource' unless resource.instance_of?(Ecutools::J2534::Models::Resource)
+     resourceStruct = Ecutools::J2534::Structs::RESOURCE_STRUCT.new
+     resourceStruct[:Connector] = resource.Connector
+     resourceStruct[:NumOfResources] = resource.NumOfResources || 0
+     resourceStruct[:ResourceListPtr] = resource.ResourceListPtr || 0
+     pChannelID = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, channelId)
+     response = Libj2534.PassThruConnect(deviceId, protocolId, flags, baudRate, resourceStruct, pChannelID)
      raise Ecutools::J2534Error, Error[response] unless response == 0
      true
    end

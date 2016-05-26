@@ -15,22 +15,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module Ecutools::J2534::Models
+require 'spec_helper'
 
-  class Device
-    attr_writer :DeviceName
-    attr_accessor :DeviceAvailable
-    attr_accessor :DeviceDLLFWStatus
-    attr_accessor :DeviceConnectMedia
-    attr_accessor :DirectConnectSpeed
-    attr_accessor :DirectSignalQuality
-    attr_accessor :DirectSignalStrength
+describe Ecutools::J2534 do
+  include_context 'J2534' do
+    context 'PassThruConnect' do
+
+      it 'returns STATUS_NOERROR when connected' do
+        things.test_with_ecutuned {
+          #PassThruConnect(deviceId, protocolId, flags, baudRate, resource, channelId)
+          resource = Ecutools::J2534::Models::Resource.new
+          resource.Connector = Ecutools::J2534::J1962_CONNECTOR
+          expect(j2534.PassThruConnect(1, Ecutools::J2534::CAN, Ecutools::J2534::CAN_ID_BOTH, 500000, resource, 1)).to eq(true)
+        }
+      end
+
+    end
   end
-
-  class Resource
-    attr_accessor :Connector
-    attr_accessor :NumOfResources
-    attr_accessor :ResourceListPtr
-  end
-
 end

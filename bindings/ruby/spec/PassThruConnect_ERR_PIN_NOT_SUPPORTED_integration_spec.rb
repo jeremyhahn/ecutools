@@ -15,22 +15,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module Ecutools::J2534::Models
+require 'spec_helper'
 
-  class Device
-    attr_writer :DeviceName
-    attr_accessor :DeviceAvailable
-    attr_accessor :DeviceDLLFWStatus
-    attr_accessor :DeviceConnectMedia
-    attr_accessor :DirectConnectSpeed
-    attr_accessor :DirectSignalQuality
-    attr_accessor :DirectSignalStrength
+describe Ecutools::J2534 do
+  include_context 'J2534' do
+    context 'PassThruConnect' do
+ 
+      it 'returns ERR_PIN_NOT_SUPPORTED when passed an invalid or unknown pin and/or connector' do
+        things.test_with_ecutuned {
+
+          expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
+
+          resource = Ecutools::J2534::Models::Resource.new
+          resource.Connector = 0
+
+          expect {
+            j2534.PassThruConnect(1, Ecutools::J2534::CAN, Ecutools::J2534::CAN_ID_BOTH, 500000, resource, 1)
+          }.to raise_error Ecutools::J2534Error, /ERR_PIN_NOT_SUPPORTED/
+        }
+      end
+
+    end
   end
-
-  class Resource
-    attr_accessor :Connector
-    attr_accessor :NumOfResources
-    attr_accessor :ResourceListPtr
-  end
-
 end
