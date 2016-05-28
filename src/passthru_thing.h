@@ -19,13 +19,26 @@
 #ifndef PASSTHRUTHING_H_
 #define PASSTHRUTHING_H_
 
+typedef struct passthru_thing passthru_thing;
+
 #include <stdint.h>
 #include <stddef.h>
 #include <signal.h>
 #include <pthread.h>
-#include "passthru_thing_common.h"
+#include "vector.h"
 #include "passthru_shadow_parser.h"
 #include "passthru_shadow_router.h"
+#include "j2534.h"
+
+#define PASSTHRU_FIRMWARE_VERSION       "0.1.0"
+
+#define PASSTHRU_CONNECTTYPE_CONNECT    1
+#define PASSTHRU_CONNECTTYPE_DISCONNECT 2
+
+#define PASSTHRU_LOGTYPE_NONE          0
+#define PASSTHRU_LOGTYPE_FILE          1
+#define PASSTHRU_LOGTYPE_AWSIOT        2
+#define PASSTHRU_LOGTYPE_AWSIOT_REPLAY 3
 
 #define THING_STATE_INITIALIZING  (1 << 0)
 #define THING_STATE_CONNECTING    (1 << 1)
@@ -34,6 +47,29 @@
 #define THING_STATE_CLOSED        (1 << 4)
 #define THING_STATE_DISCONNECTING (1 << 5) 
 #define THING_STATE_DISCONNECTED  (1 << 6)
+
+typedef struct {
+  char *thingId;
+  char *iface;
+  char *logdir;
+} thing_init_params;
+
+typedef struct {
+  int *state;
+  awsiot_client *awsiot;
+  canbus_client *canbus;
+  vector *clients;
+  char *error_topic;
+} passthru_j2534;
+
+typedef struct passthru_thing {
+  char *name;
+  uint8_t state;
+  thing_init_params *params;
+  passthru_shadow *shadow;
+  passthru_j2534 *j2534;
+  awsiot_client *awsiot
+} passthru_thing;
 
 void passthru_thing_init(thing_init_params *params);
 int passthru_thing_run();

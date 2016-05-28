@@ -36,8 +36,6 @@ int passthru_shadow_connect(passthru_shadow *shadow) {
   char clientCRTName[] = AWS_IOT_CERTIFICATE_FILENAME;
   char clientKeyName[] = AWS_IOT_PRIVATE_KEY_FILENAME;
 
-  syslog(LOG_DEBUG, "AWS IoT SDK Version %d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
-
   getcwd(CurrentWD, sizeof(CurrentWD));
   sprintf(rootCA, "%s/%s/%s", CurrentWD, certDirectory, cafileName);
   sprintf(clientCRT, "%s/%s/%s", CurrentWD, certDirectory, clientCRTName);

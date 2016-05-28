@@ -17,12 +17,18 @@
  */
 
 #include "passthru_shadow_connection_handler.h"
-#include <syslog.h>
 
-void passthru_shadow_connection_handler_handle(int *connection) {
+unsigned int passthru_shadow_connection_handler_handle(passthru_thing *thing, int *connection) {
 
-  if(connection == PASSTHRU_CONNECTTYPE_DISCONNECT) {
-    passthru_thing_disconnect();
+  if(connection == PASSTHRU_CONNECTTYPE_CONNECT) {
+    thing->state = THING_STATE_CONNECTED;
+    return 0;
   }
 
+  if(connection == PASSTHRU_CONNECTTYPE_DISCONNECT) {
+    thing->state = THING_STATE_DISCONNECTED;
+    return 0;
+  }
+
+  return 1;
 }

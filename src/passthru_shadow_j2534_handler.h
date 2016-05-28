@@ -21,9 +21,11 @@
 
 #include <syslog.h>
 #include <string.h>
-#include "passthru_shadow.h"
+#include "vector.h"
+#include "canbus.h"
 #include "j2534.h"
+#include "passthru_thing.h"
 
-void passthru_shadow_j2534_handler_handle(shadow_state *state);
+void passthru_shadow_j2534_handler_handle(passthru_thing *thing, shadow_state *state);
 
 #endif

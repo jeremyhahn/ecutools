@@ -20,8 +20,8 @@
 #define PASSTHRUSHADOWCONNECTIONHANDLER_H_
 
 #include <string.h>
-#include "passthru_defs.h"
+#include "passthru_thing.h"
 
-void passthru_shadow_connection_handler_handle(int *connection);
+unsigned int passthru_shadow_connection_handler_handle(passthru_thing *thing, int *connection);
 
 #endif

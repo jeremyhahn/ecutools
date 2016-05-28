@@ -16,22 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PASSTHRUTHINGCOMMON_H
-#define PASSTHRUTHINGCOMMON_H_
+#ifndef MYSTRING_H_
+#define MYSTRING_H_
 
-#include "passthru_shadow.h"
+#include <stddef.h>
 
-typedef struct {
-  char *thingId;
-  char *iface;
-  char *logdir;
-} thing_init_params;
-
-typedef struct {
-  char *name;
-  uint8_t state;
-  thing_init_params *params;
-  passthru_shadow *shadow;
-} passthru_thing;
+char* MYSTRING_COPY(char *src, size_t len);
+char *MYSTRING_COPYF(char *src, size_t len, char *value);
 
 #endif

@@ -18,22 +18,64 @@
 
 #include "passthru_shadow_j2534_handler.h"
 
-void passthru_shadow_j2534_handler_handle(shadow_state *state) {
+void passthru_shadow_j2534_handler_send_error(passthru_thing *thing, unsigned int error) {
+  syslog(LOG_ERR, "passthru_shadow_j2534_handler_send_error: error=%x", error);
+  j2534_send_error(thing->j2534->awsiot, error);
+}
+
+void passthru_shadow_j2534_handler_send_report(int state) {
+  char json[35];
+  snprintf(json, 35, "{\"state\":{\"reported\":{\"j2534\":%i}}}", state);
+  passthru_thing_send_report(json);
+}
+
+void passthru_shadow_j2534_handler_desired_disconnect(passthru_thing *thing) {
+  syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_handle: REPORT");
+  canbus_close(thing->j2534->canbus);
+  passthru_shadow_j2534_handler_send_report(J2534_PassThruDisconnect);
+}
+
+void passthru_shadow_j2534_handler_desired_connect(passthru_thing *thing) {
+
+  if(vector_get(thing->j2534->clients, thing->name)) return;
+
+  if(thing->j2534->canbus != NULL) {
+    passthru_shadow_j2534_handler_send_error(thing, ERR_DEVICE_IN_USE);
+  }
+
+  canbus_init(thing->j2534->canbus);
+  if(!canbus_connect(thing->j2534->canbus)) {
+    const char errmsg = "Failed to establish CAN connection";
+    passthru_shadow_j2534_handler_send_error(thing, "Failed to establish CAN connection");
+  }
+
+  passthru_shadow_j2534_handler_send_report(J2534_PassThruConnect);
+  syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_handle_desired: CAN connection successful");  
+}
+
+void passthru_shadow_j2534_handler_handle_desired(passthru_thing *thing, shadow_desired *desired) {
+
+  int *state = desired->j2534;
+
+  if(state == J2534_PassThruConnect) {
+    passthru_shadow_j2534_handler_desired_connect(thing);
+  }
+
+  if(state == J2534_PassThruDisconnect) {
+    passthru_shadow_j2534_handler_desired_disconnect(thing);
+  }
+
+}
+
+void passthru_shadow_j2534_handler_handle(passthru_thing *thing, shadow_state *state) {
 
   if(state->reported->j2534) {
     syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_handle: REPORT");
   }
 
   if(state->desired->j2534) {
+    passthru_shadow_j2534_handler_handle_desired(thing, state->desired);
     syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_handle: DESIRED");
-  }
-
-  if(state->reported->j2534 == J2534_PassThruOpen) {
-    syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_handle: PassThruOpen!");
-  }
-
-  if(state->reported->j2534 == J2534_PassThruClose) {
-    syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_handle: PassThruClose!");
   }
 
 }

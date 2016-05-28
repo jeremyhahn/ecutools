@@ -21,7 +21,7 @@
 void passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message);
 void passthru_shadow_parser_parse_desired(json_t *obj, shadow_message *message);
 
-shadow_message* passthru_shadow_parser_parse(const char *json) {
+shadow_message* passthru_shadow_parser_parse_state(const char *json) {
  
   json_t *root;
   json_error_t error;
@@ -30,13 +30,17 @@ shadow_message* passthru_shadow_parser_parse(const char *json) {
   message->state = malloc(sizeof(shadow_state));
 
   message->state->reported = malloc(sizeof(shadow_report));
+  message->state->reported->log = malloc(sizeof(shadow_log));;
+  message->state->reported->log->type = NULL;
+  message->state->reported->log->file = NULL;
   message->state->reported->connection = NULL;
-  message->state->reported->log = NULL;
   message->state->reported->j2534 = NULL;
 
   message->state->desired = malloc(sizeof(shadow_desired));
+  message->state->desired->log = malloc(sizeof(shadow_log));;
+  message->state->desired->log->type = NULL;
+  message->state->desired->log->file = NULL;
   message->state->desired->connection = NULL;
-  message->state->desired->log = NULL;
   message->state->desired->j2534 = NULL;
 
   root = json_loads(json, 0, &error);
@@ -71,6 +75,44 @@ shadow_message* passthru_shadow_parser_parse(const char *json) {
   return message;
 }
 
+shadow_desired* passthru_shadow_parser_parse_delta(const char *pJsonValueBuffer, uint32_t valueLength) {
+ 
+  json_t *root;
+  json_error_t error;
+
+  char *json = MYSTRING_COPY(pJsonValueBuffer, valueLength);
+
+  shadow_desired *desired = malloc(sizeof(shadow_desired));
+  desired->log = malloc(sizeof(shadow_log));;
+  desired->log->type = NULL;
+  desired->log->file = NULL;
+  desired->connection = NULL;
+  desired->j2534 = NULL;
+
+  root = json_loads(json, 0, &error);
+  free(json);
+
+  if(!root) {
+    syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: unable to parse root node. line=%i, source=%s, text=%s", error.line, error.source, error.text);
+    return desired;
+  }
+
+  if(!json_is_object(root)) {
+    syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: Expected JSON root to be an object.");
+    json_decref(root);
+    return desired;
+  }
+
+  json_t *jslog = json_object_get(root, "log");
+  if(json_is_object(jslog)) {
+    json_t *type = json_object_get(jslog, "type");
+    json_t *file = json_object_get(jslog, "file");
+    desired->log->type = json_integer_value(type);
+    desired->log->file = json_string_value(file);
+  }
+  return desired;
+}
+
 void passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message) {
 
   size_t obj_len = json_object_size(obj);
@@ -93,25 +135,10 @@ void passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message)
     }
 
     if(strncmp(key, "log", strlen(key)) == 0) {
-
-      message->state->reported->log = malloc(sizeof(shadow_log));
-      message->state->reported->log->type = NULL;
-      message->state->reported->log->file = NULL;
-
-      json_t *file = json_object_get(value, "file");
       json_t *type = json_object_get(value, "type");
-
-      if(json_is_string(file)) {
-       const char *file_val = json_string_value(file);
-        int file_val_len = strlen(file_val);
-        message->state->reported->log->file = malloc(file_val_len+1);
-        strncpy(message->state->reported->log->file, file_val, file_val_len);
-        message->state->reported->log->file[file_val_len] = '\0';
-      }
-
-      if(json_is_integer(type)) {
-        message->state->reported->log->type = json_integer_value(type);
-      }
+      json_t *file = json_object_get(value, "file");
+      message->state->reported->log->type = json_integer_value(type);
+      message->state->reported->log->file = json_string_value(file);
     }
 
   }
@@ -139,39 +166,33 @@ void passthru_shadow_parser_parse_desired(json_t *obj, shadow_message *message) 
     }
 
     if(strncmp(key, "log", strlen(key)) == 0) {
-
-      message->state->desired->log = malloc(sizeof(shadow_log));
-      message->state->desired->log->type = NULL;
-      message->state->desired->log->file = NULL;
-
-      json_t *file = json_object_get(value, "file");
       json_t *type = json_object_get(value, "type");
-
-      if(json_is_string(file)) {
-        const char *file_val = json_string_value(file);
-        int file_val_len = strlen(file_val);
-        message->state->desired->log->file = malloc(file_val_len+1);
-        strncpy(message->state->desired->log->file, file_val, file_val_len);
-        message->state->desired->log->file[file_val_len] = '\0';
-      }
-
-      if(json_is_integer(type)) {
-        message->state->desired->log->type = json_integer_value(type);
-      }
+      json_t *file = json_object_get(value, "file");
+      message->state->desired->log->type = json_integer_value(type);
+      message->state->desired->log->file = json_string_value(file);
     }
   }
+}
+
+void passthru_shadow_parser_free_desired(shadow_desired *desired) {
+  if(desired == NULL) return;
+  if(desired->log) {
+    free(desired->log);
+    desired->log = NULL;
+  }
+  if(desired->j2534 != NULL) {
+    desired->j2534 = NULL;
+  }
+  if(desired->connection) {
+    desired->connection = NULL;
+  }
+  free(desired);
+  desired = NULL;
 }
 
 void passthru_shadow_parser_free_message(shadow_message *message) {
 
   if(message->state->reported->log) {
-    if(message->state->reported->log->file) {
-      free(message->state->reported->log->file);
-      message->state->reported->log->file = NULL;
-    }
-    if(message->state->reported->log->type) {
-      message->state->reported->log->type = NULL;
-    }
     free(message->state->reported->log);
     message->state->reported->log = NULL;
   }
@@ -186,28 +207,7 @@ void passthru_shadow_parser_free_message(shadow_message *message) {
     message->state->reported = NULL;
   }
 
-  if(message->state->desired->log) {
-    if(message->state->desired->log->file) {
-      free(message->state->desired->log->file);
-      message->state->desired->log->file = NULL;
-    }
-    if(message->state->desired->log->type) {
-      message->state->desired->log->type = NULL;
-    }
-    free(message->state->desired->log);
-    message->state->desired->log = NULL;
-  }
-
-  if(message->state->desired->j2534 != NULL) {
-    message->state->desired->j2534 = NULL;
-  }
-  if(message->state->desired->connection) {
-    message->state->desired->connection = NULL;
-  }
-  if(message->state->desired != NULL) {
-    free(message->state->desired);
-    message->state->desired = NULL;
-  }
+  passthru_shadow_parser_free_desired(message->state->desired);
 
   if(message->state != NULL) {
     free(message->state);

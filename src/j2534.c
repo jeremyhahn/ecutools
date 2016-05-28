@@ -30,9 +30,56 @@ static long j2534_device_count = 0;
 static SDEVICE j2534_device_list[25] = {0};
 static SDEVICE *j2534_device_selected;
 
-static char j2534_shadow_get_topic[121];
 static char j2534_shadow_update_topic[121];
 static char j2534_shadow_update_accepted_topic[121];
+
+/*
+void j2534_send_error(awsiot_client *awsiot, char *message, size_t message_len) {
+
+  size_t thing_name_len = strlen(j2534client->name);
+  size_t topic_format_len = 21;
+  size_t topic_len = thing_name_len + topic_format_len;
+
+  char error_topic[topic_len+1];
+  snprintf(error_topic, topic_len, J2534_ERROR_TOPIC, j2534client->name);
+  error_topic[topic_len] = '\0';
+
+  size_t json_format_len = 14;
+  char json_len = json_format_len + message_len;
+  char json[json_len+1];
+  snprintf(json, json_len, "{\"message\":\"%s\"}", message);
+  json[json_len] = '\0';
+
+  if(awsiot_client_publish(awsiot, error_topic, json) != 0) {
+    syslog(LOG_ERR, "j2534_send_error: topic=%s, rc=%d", error_topic, awsiot->rc);
+  }
+
+}*/
+
+void j2534_send_error(awsiot_client *awsiot, unsigned int error) {
+
+  size_t thing_name_len = strlen(j2534client->name);
+  size_t topic_format_len = 21;
+  size_t topic_len = thing_name_len + topic_format_len;
+
+  char error_topic[topic_len+1];
+  snprintf(error_topic, topic_len, J2534_ERROR_TOPIC, j2534client->name);
+  error_topic[topic_len] = '\0';
+
+  size_t json_len = 14;
+  char json[json_len+1];
+  snprintf(json, json_len, "{\"message\":\"%x\"}", error);
+  json[json_len] = '\0';
+
+  if(awsiot_client_publish(awsiot, error_topic, json) != 0) {
+    syslog(LOG_ERR, "j2534_send_error: topic=%s, rc=%d", error_topic, awsiot->rc);
+  }
+
+}
+
+void j2534_iot_error() {
+  return STATUS_NOERROR;
+}
 
 unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call) {
   syslog(LOG_DEBUG, "unless_concurrent_call: status=%x, api_call=%d", status, api_call);
@@ -69,6 +116,7 @@ bool j2534_isopen() {
 bool j2534_is_valid_device_id(unsigned long DeviceID) {
   if(j2534client == NULL) return false;
   if(j2534client->deviceId != DeviceID) return false;
+  return true;
 }
 
 void j2534_onmessage(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
@@ -80,7 +128,7 @@ void j2534_onmessage(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNam
   memcpy(json, params->payload, params->payloadLen);
   json[params->payloadLen] = '\0';
 
-  shadow_message *message = passthru_shadow_parser_parse(json);
+  shadow_message *message = passthru_shadow_parser_parse_state(json);
   j2534client->state = message->state->reported->j2534;
   passthru_shadow_parser_free_message(message);
 }
@@ -97,12 +145,12 @@ unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
   json[json_len] = '\0';
 
   if(awsiot_client_subscribe(client->awsiot, j2534_shadow_update_accepted_topic) != 0) {
-    syslog(LOG_ERR, "j2534_publish_and_wait: failed to subscribe to j2534_shadow_update_accepted_topic %s. rc=%d", j2534_shadow_update_accepted_topic, client->awsiot->rc);
+    syslog(LOG_ERR, "j2534_publish_state: failed to subscribe to j2534_shadow_update_accepted_topic %s. rc=%d", j2534_shadow_update_accepted_topic, client->awsiot->rc);
     return ERR_DEVICE_NOT_CONNECTED;
   }
 
   if(awsiot_client_publish(client->awsiot, j2534_shadow_update_topic, (const char *)json) != 0) {
-    syslog(LOG_ERR, "j2534_publish_and_wait: failed to publish to j2534_shadow_update_topic %s. rc=%d", j2534_shadow_update_topic, client->awsiot->rc);
+    syslog(LOG_ERR, "j2534_publish_state: failed to publish to j2534_shadow_update_topic %s. rc=%d", j2534_shadow_update_topic, client->awsiot->rc);
     return ERR_DEVICE_NOT_CONNECTED;
   }
 
@@ -114,7 +162,7 @@ unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
 
     client->awsiot->rc = aws_iot_mqtt_yield(client->awsiot->client, 200);
     if(client->awsiot->rc == NETWORK_ATTEMPTING_RECONNECT) {
-      syslog(LOG_DEBUG, "j2534_publish_and_wait: waiting for network to reconnect");
+      syslog(LOG_DEBUG, "j2534_publish_state: waiting for network to reconnect");
       sleep(1);
       continue;
     }
@@ -455,10 +503,6 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
 long PassThruClose(unsigned long DeviceID) {
 
   j2534_current_api_call = J2534_PassThruClose;
-
-  if(j2534client == NULL) {
-    return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, J2534_PassThruClose);
-  }
 
   if(!j2534_isopen()) {
     return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, J2534_PassThruClose);
@@ -1471,9 +1515,9 @@ long  PassThruStopMsgFilter(unsigned long ChannelID, unsigned long FilterID) {
 long PassThruReadVersion(unsigned long DeviceID, char *pFirmwareVersion, char *pDllVersion, char *pApiVersion) {
   int api_call = 7317;
   j2534_current_api_call = api_call;
-  strcpy(pFirmwareVersion, "0.1.0");
-  strcpy(pDllVersion, "0.0.0");
-  strcpy(pApiVersion, "0.1.0");
+  strcpy(pFirmwareVersion, PASSTHRU_FIRMWARE_VERSION);
+  strcpy(pDllVersion, J2534_DLL_VERSION);
+  strcpy(pApiVersion, J2534_API_VERSION);
   return unless_concurrent_call(STATUS_NOERROR, api_call);
 }
 

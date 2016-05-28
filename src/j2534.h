@@ -21,6 +21,7 @@
 
 #include <stdbool.h>
 #include <syslog.h>
+#include "passthru_thing.h"
 #include "passthru_shadow_parser.h"
 #include "awsiot_client.h"
 #include "j2534/apigateway.h"
@@ -296,6 +297,10 @@ long PassThruGetLastError(char *pErrorDescription);
 long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *InputPtr, void *OutputPtr);
 
 // non-J2534 spec (implementation specific)
+#define J2534_API_VERSION                   "0.5.0"
+#define J2534_DLL_VERSION                   "0.1.0"
+#define J2534_ERROR_TOPIC                   "ecutools/j2534/%s/error"
+
 #define J2534_PassThruScanForDevices        1
 #define J2534_PassThruGetNextDevice         2
 #define J2534_PassThruOpen                  3
@@ -324,6 +329,8 @@ typedef struct {
   SDEVICE *device;
   awsiot_client *awsiot;
 } j2534_client;
+
+void j2534_send_error(awsiot_client *awsiot, unsigned int error);
 // end non-J2534 spec
 
 #endif

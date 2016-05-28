@@ -21,7 +21,9 @@
 #include <signal.h>
 #include <syslog.h>
 #include <string.h>
+#include "mystring.h"
 #include "passthru_thing.h"
+#include "j2534.h"
 
 int daemonize = 0;
 
@@ -85,6 +87,13 @@ void print_program_header() {
   fprintf(stdout, "* along with ecutools.  If not, see <http://www.gnu.org/licenses/>.        *\n");
   fprintf(stdout, "****************************************************************************\n");
   fprintf(stdout, "\n");
+  fprintf(stdout, "PassThru Firmware: v%s\n", PASSTHRU_FIRMWARE_VERSION);
+  fprintf(stdout, "J2534 DLL:         v%s\n", J2534_DLL_VERSION);
+  fprintf(stdout, "J2534 API:         v%s\n", J2534_API_VERSION);
+  fprintf(stdout, "AWS IoT SDK:       v%d.%d.%d-%s\n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
+  fprintf(stdout, "Jansson:           v%s\n", JANSSON_VERSION);
+  fprintf(stdout, "\n");
+  fprintf(stdout, "\n");
 }
 
 void parse_args(int argc, char** argv, thing_init_params *params) {
@@ -96,24 +105,21 @@ void parse_args(int argc, char** argv, thing_init_params *params) {
           printf("ERROR: Thing name must not exceed 80 chars");
           main_exit(1, params);
         }
-        params->thingId = malloc(sizeof(char) * (strlen(optarg)+1));
-        strcpy(params->thingId, optarg);
+        params->thingId = MYSTRING_COPY(optarg, strlen(optarg));
         break;
       case 'i':
         if(strlen(optarg) > 10) {
           printf("ERROR: interface value must not exceed 10 chars");
           main_exit(1, params);
         }
-        params->iface = malloc(sizeof(char) * (strlen(optarg)+1));
-        strcpy(params->iface, optarg);
+        params->iface = MYSTRING_COPY(optarg, strlen(optarg));
         break;
       case 'l':
         if(strlen(optarg) > 255) {
           printf("ERROR: log directory value must not exceed 255 chars");
           main_exit(1, params);
         }
-        params->logdir = malloc(sizeof(char) * (strlen(optarg)+1));
-        strcpy(params->logdir, optarg);
+        params->logdir = MYSTRING_COPY(optarg, strlen(optarg));
         break;
       case 'd':
         daemonize = 1;

@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 APP_DIR = src
 APP_INCLUDE_DIRS = -I$(top_srcdir)/include -I$(APP_DIR)
 
-ECUTOOLS_SRC_FILES = src/canbus.c src/awsiot_client.c
+ECUTOOLS_SRC_FILES = src/canbus.c src/awsiot_client.c src/mystring.c src/vector.c src/j2534.c src/j2534/apigateway.c 
 ECUTOOLS_SRC_FILES += src/passthru_shadow.c src/passthru_thing.c src/passthru_shadow_parser.c src/passthru_shadow_router.c
 ECUTOOLS_SRC_FILES += src/passthru_shadow_connection_handler.c src/passthru_shadow_log_handler.c src/passthru_shadow_j2534_handler.c
 ECUTOOLS_SRC_FILES += src/canbus_logger.c src/canbus_log.c src/canbus_filelogger.c src/canbus_awsiotlogger.c

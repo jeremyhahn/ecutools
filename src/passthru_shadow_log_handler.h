@@ -21,9 +21,9 @@
 
 #include <syslog.h>
 #include <string.h>
+#include "passthru_thing.h"
 #include "passthru_shadow.h"
 #include "canbus_logger.h"
-#include "passthru_defs.h"
 
 void passthru_shadow_log_handler_handle(const char *iface, const char *dir, shadow_log *log);
 

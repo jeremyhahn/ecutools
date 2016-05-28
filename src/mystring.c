@@ -16,15 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PASSTHRULOGTYPES_H_
-#define PASSTHRULOGTYPES_H_
+#include "mystring.h"
 
-#define PASSTHRU_CONNECTTYPE_CONNECT    1
-#define PASSTHRU_CONNECTTYPE_DISCONNECT 2
+char* MYSTRING_COPY(char *src, size_t len) {
+  char *str = malloc(sizeof(char) * (len+1));
+  strncpy(str, src, len);
+  str[len] = '\0';
+  return str;
+}
 
-#define PASSTHRU_LOGTYPE_NONE          0
-#define PASSTHRU_LOGTYPE_FILE          1
-#define PASSTHRU_LOGTYPE_AWSIOT        2
-#define PASSTHRU_LOGTYPE_AWSIOT_REPLAY 3
+char *MYSTRING_COPYF(char *src, size_t len, char *value) {
+  char *str = malloc(sizeof(char) * (len+1));
+  snprintf(str, len, src, value);
+  str[len] = '\0';
+  return str;
+}
 
-#endif

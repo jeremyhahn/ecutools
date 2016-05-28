@@ -19,9 +19,34 @@
 #ifndef CANBUSLOGGER_H
 #define CANBUSLOGGER_H
 
-#include "canbus_logger_common.h"
+typedef struct canbus_logger canbus_logger;
+
 #include "canbus_filelogger.h"
 #include "canbus_awsiotlogger.h"
+#include "canbus.h"
+
+#define CANBUS_LOGTYPE_FILE          (1 << 0)
+#define CANBUS_LOGTYPE_AWSIOT        (1 << 1)
+#define CANBUS_LOGTYPE_AWSIOT_REPLAY (1 << 2)
+
+#define CANBUS_LOGTHREAD_RUNNING     (1 << 0)
+#define CANBUS_LOGTHREAD_STOPPING    (1 << 1)
+#define CANBUS_LOGTHREAD_STOPPED     (1 << 2)
+
+typedef struct canbus_logger {
+  uint8_t canbus_flags;
+  pthread_t canbus_thread;
+  struct canbus_filter *filters[10];
+  canbus_client *canbus;
+  bool isrunning;
+  unsigned int type;
+  char **iface;
+  char **logdir;
+  pthread_t replay_thread;
+  char *logfile;
+  uint8_t canbus_thread_state;
+  void (*onread)(const char *line);
+} canbus_logger;
 
 void canbus_logger_run(canbus_logger *logger);
 void canbus_logger_stop(canbus_logger *logger);

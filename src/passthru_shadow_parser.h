@@ -23,9 +23,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <jansson.h>
+#include "passthru_thing.h"
 #include "passthru_shadow.h"
-#include "passthru_defs.h"
-#include "canbus_logger_common.h"
+#include "canbus_logger.h"
 
 #define PASSTHRU_SHADOW_REPORTED_MAX_ELEMENTS 50
 #define PASSTHRU_SHADOW_DESIRED_MAX_ELEMENTS 50
@@ -70,7 +70,10 @@ Delta:
 }
 */
 
-shadow_message* passthru_shadow_parser_parse(const char *json);
+shadow_message* passthru_shadow_parser_parse_state(const char *json);
 void passthru_shadow_parser_free_message(shadow_message *message);
+
+shadow_desired* passthru_shadow_parser_parse_delta(const char *pJsonValueBuffer, uint32_t valueLength);
+void passthru_shadow_parser_free_desired(shadow_desired *message);
 
 #endif

@@ -22,8 +22,8 @@
 #include <syslog.h>
 #include <string.h>
 #include "passthru_thing.h"
-#include "passthru_shadow_connection_handler.h"
 #include "passthru_shadow_log_handler.h"
+#include "passthru_shadow_connection_handler.h"
 
 void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message);
 

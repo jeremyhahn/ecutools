@@ -19,11 +19,6 @@
 #include "passthru_thing.h"
 
 passthru_thing *thing;
-awsiot_client *awsiot;
-
-static char my_shadow_get_topic[121];
-static char my_shadow_update_topic[121];
-static char my_shadow_get_accepted_topic[121];
 
 void passthru_thing_sync_initial_state(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
  
@@ -35,7 +30,7 @@ void passthru_thing_sync_initial_state(AWS_IoT_Client *pClient, char *topicName,
   memcpy(json, params->payload, params->payloadLen);
   json[params->payloadLen] = '\0';
 
-  shadow_message *message = passthru_shadow_parser_parse(json);
+  shadow_message *message = passthru_shadow_parser_parse_state(json);
   // clear connection=2 to prevent connection handler from disconnecting
   if(message->state->reported->connection) message->state->reported->connection = NULL;
   passthru_shadow_router_route(thing, message);
@@ -48,12 +43,12 @@ unsigned int passthru_thing_set_initial_state() {
 
   thing->state = THING_STATE_INITIALIZING;
 
-  awsiot = malloc(sizeof(awsiot_client));
-  awsiot->client = malloc(sizeof(AWS_IoT_Client));
-  awsiot->onmessage = &passthru_thing_sync_initial_state;
-  awsiot_client_connect(awsiot);
-  awsiot_client_subscribe(awsiot, my_shadow_get_accepted_topic);
-  awsiot_client_publish(awsiot, my_shadow_update_topic, "{\"state\":{\"desired\":{\"j2534\":null},\"reported\":{\"j2534\":null}}}");
+  thing->awsiot = malloc(sizeof(awsiot_client));
+  thing->awsiot->client = malloc(sizeof(AWS_IoT_Client));
+  thing->awsiot->onmessage = &passthru_thing_sync_initial_state;
+  awsiot_client_connect(thing->awsiot);
+  awsiot_client_subscribe(thing->awsiot, thing->shadow->get_accepted_topic);
+  awsiot_client_publish(thing->awsiot, thing->shadow->update_topic, "{\"state\":{\"desired\":{\"j2534\":null},\"reported\":{\"j2534\":null}}}");
 
   unsigned int i = 0;
   while(thing->state & THING_STATE_INITIALIZING) {
@@ -63,8 +58,8 @@ unsigned int passthru_thing_set_initial_state() {
       break;
     }
 
-    aws_iot_mqtt_yield(awsiot->client, 200);
-    if(awsiot->rc == NETWORK_ATTEMPTING_RECONNECT) {
+    aws_iot_mqtt_yield(thing->awsiot->client, 200);
+    if(thing->awsiot->rc == NETWORK_ATTEMPTING_RECONNECT) {
       syslog(LOG_DEBUG, "passthru_thing_set_initial_state: waiting for network to reconnect");
       sleep(1);
       continue;
@@ -75,8 +70,8 @@ unsigned int passthru_thing_set_initial_state() {
 
   syslog(LOG_DEBUG, "passthru_thing_set_initial_state: done initializing");
 
-  free(awsiot->client);
-  free(awsiot);
+  free(thing->awsiot->client);
+  free(thing->awsiot);
 
   return 0;
 }
@@ -87,8 +82,17 @@ void passthru_thing_shadow_onopen(passthru_shadow *shadow) {
 
 void passthru_thing_shadow_ondelta(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t) {
   syslog(LOG_DEBUG, "passthru_thing_shadow_ondelta: pJsonValueBuffer=%.*s", valueLength, pJsonValueBuffer);
-  if(passthru_shadow_build_report_json(DELTA_REPORT, SHADOW_MAX_SIZE_OF_RX_BUFFER, pJsonValueBuffer, valueLength)) {
-    messageArrivedOnDelta = true;
+  shadow_desired *desired = passthru_shadow_parser_parse_delta(pJsonValueBuffer, valueLength);
+  passthru_shadow_router_route_delta(thing, desired);
+  passthru_shadow_parser_free_desired(desired);
+}
+
+void passthru_thing_send_report(const char *json) {
+  syslog(LOG_DEBUG, "passthru_thing_send_report: json=%s", json);
+  char msgbuf[SHADOW_MAX_SIZE_OF_RX_BUFFER];
+  if(passthru_shadow_build_report_json(msgbuf, SHADOW_MAX_SIZE_OF_RX_BUFFER, json, strlen(json))) {
+    syslog(LOG_DEBUG, "passthru_thing_send_report: sending report: %s", msgbuf);
+    passthru_shadow_update(thing->shadow, msgbuf);
   }
 }
 
@@ -117,9 +121,8 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
     syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: Update Accepted");
   }
 
-  // Handle messages sent by this device
   if(strncmp(pThingName, AWS_IOT_MY_THING_NAME, strlen(AWS_IOT_MY_THING_NAME)) == 0) {
-    shadow_message *message = passthru_shadow_parser_parse(pReceivedJsonDocument);
+    shadow_message *message = passthru_shadow_parser_parse_state(pReceivedJsonDocument);
     passthru_shadow_router_route(thing, message);
     passthru_shadow_parser_free_message(message);
   }
@@ -150,12 +153,6 @@ void *passthru_thing_shadow_yield_thread(void *ptr) {
       syslog(LOG_DEBUG, "Attempting to reconnect to AWS IoT shadow service");
       sleep(1);
       continue;
-    }
-
-    if(messageArrivedOnDelta) {
-      syslog(LOG_DEBUG, "passthru_thing_shadow_yield_thread: Sending delta. message=%s", DELTA_REPORT);
-      passthru_shadow_update(thing->shadow, DELTA_REPORT);
-      messageArrivedOnDelta = false;
     }
 
     if(thing->state & THING_STATE_CLOSING) {
@@ -212,9 +209,18 @@ void passthru_thing_init(thing_init_params *params) {
   thing->shadow->ondisconnect = &passthru_thing_shadow_ondisconnect;
   thing->shadow->onerror = &passthru_thing_shadow_onerror;
 
-  snprintf(my_shadow_get_topic, 120, PASSTHRU_SHADOW_GET_TOPIC, thing->name);
-  snprintf(my_shadow_update_topic, 120, PASSTHRU_SHADOW_UPDATE_TOPIC, thing->name);
-  snprintf(my_shadow_get_accepted_topic, 120, PASSTHRU_SHADOW_GET_ACCEPTED_TOPIC, thing->name);
+  thing->shadow->get_topic = MYSTRING_COPYF(PASSTHRU_SHADOW_GET_TOPIC, 255, thing->name);
+  thing->shadow->get_accepted_topic = MYSTRING_COPYF(PASSTHRU_SHADOW_GET_ACCEPTED_TOPIC, 255, thing->name);
+  thing->shadow->update_topic = MYSTRING_COPYF(PASSTHRU_SHADOW_UPDATE_TOPIC, 255, thing->name);
+  thing->shadow->update_accepted_topic = MYSTRING_COPYF(PASSTHRU_SHADOW_GET_ACCEPTED_TOPIC, 255, thing->name);
+
+  thing->j2534 = malloc(sizeof(passthru_j2534));
+  thing->j2534->awsiot = malloc(sizeof(awsiot_client));
+  thing->j2534->error_topic = MYSTRING_COPYF(J2534_ERROR_TOPIC, 255, thing->name);
+  thing->j2534->canbus = NULL;
+  thing->j2534->state = NULL;
+  thing->j2534->clients = malloc(sizeof(vector));
+  vector_init(thing->j2534->clients);
 }
 
 int passthru_thing_run() {
@@ -260,5 +266,8 @@ void passthru_thing_destroy() {
   passthru_shadow_destroy(thing->shadow);
   free(thing->shadow->mqttClient);
   free(thing->shadow);
+  vector_free(thing->j2534->clients);
+  free(thing->j2534->awsiot);
+  free(thing->j2534);
   free(thing);
 }

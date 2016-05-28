@@ -36,7 +36,7 @@
 #define PASSTHRU_SHADOW_GET_ACCEPTED_TOPIC    "$aws/things/%s/shadow/get/accepted"
 
 char DELTA_REPORT[SHADOW_MAX_SIZE_OF_RX_BUFFER];
-bool messageArrivedOnDelta;
+//bool messageArrivedOnDelta;
 
 typedef struct {
   int *type;
@@ -78,6 +78,10 @@ typedef struct _passthru_shadow {
   AWS_IoT_Client *mqttClient;
   pthread_t yield_thread;
   pthread_mutex_t shadow_update_lock;
+  char *get_topic;
+  char *get_accepted_topic;
+  char *update_topic;
+  char *update_accepted_topic;
   void (*onopen)(struct _passthru_shadow *);
   void (*ondelta)(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t);
   void (*onupdate)(const char *pThingName, ShadowActions_t action, Shadow_Ack_Status_t status, const char *pReceivedJsonDocument, void *pContextData);
