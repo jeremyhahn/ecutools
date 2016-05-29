@@ -34,17 +34,16 @@ typedef struct canbus_logger canbus_logger;
 #define CANBUS_LOGTHREAD_STOPPED     (1 << 2)
 
 typedef struct canbus_logger {
-  uint8_t canbus_flags;
-  pthread_t canbus_thread;
-  struct canbus_filter *filters[10];
-  canbus_client *canbus;
+  char *iface;
+  char *logdir;
+  char *logfile;
   bool isrunning;
   unsigned int type;
-  char **iface;
-  char **logdir;
-  pthread_t replay_thread;
-  char *logfile;
+  uint8_t canbus_flags;
   uint8_t canbus_thread_state;
+  canbus_client *canbus;
+  pthread_t canbus_thread;
+  struct canbus_filter *filters[10];
   void (*onread)(const char *line);
 } canbus_logger;
 

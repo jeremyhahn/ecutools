@@ -19,8 +19,8 @@
 #include "passthru_shadow_router.h"
 
 void passthru_shadow_router_route_desired_log(passthru_thing *thing, shadow_log *slog) {
-  syslog(LOG_DEBUG, "passthru_shadow_router_route_desired_log: type=%i, file=%s", slog->type, slog->file);
-  passthru_shadow_log_handler_handle(thing->params->iface, thing->params->logdir, slog);
+  syslog(LOG_DEBUG, "passthru_shadow_router_route_desired_log: type=%d, file=%s", slog->type, slog->file);
+  passthru_shadow_log_handler_handle(thing, slog);
 }
 
 void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message) {
@@ -33,11 +33,11 @@ void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message
     return passthru_shadow_connection_handler_handle(thing, message->state->reported->connection);
   }
 
-  if(message->state->desired->log) {
-    return passthru_shadow_router_route_desired_log(thing, message->state);
+  if(message->state->desired->log->type) {
+    return passthru_shadow_router_route_desired_log(thing, message->state->desired->log);
   }
 
-  if(message->state->desired->j2534 || message->state->reported->j2534) {
+  if(message->state->desired->j2534) {
     return passthru_shadow_j2534_handler_handle(thing, message->state);
   }
 
@@ -46,9 +46,8 @@ void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message
 
 void passthru_shadow_router_route_delta(passthru_thing *thing, shadow_desired *desired) {
   if(desired->log) {
-    passthru_shadow_router_route_desired_log(thing, desired->log);
+    return passthru_shadow_router_route_desired_log(thing, desired->log);
   }
-
   syslog(LOG_DEBUG, "passthru_shadow_router_route_delta: unable to locate delata handler");
 }
 

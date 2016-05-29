@@ -201,4 +201,5 @@ void canbus_free(canbus_client *canbus) {
     free(canbus->iface);
     canbus->iface == NULL;
   }
+  syslog(LOG_DEBUG, "canbus_free: freed");
 }

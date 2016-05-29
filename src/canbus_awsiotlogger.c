@@ -19,7 +19,8 @@
 #include "canbus_awsiotlogger.h"
 
 static const char *awsiotlogger_topic = "ecutools/datalogger";
-awsiot_client iotlogger;
+static awsiot_client *iotlogger;
+pthread_t replay_thread;
 
 void canbus_awsiotlogger_onopen(awsiot_client *awsiot) {
   syslog(LOG_DEBUG, "canbus_awsiotlogger_onopen");
@@ -63,12 +64,12 @@ void *canbus_awsiotlogger_thread(void *ptr) {
       continue;
     }
 
-    awsiot_client_publish(&iotlogger, awsiotlogger_topic, data);
+    awsiot_client_publish(iotlogger, awsiotlogger_topic, data);
   }
 
-  awsiot_client_close(&iotlogger, NULL, NULL);
   syslog(LOG_DEBUG, "canbus_awsiotlogger_thread: stopping");
   pLogger->canbus_thread_state = CANBUS_LOGTHREAD_STOPPED;
+  canbus_iotlogger_close();
 
   return NULL;
 }
@@ -86,20 +87,21 @@ void *canbus_awsiotlogger_replay_thread(void *ptr) {
   } while(rc != 0 && pLogger->isrunning);
   canbus_log_close();
 
-  awsiot_client_close(&iotlogger, NULL, NULL);
   syslog(LOG_DEBUG, "canbus_awsiotlogger_replay_thread: stopping");
-  return NULL;
+  pLogger->canbus_thread_state = CANBUS_LOGTHREAD_STOPPED;
+  canbus_iotlogger_close();
 }
 
 unsigned int canbus_awsiotlogger_init(canbus_logger *logger) {
-
-  iotlogger.onopen = &canbus_awsiotlogger_onopen;
-  iotlogger.onmessage = &canbus_awsiotlogger_onmessage;
-  iotlogger.onclose = &canbus_awsiotlogger_onclose;
-  iotlogger.onerror = &canbus_awsiotlogger_onerror;
-
-  awsiot_client_connect(&iotlogger);
-
+  if(iotlogger != NULL) return;
+  iotlogger = malloc(sizeof(awsiot_client));
+  iotlogger->client = malloc(sizeof(AWS_IoT_Client));
+  iotlogger->onopen = &canbus_awsiotlogger_onopen;
+  iotlogger->onmessage = &canbus_awsiotlogger_onmessage;
+  iotlogger->onclose = &canbus_awsiotlogger_onclose;
+  iotlogger->onerror = &canbus_awsiotlogger_onerror;
+  iotlogger->ondisconnect = NULL;
+  awsiot_client_connect(iotlogger);
   logger->isrunning = true;
 }
 
@@ -110,12 +112,19 @@ unsigned int canbus_awsiotlogger_run(canbus_logger *logger) {
 }
 
 void canbus_awsiotlogger_onread(const char *line) {
-  awsiot_client_publish(&iotlogger, awsiotlogger_topic, line);
+  awsiot_client_publish(iotlogger, awsiotlogger_topic, line);
 }
 
 unsigned int canbus_awsiotlogger_replay(canbus_logger *logger) {
   canbus_awsiotlogger_init(logger);
   logger->onread = &canbus_awsiotlogger_onread;
-  pthread_create(&logger->replay_thread, NULL, canbus_awsiotlogger_replay_thread, (void *)logger);
+  pthread_create(&replay_thread, NULL, canbus_awsiotlogger_replay_thread, (void *)logger);
   return 0;
+}
+
+void canbus_iotlogger_close() {
+  awsiot_client_close(iotlogger);
+  free(iotlogger->client);
+  free(iotlogger);
+  iotlogger = NULL;
 }

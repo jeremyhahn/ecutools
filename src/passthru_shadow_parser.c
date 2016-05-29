@@ -75,12 +75,12 @@ shadow_message* passthru_shadow_parser_parse_state(const char *json) {
   return message;
 }
 
-shadow_desired* passthru_shadow_parser_parse_delta(const char *pJsonValueBuffer, uint32_t valueLength) {
+shadow_desired* passthru_shadow_parser_parse_delta(const char *json) {
  
+  syslog(LOG_DEBUG, "passthru_shadow_parser_parse_delta: json=%s", json);
+
   json_t *root;
   json_error_t error;
-
-  char *json = MYSTRING_COPY(pJsonValueBuffer, valueLength);
 
   shadow_desired *desired = malloc(sizeof(shadow_desired));
   desired->log = malloc(sizeof(shadow_log));;
@@ -90,7 +90,6 @@ shadow_desired* passthru_shadow_parser_parse_delta(const char *pJsonValueBuffer,
   desired->j2534 = NULL;
 
   root = json_loads(json, 0, &error);
-  free(json);
 
   if(!root) {
     syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: unable to parse root node. line=%i, source=%s, text=%s", error.line, error.source, error.text);
@@ -110,6 +109,7 @@ shadow_desired* passthru_shadow_parser_parse_delta(const char *pJsonValueBuffer,
     desired->log->type = json_integer_value(type);
     desired->log->file = json_string_value(file);
   }
+
   return desired;
 }
 

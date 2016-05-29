@@ -73,7 +73,7 @@ Delta:
 shadow_message* passthru_shadow_parser_parse_state(const char *json);
 void passthru_shadow_parser_free_message(shadow_message *message);
 
-shadow_desired* passthru_shadow_parser_parse_delta(const char *pJsonValueBuffer, uint32_t valueLength);
+shadow_desired* passthru_shadow_parser_parse_delta(const char *json);
 void passthru_shadow_parser_free_desired(shadow_desired *message);
 
 #endif

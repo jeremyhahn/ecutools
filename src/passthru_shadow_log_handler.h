@@ -21,10 +21,11 @@
 
 #include <syslog.h>
 #include <string.h>
+#include "mystring.h"
 #include "passthru_thing.h"
 #include "passthru_shadow.h"
 #include "canbus_logger.h"
 
-void passthru_shadow_log_handler_handle(const char *iface, const char *dir, shadow_log *log);
+void passthru_shadow_log_handler_handle(passthru_thing *thing, shadow_log *log);
 
 #endif

@@ -20,20 +20,23 @@
 
 canbus_logger *logger = NULL;
 
-void passthru_shadow_log_handler_init() {
+void passthru_shadow_log_handler_init(passthru_thing *thing) {
 
-  if(logger != NULL) return;
+  if(logger != NULL) {
+    syslog(LOG_DEBUG, "passthru_shadow_log_handler_init: logger not null! aborting!");
+    return;
+  }
 
   logger = malloc(sizeof(canbus_logger));
   logger->logfile = NULL;
+  logger->iface = thing->params->iface;
+  logger->logdir = thing->params->logdir;
 
   logger->canbus = malloc(sizeof(canbus_client));
-  logger->canbus->iface = NULL;
+  logger->canbus->iface = thing->params->iface;
 
   if(logger->iface != NULL) {
-    unsigned int iface_len = strnlen(logger->iface, 8)+1;
-    logger->canbus->iface = malloc(sizeof(char) * iface_len);
-    strncpy(logger->canbus->iface, logger->iface, iface_len);
+    logger->canbus->iface = logger->iface;
   }
 
   if(logger->logdir == NULL) {
@@ -44,18 +47,30 @@ void passthru_shadow_log_handler_init() {
   canbus_init(logger->canbus);
 }
 
-void passthru_shadow_log_handler_handle(const char *iface, const char *logdir, shadow_log *log) {
+void passthru_shadow_log_handler_send_report(shadow_log *slog) {
+  unsigned int json_len = 255;
+  char json[json_len];
+  if(slog->file) {
+    snprintf(json, json_len, "{\"log\":{\"type\":%i, \"file\": \"%s\" }}", slog->type, slog->file);
+  }
+  else {
+   snprintf(json, json_len, "{\"log\":{\"type\":%i }}", slog->type);
+  }
+  passthru_thing_send_report(json);
+}
 
-   syslog(LOG_DEBUG, "passthru_shadow_log_handler_handle: iface=%s, logidr=%s, log->type=%i, log->file=%s",
-    iface, logdir, log->type, log->file);
+void passthru_shadow_log_handler_handle(passthru_thing *thing, shadow_log *slog) {
 
-  if(logger != NULL && log->type != PASSTHRU_LOGTYPE_NONE) {
+   syslog(LOG_DEBUG, "passthru_shadow_log_handler_handle: iface=%s, logidr=%s, log->type=%d, log->file=%s",
+    thing->params->iface, thing->params->logdir, slog->type, slog->file);
+
+  if(logger != NULL && slog->type != PASSTHRU_LOGTYPE_NONE) {
     syslog(LOG_ERR, "passthru_shadow_log_handler_handle: logger already running! aborting");
     return;
   }
 
   // LOG_NONE
-  if(log->type == PASSTHRU_LOGTYPE_NONE) {
+  if(slog->type == PASSTHRU_LOGTYPE_NONE) {
     syslog(LOG_DEBUG, "passthru_shadow_log_handler_handle: LOG_NONE");
     if(logger == NULL) {
       syslog(LOG_ERR, "passthru_shadow_log_handler_handle: logger not running! aborting.");
@@ -64,45 +79,49 @@ void passthru_shadow_log_handler_handle(const char *iface, const char *logdir, s
     if(logger->isrunning) {
       syslog(LOG_DEBUG, "passthru_shadow_log_handler_handle: stopping logger thread");
       canbus_logger_stop(logger);
-      passthru_shadow_log_handler_free();
     }
+    passthru_shadow_log_handler_free();
+    passthru_shadow_log_handler_send_report(slog);
     return;
   }
 
-  passthru_shadow_log_handler_init();
-  logger->iface = iface;
-  logger->logdir = logdir;
+  passthru_shadow_log_handler_init(thing);
 
-  if(log->type == PASSTHRU_LOGTYPE_FILE) {
+  if(slog->type == PASSTHRU_LOGTYPE_FILE) {
     logger->type = CANBUS_LOGTYPE_FILE;
     canbus_logger_run(logger);
+    passthru_shadow_log_handler_send_report(slog);
     return;
   }
 
-  if(log->type == PASSTHRU_LOGTYPE_AWSIOT) {
+  if(slog->type == PASSTHRU_LOGTYPE_AWSIOT) {
     logger->type = CANBUS_LOGTYPE_AWSIOT;
+    canbus_awsiotlogger_init(logger);
     canbus_logger_run(logger);
+    passthru_shadow_log_handler_send_report(slog);
     return;
   }
 
-  if(log->type == PASSTHRU_LOGTYPE_AWSIOT_REPLAY) {
+  if(slog->type == PASSTHRU_LOGTYPE_AWSIOT_REPLAY) {
     logger->type = CANBUS_LOGTYPE_AWSIOT_REPLAY;
-    if(log->file == NULL) {
+    if(slog->file == NULL) {
       syslog(LOG_ERR, "passthru_shadow_log_handler_handle: LOG_AWSIOT_REPLAY passed NULL log->file");
     }
     else {
-      logger->logfile = malloc(sizeof(char)*strlen(log->file)+1);
-      strcpy(logger->logfile, log->file);
+      canbus_awsiotlogger_init(logger);
+      logger->logfile = slog->file;
       canbus_awsiotlogger_replay(logger);
+      passthru_shadow_log_handler_send_report(slog);
+      return;
     }
   }
 
+  return 0;
 }
 
 void passthru_shadow_log_handler_free() {
-
   canbus_free(logger->canbus);
-
+  logger->canbus = NULL;
   if(logger != NULL) {
     free(logger);
     logger = NULL;

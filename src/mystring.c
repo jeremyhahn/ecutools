@@ -20,7 +20,7 @@
 
 char* MYSTRING_COPY(char *src, size_t len) {
   char *str = malloc(sizeof(char) * (len+1));
-  strncpy(str, src, len);
+  memcpy(str, src, len);
   str[len] = '\0';
   return str;
 }

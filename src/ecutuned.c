@@ -27,8 +27,8 @@
 
 int daemonize = 0;
 
-int main_exit(int exit_status, thing_init_params *params) {
-  syslog(LOG_DEBUG, "exiting %s", params->thingId);
+int main_exit(int exit_status, passthru_thing_params *params) {
+  syslog(LOG_DEBUG, "exiting %s", params->thingName);
   closelog();
   if(params->iface != NULL) {
     free(params->iface);
@@ -36,7 +36,7 @@ int main_exit(int exit_status, thing_init_params *params) {
   if(params->logdir != NULL) {
     free(params->logdir);
   }
-  free(params->thingId);
+  free(params->thingName);
   free(params);
   return exit_status;
 }
@@ -96,7 +96,7 @@ void print_program_header() {
   fprintf(stdout, "\n");
 }
 
-void parse_args(int argc, char** argv, thing_init_params *params) {
+void parse_args(int argc, char** argv, passthru_thing_params *params) {
   int opt;
   while((opt = getopt(argc, argv, "n:i:l:d")) != -1) {
     switch(opt) {
@@ -105,7 +105,7 @@ void parse_args(int argc, char** argv, thing_init_params *params) {
           printf("ERROR: Thing name must not exceed 80 chars");
           main_exit(1, params);
         }
-        params->thingId = MYSTRING_COPY(optarg, strlen(optarg));
+        params->thingName = MYSTRING_COPY(optarg, strlen(optarg));
         break;
       case 'i':
         if(strlen(optarg) > 10) {
@@ -145,14 +145,14 @@ int main(int argc, char **argv) {
 
   print_program_header();
 
-  thing_init_params *params = malloc(sizeof(thing_init_params));
-  params->thingId = NULL;
+  passthru_thing_params *params = malloc(sizeof(passthru_thing_params));
+  params->thingName = NULL;
   params->logdir = NULL;
   params->iface = NULL;
   parse_args(argc, argv, params);
-  if(params->thingId == NULL) {
-    params->thingId = malloc(sizeof(char) * 8);
-    strcpy(params->thingId, "myj2534");
+  if(params->thingName == NULL) {
+    params->thingName = malloc(sizeof(char) * 8);
+    strcpy(params->thingName, "myj2534");
   }
 
   struct sigaction newSigAction;
@@ -174,8 +174,8 @@ int main(int argc, char **argv) {
   sigaction(SIGINT, &newSigAction, NULL);
 
   setlogmask(LOG_UPTO(LOG_DEBUG));
-  openlog(params->thingId, LOG_CONS | LOG_PERROR, LOG_USER);
-  syslog(LOG_DEBUG, "Starting IoT PassThru Thing: %s", params->thingId);
+  openlog(params->thingName, LOG_CONS | LOG_PERROR, LOG_USER);
+  syslog(LOG_DEBUG, "Starting IoT PassThru Thing: %s", params->thingName);
 
   if(daemonize) daemon(1, 0);
 

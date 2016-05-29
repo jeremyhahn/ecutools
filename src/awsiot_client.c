@@ -85,6 +85,7 @@ unsigned int awsiot_client_connect(awsiot_client *awsiot) {
     awsiot->onopen(awsiot);
   }
 
+  syslog(LOG_DEBUG, "awsiot_client_connect: connected to MQTT server %s:%d", AWS_IOT_MQTT_HOST, AWS_IOT_MQTT_PORT);
   return 0;
 }
 
@@ -125,12 +126,9 @@ unsigned int awsiot_client_publish(awsiot_client *awsiot, const char *topic, con
   return 0;
 }
 
-void awsiot_client_close(awsiot_client *awsiot, const char *topic, const char *payload) {
+void awsiot_client_close(awsiot_client *awsiot) {
   syslog(LOG_DEBUG, "awsiot_client_close: closing connection");
-  if(topic != NULL && payload != NULL) {
-    awsiot_client_publish(awsiot, topic, payload);
-  }
   awsiot->rc = aws_iot_mqtt_disconnect(&awsiot->client);
-  if(awsiot->onclose) awsiot->onclose(awsiot, payload);
+  if(awsiot->onclose) awsiot->onclose(awsiot);
 }
 

@@ -40,7 +40,7 @@ typedef struct _awsiot_client {
   void (*onopen)(struct _awsiot_client *);
   void (*onmessage)(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData);
   void (*ondisconnect)(void);
-  void (*onclose)(struct _awsiot_client *, const char *message);
+  void (*onclose)(struct _awsiot_client *);
   void (*onerror)(struct _awsiot_client *, const char *message);
 } awsiot_client;
 
@@ -48,7 +48,7 @@ unsigned int awsiot_client_connect(awsiot_client *awsiot);
 bool awsiot_client_isconnected();
 unsigned int awsiot_client_subscribe(awsiot_client *awsiot, const char *topic);
 unsigned int awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char *payload);
-void awsiot_client_close(awsiot_client *awsiot, const char *topic, const char *payload);
+void awsiot_client_close(awsiot_client *awsiot);
 bool awsiot_client_build_desired_json(char *pJsonDocument, size_t maxSizeOfJsonDocument, const char *pData, uint32_t pDataLen);
 
 #endif
