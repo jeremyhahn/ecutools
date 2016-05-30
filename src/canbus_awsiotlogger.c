@@ -20,7 +20,7 @@
 
 static const char *awsiotlogger_topic = "ecutools/datalogger";
 static awsiot_client *iotlogger;
-pthread_t replay_thread;
+static pthread_t replay_thread;
 
 void canbus_awsiotlogger_onopen(awsiot_client *awsiot) {
   syslog(LOG_DEBUG, "canbus_awsiotlogger_onopen");

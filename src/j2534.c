@@ -33,53 +33,7 @@ static SDEVICE *j2534_device_selected;
 static char j2534_shadow_update_topic[121];
 static char j2534_shadow_update_accepted_topic[121];
 
-/*
-void j2534_send_error(awsiot_client *awsiot, char *message, size_t message_len) {
-
-  size_t thing_name_len = strlen(j2534client->name);
-  size_t topic_format_len = 21;
-  size_t topic_len = thing_name_len + topic_format_len;
-
-  char error_topic[topic_len+1];
-  snprintf(error_topic, topic_len, J2534_ERROR_TOPIC, j2534client->name);
-  error_topic[topic_len] = '\0';
-
-  size_t json_format_len = 14;
-  char json_len = json_format_len + message_len;
-  char json[json_len+1];
-  snprintf(json, json_len, "{\"message\":\"%s\"}", message);
-  json[json_len] = '\0';
-
-  if(awsiot_client_publish(awsiot, error_topic, json) != 0) {
-    syslog(LOG_ERR, "j2534_send_error: topic=%s, rc=%d", error_topic, awsiot->rc);
-  }
-
-}*/
-
-void j2534_send_error(awsiot_client *awsiot, unsigned int error) {
-
-  size_t thing_name_len = strlen(j2534client->name);
-  size_t topic_format_len = 21;
-  size_t topic_len = thing_name_len + topic_format_len;
-
-  char error_topic[topic_len+1];
-  snprintf(error_topic, topic_len, J2534_ERROR_TOPIC, j2534client->name);
-  error_topic[topic_len] = '\0';
-
-  size_t json_len = 14;
-  char json[json_len+1];
-  snprintf(json, json_len, "{\"message\":\"%x\"}", error);
-  json[json_len] = '\0';
-
-  if(awsiot_client_publish(awsiot, error_topic, json) != 0) {
-    syslog(LOG_ERR, "j2534_send_error: topic=%s, rc=%d", error_topic, awsiot->rc);
-  }
-
-}
-
-void j2534_iot_error() {
-  return STATUS_NOERROR;
-}
+static int *j2534_awsiot_error = NULL;
 
 unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call) {
   syslog(LOG_DEBUG, "unless_concurrent_call: status=%x, api_call=%d", status, api_call);
@@ -129,7 +83,13 @@ void j2534_onmessage(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNam
   json[params->payloadLen] = '\0';
 
   shadow_message *message = passthru_shadow_parser_parse_state(json);
-  j2534client->state = message->state->reported->j2534;
+  j2534client->state = message->state->reported->j2534->state;
+
+  if(message->state->reported->j2534->error) {
+    syslog(LOG_DEBUG, "j2534_onmessage: [ERROR] %x", message->state->reported->j2534->error);
+    j2534_awsiot_error = message->state->reported->j2534->error;
+  }
+
   passthru_shadow_parser_free_message(message);
 }
 
@@ -149,6 +109,11 @@ unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
     return ERR_DEVICE_NOT_CONNECTED;
   }
 
+  if(awsiot_client_subscribe(client->awsiot, J2534_ERROR_TOPIC) != 0) {
+    syslog(LOG_ERR, "j2534_publish_state: failed to subscribe to J2534_ERROR_TOPIC %s. rc=%d", J2534_ERROR_TOPIC, client->awsiot->rc);
+    return ERR_DEVICE_NOT_CONNECTED;
+  }
+
   if(awsiot_client_publish(client->awsiot, j2534_shadow_update_topic, (const char *)json) != 0) {
     syslog(LOG_ERR, "j2534_publish_state: failed to publish to j2534_shadow_update_topic %s. rc=%d", j2534_shadow_update_topic, client->awsiot->rc);
     return ERR_DEVICE_NOT_CONNECTED;
@@ -159,6 +124,11 @@ unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
 
     // timeout if no response from device
     if(i == 10) return ERR_DEVICE_NOT_CONNECTED;
+
+    if(j2534_awsiot_error != NULL) {
+      j2534_awsiot_error = NULL;
+      return j2534_awsiot_error;
+    }
 
     client->awsiot->rc = aws_iot_mqtt_yield(client->awsiot->client, 200);
     if(client->awsiot->rc == NETWORK_ATTEMPTING_RECONNECT) {
@@ -621,11 +591,14 @@ long PassThruConnect(unsigned long DeviceID, unsigned long ProtocolID, unsigned 
   if(!j2534_is_valid_device_id(DeviceID)) {
     return unless_concurrent_call(ERR_INVALID_DEVICE_ID, J2534_PassThruConnect);
   }
-
+  /*
   if(ProtocolID != J1850VPW && ProtocolID != J1850PWM && ProtocolID != ISO9141 &&
      ProtocolID != ISO14230 && ProtocolID != CAN && ProtocolID != J2610 &&
      ProtocolID != ISO15765_LOGICAL) {
 
+    return unless_concurrent_call(ERR_PROTOCOL_ID_NOT_SUPPORTED, J2534_PassThruConnect);
+  }*/
+  if(ProtocolID != CAN) {
     return unless_concurrent_call(ERR_PROTOCOL_ID_NOT_SUPPORTED, J2534_PassThruConnect);
   }
 

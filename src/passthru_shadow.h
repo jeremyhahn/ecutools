@@ -44,8 +44,13 @@ typedef struct {
 } shadow_log;
 
 typedef struct {
+  int *state;
+  int *error;
+} shadow_j2534;
+
+typedef struct {
   char *connection;
-  int *j2534;
+  shadow_j2534 *j2534;
   shadow_log *log;
 } shadow_report;
 
@@ -55,7 +60,7 @@ typedef struct {
 
 typedef struct {
   int *connection;
-  int *j2534;
+  shadow_j2534 *j2534;
   shadow_log *log;
 } shadow_desired;
 

@@ -37,7 +37,7 @@ void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message
     return passthru_shadow_router_route_desired_log(thing, message->state->desired->log);
   }
 
-  if(message->state->desired->j2534) {
+  if(message->state->desired->j2534->state) {
     return passthru_shadow_j2534_handler_handle(thing, message->state);
   }
 

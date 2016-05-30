@@ -69,7 +69,6 @@ void passthru_shadow_log_handler_handle(passthru_thing *thing, shadow_log *slog)
     return;
   }
 
-  // LOG_NONE
   if(slog->type == PASSTHRU_LOGTYPE_NONE) {
     syslog(LOG_DEBUG, "passthru_shadow_log_handler_handle: LOG_NONE");
     if(logger == NULL) {
