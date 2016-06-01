@@ -18,12 +18,7 @@
 
 #include "passthru_shadow_router.h"
 
-void passthru_shadow_router_route_desired_log(passthru_thing *thing, shadow_log *slog) {
-  syslog(LOG_DEBUG, "passthru_shadow_router_route_desired_log: type=%d, file=%s", slog->type, slog->file);
-  passthru_shadow_log_handler_handle(thing, slog);
-}
-
-void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message) {
+void passthru_shadow_router_route_message(passthru_thing *thing, shadow_message *message) {
 
   if(message == NULL || message->state == NULL) return;
 
@@ -34,26 +29,39 @@ void passthru_shadow_router_route(passthru_thing *thing, shadow_message *message
   }
 
   if(message->state->desired->log->type) {
-    return passthru_shadow_router_route_desired_log(thing, message->state->desired->log);
+    return passthru_shadow_log_handler_handle(thing, message->state->desired->log);
   }
 
   if(message->state->desired->j2534->state) {
-    return passthru_shadow_j2534_handler_handle(thing, message->state);
+    return passthru_shadow_j2534_handler_handle_state(thing, message->state);
   }
 
   syslog(LOG_DEBUG, "passthru_shadow_router_route: unable to locate state hander");
 }
 
 void passthru_shadow_router_route_delta(passthru_thing *thing, shadow_desired *desired) {
-  if(desired->log) {
-    return passthru_shadow_router_route_desired_log(thing, desired->log);
+  passthru_shadow_router_print_desired(desired);
+  if(desired->log->type) {
+    return passthru_shadow_log_handler_handle(thing, desired->log);
   }
-  syslog(LOG_DEBUG, "passthru_shadow_router_route_delta: unable to locate delata handler");
+  if(desired->j2534->state) {
+    return passthru_shadow_j2534_handler_handle_delta(thing, desired->j2534);
+  }
+  syslog(LOG_DEBUG, "passthru_shadow_router_route_delta: unable to locate delta handler");
 }
 
 void passthru_shadow_router_print_message(shadow_message *message) {
   syslog(LOG_DEBUG, "passthru_shadow_router_print_message: reported->connection=%i", message->state->reported->connection);
-  syslog(LOG_DEBUG, "passthru_shadow_router_print_message: desired->j2534=%i, reported->j2534=%i",  message->state->desired->j2534,  message->state->reported->j2534);
-  syslog(LOG_DEBUG, "passthru_shadow_router_print_message: desired->log->type=%d, desired->log->file=%s",  message->state->desired->log->type,  message->state->desired->log->file);
-  syslog(LOG_DEBUG, "passthru_shadow_router_print_message: reported->log->type=%d, reported->log->file=%s",  message->state->reported->log->type,  message->state->reported->log->file);
+  passthru_shadow_router_print_desired(message->state->desired);
+  passthru_shadow_router_print_reported(message->state->reported);
+}
+
+void passthru_shadow_router_print_desired(shadow_desired *desired) {
+  syslog(LOG_DEBUG, "passthru_shadow_router_print_message: desired->j2534->state=%d, desired->j2534->error=%d",  desired->j2534->state, desired->j2534->error);
+  syslog(LOG_DEBUG, "passthru_shadow_router_print_message: desired->log->type=%d, desired->log->file=%s",  desired->log->type, desired->log->file);
+}
+
+void passthru_shadow_router_print_reported(shadow_report *reported) {
+  syslog(LOG_DEBUG, "passthru_shadow_router_print_message: reported->j2534->state=%d, reported->j2534->error=%d",  reported->j2534->state, reported->j2534->error);
+  syslog(LOG_DEBUG, "passthru_shadow_router_print_message: reported->log->type=%d, reported->log->file=%s",  reported->log->type, reported->log->file);
 }

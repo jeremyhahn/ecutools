@@ -31,20 +31,20 @@ shadow_message* passthru_shadow_parser_parse_state(const char *json) {
 
   message->state->reported = malloc(sizeof(shadow_report));
   message->state->reported->log = malloc(sizeof(shadow_log));
-  message->state->reported->log->type = NULL;
+  message->state->reported->log->type = 0;
   message->state->reported->log->file = NULL;
   message->state->reported->j2534 = malloc(sizeof(shadow_j2534));
-  message->state->reported->j2534->state = NULL;
-  message->state->reported->j2534->error = NULL;
+  message->state->reported->j2534->state = 0;
+  message->state->reported->j2534->error = 0;
   message->state->reported->connection = NULL;
 
   message->state->desired = malloc(sizeof(shadow_desired));
   message->state->desired->log = malloc(sizeof(shadow_log));
-  message->state->desired->log->type = NULL;
+  message->state->desired->log->type = 0;
   message->state->desired->log->file = NULL;
   message->state->desired->j2534 = malloc(sizeof(shadow_j2534));
-  message->state->desired->j2534->state = NULL;
-  message->state->desired->j2534->error = NULL;
+  message->state->desired->j2534->state = 0;
+  message->state->desired->j2534->error = 0;
   message->state->desired->connection = NULL;
 
   root = json_loads(json, 0, &error);
@@ -90,8 +90,10 @@ shadow_desired* passthru_shadow_parser_parse_delta(const char *json) {
   desired->log = malloc(sizeof(shadow_log));;
   desired->log->type = NULL;
   desired->log->file = NULL;
+  desired->j2534 = malloc(sizeof(shadow_j2534));
+  desired->j2534->state = NULL;
+  desired->j2534->error = NULL;
   desired->connection = NULL;
-  desired->j2534 = NULL;
 
   root = json_loads(json, 0, &error);
 
@@ -112,6 +114,14 @@ shadow_desired* passthru_shadow_parser_parse_delta(const char *json) {
     json_t *file = json_object_get(jslog, "file");
     desired->log->type = json_integer_value(type);
     desired->log->file = json_string_value(file);
+  }
+
+  json_t *j2534 = json_object_get(root, "j2534");
+  if(json_is_object(j2534)) {
+    json_t *state = json_object_get(j2534, "state");
+    json_t *error = json_object_get(j2534, "error");
+    desired->j2534->state = json_integer_value(state);
+    desired->j2534->error = json_string_value(error);
   }
 
   return desired;

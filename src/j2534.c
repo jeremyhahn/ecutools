@@ -591,6 +591,7 @@ long PassThruConnect(unsigned long DeviceID, unsigned long ProtocolID, unsigned 
   if(!j2534_is_valid_device_id(DeviceID)) {
     return unless_concurrent_call(ERR_INVALID_DEVICE_ID, J2534_PassThruConnect);
   }
+
   /*
   if(ProtocolID != J1850VPW && ProtocolID != J1850PWM && ProtocolID != ISO9141 &&
      ProtocolID != ISO14230 && ProtocolID != CAN && ProtocolID != J2610 &&
@@ -598,6 +599,7 @@ long PassThruConnect(unsigned long DeviceID, unsigned long ProtocolID, unsigned 
 
     return unless_concurrent_call(ERR_PROTOCOL_ID_NOT_SUPPORTED, J2534_PassThruConnect);
   }*/
+
   if(ProtocolID != CAN) {
     return unless_concurrent_call(ERR_PROTOCOL_ID_NOT_SUPPORTED, J2534_PassThruConnect);
   }

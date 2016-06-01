@@ -33,7 +33,7 @@ void passthru_thing_sync_initial_state_handler(AWS_IoT_Client *pClient, char *to
   shadow_message *message = passthru_shadow_parser_parse_state(json);
   // clear connection=2 to prevent connection handler from disconnecting
   if(message->state->reported->connection) message->state->reported->connection = NULL;
-  passthru_shadow_router_route(thing, message);
+  passthru_shadow_router_route_message(thing, message);
   passthru_shadow_parser_free_message(message);
 }
 
@@ -121,7 +121,7 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
 
   if(strncmp(pThingName, AWS_IOT_MY_THING_NAME, strlen(AWS_IOT_MY_THING_NAME)) == 0) {
     shadow_message *message = passthru_shadow_parser_parse_state(pReceivedJsonDocument);
-    passthru_shadow_router_route(thing, message);
+    passthru_shadow_router_route_message(thing, message);
     passthru_shadow_parser_free_message(message);
   }
 

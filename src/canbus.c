@@ -92,32 +92,32 @@ unsigned int canbus_connect(canbus_client *canbus) {
   can_err_mask_t err_mask = CAN_ERR_MASK;
 
   if((canbus->socket = socket(PF_CAN, SOCK_RAW, CAN_RAW)) == -1) {
-	  syslog(LOG_CRIT, "canbus_connect: error opening socket");
+	  syslog(LOG_ERR, "canbus_connect: error opening socket");
 	  return 4;
   }
 
   strcpy(ifr.ifr_name, canbus->iface);
   if(ioctl(canbus->socket, SIOCGIFINDEX, &ifr) < 0) {
-	  syslog(LOG_CRIT, "canbus_connect: unable to find CAN interface %s", canbus->iface);
-	  exit(1);
+	  syslog(LOG_ERR, "canbus_connect: unable to find CAN interface %s", canbus->iface);
+	  return 5;
   }
 
   addr.can_family = AF_CAN;
   addr.can_ifindex = ifr.ifr_ifindex;
 
   if(bind(canbus->socket, (struct sockaddr *)&addr, sizeof(addr)) < -1) {
-    printf("canbus_connect: error in socket bind");
-    return 5;
+    syslog(LOG_ERR, "canbus_connect: error in socket bind");
+    return 6;
   }
 
   if(setsockopt(canbus->socket, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &err_mask, sizeof(err_mask)) == -1) {
     syslog(LOG_ERR, "canbus_connect: unable to set CAN_RAW_ERR_FILTER socket option: %s", strerror(errno));
-    return 6;
+    return 7;
   }
 
   if(setsockopt(canbus->socket, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &recv_own_msgs, sizeof(recv_own_msgs)) == -1) {
     syslog(LOG_ERR, "canbus_connect: unable to set CAN_RAW_RECV_OWN_MSGS socket option: %s", strerror(errno));
-    return 7;
+    return 8;
   }
 
   syslog(LOG_DEBUG, "canbus_connect: %s socket=%i", ifr.ifr_name, canbus->socket);
