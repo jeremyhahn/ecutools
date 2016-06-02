@@ -1,11 +1,16 @@
 #!/bin/bash
 
-# BeagleBone Black / Debian Installer
+# BeagleBone Black Debian Installer
 
-sudo apt-get update
-apt-get remove lightdm xserver-* apache2* --purge
-sudo apt-get install -y cmake libssl-dev libjansson-dev libcurl4-openssl-dev can-utils
-sudo apt-get autoremove -y
+if [ "`id -u`" != "0" ];then
+  echo "You must be root to run the installer"
+  exit 1
+fi
+
+apt-get update
+apt-get remove -y lightdm xserver-* apache2* --purge
+apt-get install -y cmake libssl-dev libjansson-dev libcurl4-openssl-dev can-utils
+apt-get autoremove -y
 
 git clone https://github.com/jeremyhahn/ecutools.git
 cd ecutools
@@ -25,19 +30,20 @@ chown root.$MYGID $LOGDIR
 chmod 775 $LOGDIR
 
 mkdir -p $CERTDIR
-chown root.$MYGID $CERTDIR
-chmod 775 $CERTDIR
 
-echo "Create Thing, copy certs to /etc/ecutools, and configure aws_iot_config.h!"
+echo "Create Thing, copy certs to $CERTDIR, and configure aws_iot_config.h."
 read -n1 -r -p "Press any key to continue..." key
 make && sudo make install
+
+chown -R root.$MYGID $CERTDIR
+chmod 775 $CERTDIR
+chmod 660 $CERTDIR/*
 
 echo '
 #!/bin/sh
 
 set -e
 
-THING_NAME=myj2534
 MYUID=ecutune
 MYGID=ecutools
 LOGDIR=/var/log/ecutools
@@ -45,7 +51,7 @@ LOGDIR=/var/log/ecutools
 NAME=ecutuned
 PIDFILE=/var/run/$NAME.pid
 DAEMON=/usr/local/bin/ecutuned
-DAEMON_OPTS="-d -l $LOGDIR -n $THING_NAME"
+DAEMON_OPTS="-d -l $LOGDIR"
 
 export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 
@@ -76,4 +82,7 @@ exit 0
 
 chmod 755 /etc/init.d/ecutuned
 update-rc.d ecutuned defaults
+/etc/init.d/ecutuned start
+
+#rm -rf ecutools
 

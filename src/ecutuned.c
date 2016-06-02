@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
   parse_args(argc, argv, params);
   if(params->thingName == NULL) {
     params->thingName = malloc(sizeof(char) * 8);
-    strcpy(params->thingName, "myj2534");
+    strcpy(params->thingName, AWS_IOT_MY_THING_NAME);
   }
 
   struct sigaction newSigAction;
