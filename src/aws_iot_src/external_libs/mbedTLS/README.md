@@ -39,7 +39,7 @@ and build it with:
 
     yotta build
 
-If, on the other hand, you already have a copy of mbed TLS from a source other than the yotta registry, for example from cloning our github repository, or from downloading a tarball of the standalone edition, then you'll need first need to generate the yotta module by running:
+If, on the other hand, you already have a copy of mbed TLS from a source other than the yotta registry, for example from cloning our GitHub repository, or from downloading a tarball of the standalone edition, then you'll need first need to generate the yotta module by running:
 
     yotta/create-module.sh
 
@@ -50,7 +50,7 @@ from the mbed TLS root directory. This will create the yotta module in the `yott
 
 In any case, you'll probably want to set the yotta target before building unless it's already set globally; for more information on using yotta, please consult the [yotta documentation](http://docs.yottabuild.org/).
 
-The yotta edition of mbed TLS includes a few example programs, some of which demonstrate integration with mbed OS; for more details, please consult the [Readme at the root of the yotta module](https://github.com/ARMmbed/mbedtls/blob/development/yotta/data/README.md).
+For more details on the yotta/mbed OS edition of mbed TLS, including example programs, please consult the [Readme at the root of the yotta module](https://github.com/ARMmbed/mbedtls/blob/development/yotta/data/README.md).
 
 ### Make
 
@@ -148,6 +148,7 @@ For machines with a Unix shell and OpenSSL (and optionally GnuTLS) installed, ad
 -   `tests/ssl-opt.sh` runs integration tests for various TLS options (renegotiation, resumption, etc.) and tests interoperability of these options with other implementations.
 -   `tests/compat.sh` tests interoperability of every ciphersuite with other implementations.
 -   `tests/scripts/test-ref-configs.pl` test builds in various reduced configurations.
+-   `tests/scripts/key-exchanges.pl` test builds in configurations with a single key exchange enabled
 -   `tests/scripts/all.sh` runs a combination of the above tests, plus some more, with various build options (such as ASan, full `config.h`, etc).
 
 Configurations

@@ -1,2 +1,0 @@
-/usr/bin/ar cr libmbedtls.a  CMakeFiles/mbedtls_static.dir/debug.c.o CMakeFiles/mbedtls_static.dir/net.c.o CMakeFiles/mbedtls_static.dir/ssl_cache.c.o CMakeFiles/mbedtls_static.dir/ssl_ciphersuites.c.o CMakeFiles/mbedtls_static.dir/ssl_cli.c.o CMakeFiles/mbedtls_static.dir/ssl_cookie.c.o CMakeFiles/mbedtls_static.dir/ssl_srv.c.o CMakeFiles/mbedtls_static.dir/ssl_ticket.c.o CMakeFiles/mbedtls_static.dir/ssl_tls.c.o
-/usr/bin/ranlib libmbedtls.a

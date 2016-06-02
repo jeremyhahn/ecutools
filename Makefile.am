@@ -80,7 +80,7 @@ check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
 check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
 
 mbedtls:
-	cd src/aws_iot_src/external_libs/mbedTLS && make && cd -
+	cd src/aws_iot_src/external_libs/mbedTLS && cmake . && make && cd -y
 
 ecutune: mbedtls
 	make
@@ -108,7 +108,7 @@ clean-mbedtls:
 	cd src/aws_iot_src/external_libs/mbedTLS && make clean && cd -
 
 clean: clean-gems
-	rm -rf compile config.h.in config.h config.cache configure install-sh aclocal.m4 autom4te.cache/ config.log config.status Debug/ depcomp .deps/ m4/ Makefile Makefile.in missing stamp-h1 *.o src/*.o src/.deps/ src/.dirstamp config.guess config.sub .libs libj2534.* libtool ar-lib *.lo *~ ltmain.sh ecutuned check_j2534* test-driver test-suite.log COPYING INSTALL /usr/local/lib/libj2534.*
+	rm -rf compile config.h.in config.h config.cache configure install-sh aclocal.m4 autom4te.cache/ config.log config.status Debug/ depcomp .deps/ m4/ Makefile Makefile.in missing stamp-h1 *.o src/*.o src/.deps/ src/.dirstamp config.guess config.sub .libs libj2534.* libtool ar-lib *.lo *~ ltmain.sh ecutuned check_j2534* test-driver test-suite.log COPYING INSTALL /usr/local/lib/libj2534.* src/aws_iot_src/external_libs/mbedTLS/CMakeFiles/apidoc_clean.dir src/aws_iot_src/external_libs/mbedTLS/programs/pkey/CMakeFiles/ecdh_curve25519.dir src/aws_iot_src/external_libs/mbedTLS/tests/CMakeFiles/test_suite_ecjpake.dir
 
 clean-devenv: clean-mbedtls clean-thing clean
 

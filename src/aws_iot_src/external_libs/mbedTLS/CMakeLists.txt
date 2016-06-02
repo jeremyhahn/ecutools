@@ -25,7 +25,7 @@ if(CMAKE_COMPILER_IS_GNUCC)
     # note: starting with CMake 2.8 we could use CMAKE_C_COMPILER_VERSION
     execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
                     OUTPUT_VARIABLE GCC_VERSION)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -Wall -Wextra -W -Wdeclaration-after-statement -Wwrite-strings")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -fomit-frame-pointer -Wall -Wextra -W -Wdeclaration-after-statement -Wwrite-strings")
     if (GCC_VERSION VERSION_GREATER 4.5 OR GCC_VERSION VERSION_EQUAL 4.5)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wlogical-op")
     endif()
@@ -85,9 +85,20 @@ if(ENABLE_PROGRAMS)
     add_subdirectory(programs)
 endif()
 
-ADD_CUSTOM_TARGET(apidoc
-    COMMAND doxygen doxygen/mbedtls.doxyfile
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+# targets for doxygen only work on Unix
+if(UNIX)
+    ADD_CUSTOM_TARGET(apidoc
+        COMMAND mkdir -p apidoc
+        COMMAND cp include/mbedtls/config.h include/mbedtls/config.h.bak
+        COMMAND scripts/config.pl realfull
+        COMMAND doxygen doxygen/mbedtls.doxyfile
+        COMMAND mv include/mbedtls/config.h.bak include/mbedtls/config.h
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+    ADD_CUSTOM_TARGET(apidoc_clean
+        COMMAND rm -rf apidoc
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endif(UNIX)
 
 if(ENABLE_TESTING)
     enable_testing()

@@ -1,1 +1,0 @@
-# Copy source code for mbedTLS into this directory
