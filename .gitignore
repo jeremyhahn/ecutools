@@ -3,3 +3,4 @@ certs/*
 logs/*
 *.gem
 Gemfile.lock
+src/aws_iot_src/external_libs/mbedTLS/*

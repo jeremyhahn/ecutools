@@ -79,6 +79,7 @@ typedef struct {
 
 typedef struct _passthru_shadow {
   char *thingName;
+  char *certDir;
   IoT_Error_t rc;
   AWS_IoT_Client *mqttClient;
   pthread_t yield_thread;

@@ -3,6 +3,7 @@
 # BeagleBone Black / Debian Installer
 
 sudo apt-get update
+apt-get remove lightdm xserver-* apache2* --purge
 sudo apt-get install -y cmake libssl-dev libjansson-dev libcurl4-openssl-dev can-utils
 sudo apt-get autoremove -y
 
@@ -11,23 +12,30 @@ cd ecutools
 
 ./autogen.sh && ./configure && make mbedtls && make && sudo make install
 
-THING_NAME=myj2534
-UID=ecutune
-GID=ecutools
+MYUID=ecutune
+MYGID=ecutools
 LOGDIR=/var/log/ecutools
-groupadd $GID
-useradd -r ecutune -s /bin/false -G $GID
+CERTDIR=/etc/ecutools/certs
+
+groupadd $MYGID
+useradd -G $MYGID -r $MYUID -s /bin/false
+
 mkdir $LOGDIR
-chown $UID.$GID $LOGDIR
-chmod 664 $UID.$GID $LOGDIR
+chown root.$MYGID $LOGDIR
+chmod 775 $LOGDIR
+
+mkdir -p $CERTDIR
+chown root.$MYGID $CERTDIR
+chmod 775 $CERTDIR
 
 echo '
 #!/bin/sh
 
 set -e
 
-UID=ecutune
-GID=ecutools
+THING_NAME=myj2534
+MYUID=ecutune
+MYGID=ecutools
 LOGDIR=/var/log/ecutools
 
 NAME=ecutuned
@@ -40,7 +48,7 @@ export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
 case "$1" in
   start)
         echo -n "Starting daemon: "$NAME
-	start-stop-daemon --chuid $UID:$GID --start --quiet --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_OPTS
+	start-stop-daemon --chuid $MYUID:$MYGID --start --quiet --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_OPTS
         echo "."
 	;;
   stop)
@@ -51,7 +59,7 @@ case "$1" in
   restart)
         echo -n "Restarting daemon: "$NAME
 	start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile $PIDFILE
-	start-stop-daemon --chuid $UID:$GID --start --quiet --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_OPTS
+	start-stop-daemon --chuid $MYUID:$MYGID --start --quiet --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_OPTS
 	echo "."
 	;;
   *)
@@ -64,6 +72,4 @@ exit 0
 
 chmod 755 /etc/init.d/ecutuned
 update-rc.d ecutuned defaults
-
-/etc/init.d/ecutuned start
 

@@ -53,6 +53,7 @@ typedef struct {
   char *thingName;
   char *iface;
   char *logdir;
+  char *certDir;
 } passthru_thing_params;
 
 typedef struct {

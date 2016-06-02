@@ -98,7 +98,7 @@ void print_program_header() {
 
 void parse_args(int argc, char** argv, passthru_thing_params *params) {
   int opt;
-  while((opt = getopt(argc, argv, "n:i:l:d")) != -1) {
+  while((opt = getopt(argc, argv, "n:i:l:d:c")) != -1) {
     switch(opt) {
       case 'n':
         if(strlen(optarg) > 80) {
@@ -116,10 +116,17 @@ void parse_args(int argc, char** argv, passthru_thing_params *params) {
         break;
       case 'l':
         if(strlen(optarg) > 255) {
-          printf("ERROR: log directory value must not exceed 255 chars");
+          printf("ERROR: log directory must not exceed 255 chars");
           main_exit(1, params);
         }
         params->logdir = MYSTRING_COPY(optarg, strlen(optarg));
+        break;
+      case 'c':
+        if(strlen(optarg) > 255) {
+          printf("ERROR: cert directory must not exceed 255 chars");
+          main_exit(1, params);
+        }
+        params->certDir = MYSTRING_COPY(optarg, strlen(optarg));
         break;
       case 'd':
         daemonize = 1;
@@ -149,6 +156,7 @@ int main(int argc, char **argv) {
   params->thingName = NULL;
   params->logdir = NULL;
   params->iface = NULL;
+  params->certDir = NULL;
   parse_args(argc, argv, params);
   if(params->thingName == NULL) {
     params->thingName = malloc(sizeof(char) * 8);

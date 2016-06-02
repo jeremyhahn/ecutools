@@ -24,17 +24,22 @@ unsigned int awsiot_client_connect(awsiot_client *awsiot) {
   char rootCA[255];
   char clientCRT[255];
   char clientKey[255];
-  char CurrentWD[255];
-  char certDirectory[10] = "certs";
+  char etcEcutools[255] = "/etc/ecutools/certs";
   char cafileName[] = AWS_IOT_ROOT_CA_FILENAME;
   char clientCRTName[] = AWS_IOT_CERTIFICATE_FILENAME;
   char clientKeyName[] = AWS_IOT_PRIVATE_KEY_FILENAME;
   awsiot->rc = SUCCESS;
 
-  getcwd(CurrentWD, sizeof(CurrentWD));
-  sprintf(rootCA, "%s/%s/%s", CurrentWD, certDirectory, cafileName);
-  sprintf(clientCRT, "%s/%s/%s", CurrentWD, certDirectory, clientCRTName);
-  sprintf(clientKey, "%s/%s/%s", CurrentWD, certDirectory, clientKeyName);
+  if(awsiot->certDir == NULL) {
+    sprintf(rootCA, "%s/%s", etcEcutools, cafileName);
+    sprintf(clientCRT, "%s/%s", etcEcutools, clientCRTName);
+    sprintf(clientKey, "%s/%s", etcEcutools, clientKeyName);
+  }
+  else {
+    sprintf(rootCA, "%s/%s", awsiot->certDir, cafileName);
+    sprintf(clientCRT, "%s/%s", awsiot->certDir, clientCRTName);
+    sprintf(clientKey, "%s/%s", awsiot->certDir, clientKeyName); 
+  }
 
   syslog(LOG_DEBUG, "rootCA %s", rootCA);
   syslog(LOG_DEBUG, "clientCRT %s", clientCRT);
@@ -131,4 +136,3 @@ void awsiot_client_close(awsiot_client *awsiot) {
   awsiot->rc = aws_iot_mqtt_disconnect(&awsiot->client);
   if(awsiot->onclose) awsiot->onclose(awsiot);
 }
-

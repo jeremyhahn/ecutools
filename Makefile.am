@@ -80,7 +80,7 @@ check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
 check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
 
 mbedtls:
-	cd src/aws_iot_src/external_libs/mbedTLS && cmake . && make && cd -y
+	cd src/aws_iot_src/external_libs/mbedTLS && cmake . && make && cd -
 
 ecutune: mbedtls
 	make

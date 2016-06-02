@@ -129,7 +129,7 @@ module Ecutools::Awsiot
     end
 
     def certs_dir
-      @certs_dir ||= "#{path}/certs"
+      @certs_dir ||= "/etc/ecutools/certs"
     end
 
     def save_certificates(keys_and_cert)

@@ -50,6 +50,7 @@ unsigned int passthru_thing_sync_initial_state() {
   thing->awsiot->onerror = NULL;
   thing->awsiot->onclose = NULL;
   thing->awsiot->ondisconnect = NULL;
+  thing->awsiot->certDir = thing->params->certDir;
   awsiot_client_connect(thing->awsiot);
   awsiot_client_subscribe(thing->awsiot, thing->shadow->get_accepted_topic);
   awsiot_client_publish(thing->awsiot, thing->shadow->update_topic, "{\"state\":{\"desired\":{\"j2534\":null},\"reported\":{\"j2534\":null}}}");
@@ -208,6 +209,7 @@ void passthru_thing_init(passthru_thing_params *params) {
   memset(thing->shadow, 0, sizeof(passthru_shadow));
   thing->shadow->mqttClient = malloc(sizeof(AWS_IoT_Client));
   thing->shadow->thingName = thing->name;
+  thing->shadow->certDir = thing->params->certDir;
 
   thing->shadow->onopen = &passthru_thing_shadow_onopen;
   thing->shadow->ondelta = &passthru_thing_shadow_ondelta;
