@@ -10,7 +10,7 @@ sudo apt-get autoremove -y
 git clone https://github.com/jeremyhahn/ecutools.git
 cd ecutools
 
-./autogen.sh && ./configure && make mbedtls && make && sudo make install
+./autogen.sh && ./configure && make mbedtls
 
 MYUID=ecutune
 MYGID=ecutools
@@ -27,6 +27,10 @@ chmod 775 $LOGDIR
 mkdir -p $CERTDIR
 chown root.$MYGID $CERTDIR
 chmod 775 $CERTDIR
+
+echo "Create Thing, copy certs to /etc/ecutools, and configure aws_iot_config.h!"
+read -n1 -r -p "Press any key to continue..." key
+make && sudo make install
 
 echo '
 #!/bin/sh
