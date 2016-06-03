@@ -32,5 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rspec", "~> 3.0"
   spec.add_development_dependency "awsclient", "~> 0"
 
-  spec.add_runtime_dependency "ffi", "~> 0"
+  spec.add_runtime_dependency "ffi", "~> 1.9.10"
 end
