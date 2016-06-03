@@ -101,6 +101,7 @@ unsigned int canbus_awsiotlogger_init(canbus_logger *logger) {
   iotlogger->onclose = &canbus_awsiotlogger_onclose;
   iotlogger->onerror = &canbus_awsiotlogger_onerror;
   iotlogger->ondisconnect = NULL;
+  iotlogger->certDir = logger->certDir;
   awsiot_client_connect(iotlogger);
   logger->isrunning = true;
 }

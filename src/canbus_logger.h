@@ -37,6 +37,7 @@ typedef struct canbus_logger {
   char *iface;
   char *logdir;
   char *logfile;
+  char *certDir;
   bool isrunning;
   unsigned int type;
   uint8_t canbus_flags;

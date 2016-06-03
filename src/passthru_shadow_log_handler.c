@@ -31,6 +31,7 @@ void passthru_shadow_log_handler_init(passthru_thing *thing) {
   logger->logfile = NULL;
   logger->iface = thing->params->iface;
   logger->logdir = thing->params->logdir;
+  logger->certDir = thing->params->certDir;
 
   logger->canbus = malloc(sizeof(canbus_client));
   logger->canbus->iface = thing->params->iface;

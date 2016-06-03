@@ -98,7 +98,7 @@ void print_program_header() {
 
 void parse_args(int argc, char** argv, passthru_thing_params *params) {
   int opt;
-  while((opt = getopt(argc, argv, "n:i:l:d:c")) != -1) {
+  while((opt = getopt(argc, argv, "n:i:l:c:d")) != -1) {
     switch(opt) {
       case 'n':
         if(strlen(optarg) > 80) {
