@@ -7,6 +7,8 @@ module Ecutools::Awsiot
     attr_accessor :path
     attr_accessor :certificate_id
     attr_accessor :save_certs
+    attr_accessor :owner
+    attr_accessor :group
 
     def initialize(options)
       self.thing_name = options[:name]
@@ -15,6 +17,8 @@ module Ecutools::Awsiot
       self.path = options[:path] || "#{Ecutools.home}/../../"
       self.certificate_id = options[:certificate_id]
       self.save_certs = options[:save_certs]
+      self.owner = options[:owner] || 'root'
+      self.group = options[:group] || 'ecutools'
     end
 
     def create_thing
@@ -138,6 +142,7 @@ module Ecutools::Awsiot
       File.write("#{certs_dir}/#{thing_name}.key.pem", keys_and_cert[:key_pair][:private_key])
       FileUtils.chmod 0600, "#{certs_dir}/#{thing_name}.key.pem"
       FileUtils.cp("#{Ecutools.home}/ecutools/awsiot/ca.crt", "#{certs_dir}/ca.crt") unless File.exist?("#{certs_dir}/ca.crt") 
+      FileUtils.chmod_R owner, group, certs_dir
     end
 
   end

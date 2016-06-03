@@ -79,6 +79,10 @@ check_PROGRAMS = check_j2534
 check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
 check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
 
+bundle-install:
+	cd bindings/ruby && bundle install && cd -
+	cd cli && bundle install && cd -
+
 mbedtls:
 	cd src/aws_iot_src/external_libs/mbedTLS && cmake . && make && cd -
 

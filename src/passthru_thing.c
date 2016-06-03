@@ -145,7 +145,8 @@ void *passthru_thing_shadow_yield_thread(void *ptr) {
 
   passthru_thing_send_connect_report(thing);
 
-  while((thing->state & THING_STATE_INITIALIZING) || (thing->state & THING_STATE_CONNECTED) || (thing->state & THING_STATE_CLOSING)) {
+  while((thing->state & THING_STATE_INITIALIZING) || (thing->state & THING_STATE_CONNECTED) || 
+        (thing->state & THING_STATE_CLOSING) || thing->shadow->rc == NETWORK_ATTEMPTING_RECONNECT) {
 
     thing->shadow->rc = aws_iot_shadow_yield(thing->shadow->mqttClient, 200);
     if(thing->shadow->rc == NETWORK_ATTEMPTING_RECONNECT) {
@@ -166,7 +167,7 @@ void *passthru_thing_shadow_yield_thread(void *ptr) {
     sleep(1);
   }
 
-  syslog(LOG_DEBUG, "passthru_thing_shadow_yield_thread: stopping");
+  syslog(LOG_DEBUG, "passthru_thing_shadow_yield_thread: stopping. thing->shadow->rc=%d", thing->shadow->rc);
   return NULL;
 }
 

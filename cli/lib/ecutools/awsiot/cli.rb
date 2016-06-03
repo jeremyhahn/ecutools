@@ -17,6 +17,8 @@ module Ecutools::Awsiot
     method_option :acct, :aliases => '-a', :desc => 'Account identifier', :required => true
     method_option :save_certs, :aliases => '-s', :desc => 'True to save generated certificates to disk', :default => true
     method_option :config_h, :desc => 'True to configure ecutools aws_iot_config.h header'
+    method_option :owner, :aliases => '-o', :desc => 'Optional certificate owner'
+    method_option :group, :aliases => '-g', :desc => 'Optional certificate group'
     def create_thing
       awsiot = Service.new(options)
       thing_arn = awsiot.create_thing

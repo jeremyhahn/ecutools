@@ -2,6 +2,14 @@
 
 # BeagleBone Black Debian Jessie Installer
 
+# Manual steps
+#
+# 1. ~/.aws/credentials
+# 2. dhclient wlan0 > /etc/rc.local
+# 3. configure vcan0, can0, wlan0
+# 4. /etc/modules (vcan0)
+# 5. fstab: /dev/mmcblk0p1	/sdcard	vfat	defaults	0	0
+
 if [ "`id -u`" != "0" ];then
   echo "You must be root to run the installer"
   exit 1
@@ -9,13 +17,16 @@ fi
 
 apt-get update
 apt-get remove -y lightdm xserver-* apache2* chromium-* lxqt-* x11-* xauth xbitmaps xfonts-* --purge
-apt-get install -y cmake libssl-dev libjansson-dev libcurl4-openssl-dev can-utils
+apt-get install -y cmake libssl-dev libjansson-dev libcurl4-openssl-dev can-utils ruby-dev
 apt-get autoremove -y
+
+gem install bundler
 
 MYUID=ecutune
 MYGID=ecutools
 LOGDIR=/var/log/ecutools
 CERTDIR=/etc/ecutools/certs
+SDCARD=/sdcard
 
 groupadd $MYGID
 useradd -G $MYGID -r $MYUID -s /bin/false
@@ -29,18 +40,20 @@ chown -R root.$MYGID $CERTDIR
 chmod 775 $CERTDIR
 chmod 660 $CERTDIR/*
 
-git clone https://github.com/jeremyhahn/ecutools.git
+su debian -c "git clone https://github.com/jeremyhahn/ecutools.git"
 cd ecutools
 
-./autogen.sh
-./configure
-make mbedtls
-
-echo "Create Thing, copy certs to $CERTDIR, and configure aws_iot_config.h."
-read -n1 -r -p "Then, press any key to continue..." key
-
-make
+su debian -c "./autogen.sh"
+su debian -c "./configure"
+su debian -c "make mbedtls"
+su debian -c "make bundle-install"
+su debian -c "make devenv"
 make install
+
+mkdir $SDCARD
+chown root.$MYGID $SDCARD
+chmod 755 $SDCARD
+mount /dev/mmcblk0p1 $SDCARD
 
 echo '#!/bin/sh
 
@@ -59,7 +72,7 @@ MYGID=ecutools
 
 NAME=ecutuned
 PIDFILE=/var/run/$NAME.pid
-LOGDIR=/var/log/ecutools
+LOGDIR=/sdcard
 DAEMON=/usr/local/bin/ecutuned
 DAEMON_OPTS="-l $LOGDIR -d"
 
@@ -93,6 +106,4 @@ exit 0
 chmod 755 /etc/init.d/ecutuned
 update-rc.d ecutuned defaults
 /etc/init.d/ecutuned start
-
-rm -rf ecutools
 
