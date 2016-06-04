@@ -36,24 +36,28 @@ typedef struct passthru_thing passthru_thing;
 #define PASSTHRU_CONNECTTYPE_CONNECT    1
 #define PASSTHRU_CONNECTTYPE_DISCONNECT 2
 
-#define PASSTHRU_LOGTYPE_NONE          1
-#define PASSTHRU_LOGTYPE_FILE          2
-#define PASSTHRU_LOGTYPE_AWSIOT        3
-#define PASSTHRU_LOGTYPE_AWSIOT_REPLAY 4
+#define PASSTHRU_LOGTYPE_NONE           1
+#define PASSTHRU_LOGTYPE_FILE           2
+#define PASSTHRU_LOGTYPE_AWSIOT         3
+#define PASSTHRU_LOGTYPE_AWSIOT_REPLAY  4
 
-#define THING_STATE_INITIALIZING  (1 << 0)
-#define THING_STATE_CONNECTING    (1 << 1)
-#define THING_STATE_CONNECTED     (1 << 2)
-#define THING_STATE_CLOSING       (1 << 3)
-#define THING_STATE_CLOSED        (1 << 4)
-#define THING_STATE_DISCONNECTING (1 << 5) 
-#define THING_STATE_DISCONNECTED  (1 << 6)
+#define THING_STATE_INITIALIZING        (1 << 0)
+#define THING_STATE_CONNECTING          (1 << 1)
+#define THING_STATE_CONNECTED           (1 << 2)
+#define THING_STATE_CLOSING             (1 << 3)
+#define THING_STATE_CLOSED              (1 << 4)
+#define THING_STATE_DISCONNECTING       (1 << 5) 
+#define THING_STATE_DISCONNECTED        (1 << 6)
+
+#define PASSTHRU_CERT_DIR               "/etc/ecutools/certs"
+#define PASSTHRU_CACHE_DIR              "/var/ecutools/cache"
 
 typedef struct {
   char *thingName;
   char *iface;
   char *logdir;
   char *certDir;
+  char *cacheDir;
 } passthru_thing_params;
 
 typedef struct {
@@ -83,8 +87,7 @@ int passthru_thing_send_disconnect_report();
 
 void passthru_thing_shadow_onopen(passthru_shadow *shadow);
 void passthru_thing_shadow_ondelta(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t);
-void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t action, Shadow_Ack_Status_t status,
-    const char *pReceivedJsonDocument, void *pContextData);
+void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t action, Shadow_Ack_Status_t status, const char *pReceivedJsonDocument, void *pContextData);
 void passthru_thing_shadow_onget(const char *pJsonValueBuffer, uint32_t valueLength, jsonStruct_t *pJsonStruct_t);
 void passthru_thing_shadow_ondisconnect();
 void passthru_thing_shadow_onerror(passthru_shadow *shadow, const char *message);

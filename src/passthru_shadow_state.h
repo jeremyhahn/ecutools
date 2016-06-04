@@ -16,16 +16,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PASSTHRUSHADOWROUTER_H_
-#define PASSTHRUSHADOWROUTER_H_
+#ifndef PASSTHRUSHADOWSTATE_H
+#define PASSTHRUSHADOWSTATE_H
 
+#include <stdio.h>
 #include <syslog.h>
-#include <string.h>
+#include <stdbool.h>
+#include "mystring.h"
 #include "passthru_thing.h"
-#include "passthru_shadow_log_handler.h"
-#include "passthru_shadow_connection_handler.h"
+#include "awsiot_client.h"
+#include "passthru_shadow.h"
+#include "passthru_shadow_parser.h"
 
-void passthru_shadow_router_route_message(passthru_thing *thing, shadow_message *message);
-void passthru_shadow_router_route_delta(passthru_thing *thing, shadow_desired *desired);
+void passthru_shadow_state_sync(passthru_thing *thing);
 
-#endif
+unsigned int passthru_shadow_state_open(const char *cacheDir, const char *mode);
+unsigned int passthru_shadow_state_write(char *data);
+unsigned int passthru_shadow_state_read();
+void passthru_shadow_state_close();
+
+ #endif

@@ -20,68 +20,6 @@
 
 passthru_thing *thing;
 
-void passthru_thing_sync_initial_state_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
- 
-  syslog(LOG_DEBUG, "passthru_thing_sync_initial_state_handler: topicName=%s, topicNameLen=%u, pData=%s", topicName, (unsigned int)topicNameLen, (char *)pData);
-
-  thing->state = THING_STATE_CONNECTING;
-
-  char json[params->payloadLen];
-  memcpy(json, params->payload, params->payloadLen);
-  json[params->payloadLen] = '\0';
-
-  shadow_message *message = passthru_shadow_parser_parse_state(json);
-  // clear connection=2 to prevent connection handler from disconnecting
-  if(message->state->reported->connection) message->state->reported->connection = NULL;
-  passthru_shadow_router_route_message(thing, message);
-  passthru_shadow_parser_free_message(message);
-}
-
-unsigned int passthru_thing_sync_initial_state() {
-
-  syslog(LOG_DEBUG, "passthru_thing_sync_initial_state: getting state");
-
-  thing->state = THING_STATE_INITIALIZING;
-
-  thing->awsiot = malloc(sizeof(awsiot_client));
-  thing->awsiot->client = malloc(sizeof(AWS_IoT_Client));
-  thing->awsiot->onmessage = &passthru_thing_sync_initial_state;
-  thing->awsiot->onopen = NULL;
-  thing->awsiot->onerror = NULL;
-  thing->awsiot->onclose = NULL;
-  thing->awsiot->ondisconnect = NULL;
-  thing->awsiot->certDir = thing->params->certDir;
-  awsiot_client_connect(thing->awsiot);
-  awsiot_client_subscribe(thing->awsiot, thing->shadow->get_accepted_topic);
-  awsiot_client_publish(thing->awsiot, thing->shadow->update_topic, "{\"state\":{\"desired\":{\"j2534\":null},\"reported\":{\"j2534\":null}}}");
-
-  unsigned int i = 0;
-  while(thing->state & THING_STATE_INITIALIZING) {
-
-    if(i == 5) {
-      syslog(LOG_DEBUG, "passthru_thing_sync_initial_state: no state to sync");
-      break;
-    }
-
-    aws_iot_mqtt_yield(thing->awsiot->client, 200);
-    if(thing->awsiot->rc == NETWORK_ATTEMPTING_RECONNECT) {
-      syslog(LOG_DEBUG, "passthru_thing_sync_initial_state: waiting for network to reconnect");
-      sleep(1);
-      continue;
-    }
-
-    i++;
-  }
-
-  syslog(LOG_DEBUG, "passthru_thing_set_initial_state: done initializing");
-
-  awsiot_client_close(thing->awsiot);
-  free(thing->awsiot->client);
-  free(thing->awsiot);
-
-  return 0;
-}
-
 void passthru_thing_shadow_onopen(passthru_shadow *shadow) {
   syslog(LOG_DEBUG, "passthru_thing_shadow_onopen");
 }
@@ -119,6 +57,10 @@ void passthru_thing_shadow_onupdate(const char *pThingName, ShadowActions_t acti
   else if(status == SHADOW_ACK_ACCEPTED) {
     syslog(LOG_DEBUG, "passthru_thing_shadow_onupdate: Update Accepted");
   }
+
+  passthru_shadow_state_open(thing->params->cacheDir, "w");
+  passthru_shadow_state_write(pReceivedJsonDocument);
+  passthru_shadow_state_close();
 
   if(strncmp(pThingName, AWS_IOT_MY_THING_NAME, strlen(AWS_IOT_MY_THING_NAME)) == 0) {
     shadow_message *message = passthru_shadow_parser_parse_state(pReceivedJsonDocument);
@@ -178,7 +120,7 @@ int passthru_thing_send_connect_report() {
     syslog(LOG_ERR, "passthru_thing_send_connect_report: failed to build JSON state message. state=%s", state);
     return 1;
   }
-  return passthru_shadow_update(thing->shadow, pJsonDocument);
+  return passthru_shadow_update(thing->shadow, pJsonDocument, NULL);
 }
 
 int passthru_thing_send_disconnect_report() {
@@ -188,7 +130,7 @@ int passthru_thing_send_disconnect_report() {
     syslog(LOG_ERR, "passthru_thing_send_disconnect_report: failed to build JSON state message. state=%s", state);
     return 1;
   }
-  passthru_shadow_update(thing->shadow, pJsonDocument);
+  passthru_shadow_update(thing->shadow, pJsonDocument, NULL);
 }
 
 void passthru_thing_send_report(const char *json) {
@@ -196,7 +138,7 @@ void passthru_thing_send_report(const char *json) {
   char msgbuf[SHADOW_MAX_SIZE_OF_RX_BUFFER];
   if(passthru_shadow_build_report_json(msgbuf, SHADOW_MAX_SIZE_OF_RX_BUFFER, json, strlen(json))) {
     syslog(LOG_DEBUG, "passthru_thing_send_report: sending report: %s", msgbuf);
-    passthru_shadow_update(thing->shadow, msgbuf);
+    passthru_shadow_update(thing->shadow, msgbuf, NULL);
   }
 }
 
@@ -210,7 +152,7 @@ void passthru_thing_init(passthru_thing_params *params) {
   memset(thing->shadow, 0, sizeof(passthru_shadow));
   thing->shadow->mqttClient = malloc(sizeof(AWS_IoT_Client));
   thing->shadow->thingName = thing->name;
-  thing->shadow->certDir = thing->params->certDir;
+  thing->shadow->certDir = params->certDir;
 
   thing->shadow->onopen = &passthru_thing_shadow_onopen;
   thing->shadow->ondelta = &passthru_thing_shadow_ondelta;
@@ -226,6 +168,7 @@ void passthru_thing_init(passthru_thing_params *params) {
 
   thing->j2534 = malloc(sizeof(passthru_j2534));
   thing->j2534->awsiot = malloc(sizeof(awsiot_client));
+  thing->j2534->awsiot->certDir = params->certDir;
   thing->j2534->error_topic = MYSTRING_COPYF(J2534_ERROR_TOPIC, 255, thing->name);
   thing->j2534->canbus = NULL;
   thing->j2534->state = NULL;
@@ -234,7 +177,10 @@ void passthru_thing_init(passthru_thing_params *params) {
 }
 
 int passthru_thing_run() {
-  passthru_thing_sync_initial_state();
+  
+  thing->state = THING_STATE_INITIALIZING;
+  passthru_shadow_state_sync(thing);
+
   thing->state = THING_STATE_CONNECTING;
   if(passthru_shadow_connect(thing->shadow) != 0) {
     syslog(LOG_CRIT, "passthru_thing_run: unable to connect to AWS IoT shadow service");
@@ -244,9 +190,11 @@ int passthru_thing_run() {
     syslog(LOG_CRIT, "passthru_thing_run: unable to connect to AWS IoT shadow service");
     return 2;
   }
+
   thing->state = THING_STATE_CONNECTED;
   pthread_create(&thing->shadow->yield_thread, NULL, passthru_thing_shadow_yield_thread, NULL);
   pthread_join(thing->shadow->yield_thread, NULL);
+
   syslog(LOG_DEBUG, "passthru_passthru_thing: run loop complete");
   return 0;
 }

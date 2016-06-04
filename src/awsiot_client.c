@@ -24,22 +24,11 @@ unsigned int awsiot_client_connect(awsiot_client *awsiot) {
   char rootCA[255];
   char clientCRT[255];
   char clientKey[255];
-  char etcEcutools[255] = "/etc/ecutools/certs";
-  char cafileName[] = AWS_IOT_ROOT_CA_FILENAME;
-  char clientCRTName[] = AWS_IOT_CERTIFICATE_FILENAME;
-  char clientKeyName[] = AWS_IOT_PRIVATE_KEY_FILENAME;
   awsiot->rc = SUCCESS;
 
-  if(awsiot->certDir == NULL) {
-    sprintf(rootCA, "%s/%s", etcEcutools, cafileName);
-    sprintf(clientCRT, "%s/%s", etcEcutools, clientCRTName);
-    sprintf(clientKey, "%s/%s", etcEcutools, clientKeyName);
-  }
-  else {
-    sprintf(rootCA, "%s/%s", awsiot->certDir, cafileName);
-    sprintf(clientCRT, "%s/%s", awsiot->certDir, clientCRTName);
-    sprintf(clientKey, "%s/%s", awsiot->certDir, clientKeyName); 
-  }
+  sprintf(rootCA, "%s/%s", awsiot->certDir, AWS_IOT_ROOT_CA_FILENAME);
+  sprintf(clientCRT, "%s/%s", awsiot->certDir, AWS_IOT_CERTIFICATE_FILENAME);
+  sprintf(clientKey, "%s/%s", awsiot->certDir, AWS_IOT_PRIVATE_KEY_FILENAME); 
 
   syslog(LOG_DEBUG, "rootCA %s", rootCA);
   syslog(LOG_DEBUG, "clientCRT %s", clientCRT);
@@ -98,9 +87,9 @@ bool awsiot_client_isconnected(awsiot_client *awsiot) {
   return (awsiot->rc == NETWORK_RECONNECTED || awsiot->rc == SUCCESS);
 }
 
-unsigned int awsiot_client_subscribe(awsiot_client *awsiot, const char *topic) {
+unsigned int awsiot_client_subscribe(awsiot_client *awsiot, const char *topic, void *pApplicationHandlerData) {
   syslog(LOG_DEBUG, "awsiot_client_subscribe: subscribing to topic %s.", topic);
-  awsiot->rc = aws_iot_mqtt_subscribe(awsiot->client, topic, strlen(topic), QOS0, awsiot->onmessage, NULL);
+  awsiot->rc = aws_iot_mqtt_subscribe(awsiot->client, topic, strlen(topic), QOS0, awsiot->onmessage, pApplicationHandlerData);
   if (SUCCESS != awsiot->rc) {
     char errmsg[255];
     sprintf(errmsg, "awsiot_client_subscribe: error subscribing to topic %s. IoT_Error_t: %d", topic, awsiot->rc);

@@ -18,6 +18,8 @@
 
 #include "canbus_log.h"
 
+static FILE *canbus_log;
+
 unsigned int canbus_log_open(canbus_logger *logger, const char *mode) {
 
   char datestamp[100];

@@ -29,21 +29,10 @@ int passthru_shadow_connect(passthru_shadow *shadow) {
   char rootCA[255];
   char clientCRT[255];
   char clientKey[255];
-  char etcEcutools[255] = "/etc/ecutools/certs";
-  char cafileName[] = AWS_IOT_ROOT_CA_FILENAME;
-  char clientCRTName[] = AWS_IOT_CERTIFICATE_FILENAME;
-  char clientKeyName[] = AWS_IOT_PRIVATE_KEY_FILENAME;
 
-  if(shadow->certDir == NULL) {
-    sprintf(rootCA, "%s/%s", etcEcutools, cafileName);
-    sprintf(clientCRT, "%s/%s", etcEcutools, clientCRTName);
-    sprintf(clientKey, "%s/%s", etcEcutools, clientKeyName);
-  }
-  else {
-    sprintf(rootCA, "%s/%s", shadow->certDir, cafileName);
-    sprintf(clientCRT, "%s/%s", shadow->certDir, clientCRTName);
-    sprintf(clientKey, "%s/%s", shadow->certDir, clientKeyName); 
-  }
+  sprintf(rootCA, "%s/%s", shadow->certDir, AWS_IOT_ROOT_CA_FILENAME);
+  sprintf(clientCRT, "%s/%s", shadow->certDir, AWS_IOT_CERTIFICATE_FILENAME);
+  sprintf(clientKey, "%s/%s", shadow->certDir, AWS_IOT_PRIVATE_KEY_FILENAME); 
 
   syslog(LOG_DEBUG, "rootCA %s", rootCA);
   syslog(LOG_DEBUG, "clientCRT %s", clientCRT);
@@ -102,7 +91,7 @@ int passthru_shadow_connect(passthru_shadow *shadow) {
 
 int passthru_shadow_report_delta(passthru_shadow *shadow) {
   syslog(LOG_DEBUG, "Sending delta report: %s", DELTA_REPORT);
-  return passthru_shadow_update(shadow, DELTA_REPORT);
+  return passthru_shadow_update(shadow, DELTA_REPORT, NULL);
 }
 
 void passthru_shadow_get(passthru_shadow *shadow) {
@@ -115,9 +104,9 @@ void passthru_shadow_get(passthru_shadow *shadow) {
   }
 }
 
-int passthru_shadow_update(passthru_shadow *shadow, char *message) {
+int passthru_shadow_update(passthru_shadow *shadow, char *message, void *pContextData) {
   syslog(LOG_DEBUG, "passthru_shadow_update: message=%s", message);
-  shadow->rc = aws_iot_shadow_update(shadow->mqttClient, shadow->thingName, message, shadow->onupdate, NULL, 2, true);
+  shadow->rc = aws_iot_shadow_update(shadow->mqttClient, shadow->thingName, message, shadow->onupdate, pContextData, 2, true);
   if(shadow->rc != SUCCESS) {
     char errmsg[255];
     sprintf(errmsg, "aws_iot_shadow_update error rc=%d", shadow->rc);

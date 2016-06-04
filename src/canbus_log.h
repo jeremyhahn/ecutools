@@ -24,8 +24,6 @@
 #include <time.h>
 #include "canbus_logger.h"
 
-FILE *canbus_log;
-
 unsigned int canbus_log_open(canbus_logger *logger, const char *mode);
 unsigned int canbus_log_write(char *data);
 unsigned int canbus_log_read(canbus_logger *logger);

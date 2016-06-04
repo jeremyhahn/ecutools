@@ -16,6 +16,7 @@ MYUID=ecutune
 MYGID=ecutools
 LOGDIR=/var/log/ecutools
 CERTDIR=/etc/ecutools/certs
+CACHEDIR=/var/ecutools/cache
 
 groupadd $MYGID
 useradd -G $MYGID -r $MYUID -s /bin/false
@@ -28,6 +29,10 @@ mkdir -p $CERTDIR
 chown -R root.$MYGID $CERTDIR
 chmod 775 $CERTDIR
 chmod 660 $CERTDIR/*
+
+mkdir -p $CACHEDIR
+chown -R root.$MYGID $CACHEDIR
+chmod 775 $CACHEDIR
 
 git clone https://github.com/jeremyhahn/ecutools.git
 cd ecutools

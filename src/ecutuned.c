@@ -98,7 +98,7 @@ void print_program_header() {
 
 void parse_args(int argc, char** argv, passthru_thing_params *params) {
   int opt;
-  while((opt = getopt(argc, argv, "n:i:l:c:d")) != -1) {
+  while((opt = getopt(argc, argv, "n:i:l:s:c:d")) != -1) {
     switch(opt) {
       case 'n':
         if(strlen(optarg) > 80) {
@@ -120,6 +120,13 @@ void parse_args(int argc, char** argv, passthru_thing_params *params) {
           main_exit(1, params);
         }
         params->logdir = MYSTRING_COPY(optarg, strlen(optarg));
+        break;
+      case 's':
+        if(strlen(optarg) > 255) {
+          printf("ERROR: state directory must not exceed 255 chars");
+          main_exit(1, params);
+        }
+        params->cacheDir = MYSTRING_COPY(optarg, strlen(optarg));
         break;
       case 'c':
         if(strlen(optarg) > 255) {
@@ -146,6 +153,19 @@ void parse_args(int argc, char** argv, passthru_thing_params *params) {
         break;
     }
   }
+
+  if(params->thingName == NULL) {
+    params->thingName = malloc(sizeof(char) * 8);
+    strcpy(params->thingName, AWS_IOT_MY_THING_NAME);
+  }
+
+  if(params->certDir == NULL) {
+    params->certDir = PASSTHRU_CERT_DIR;
+  }
+
+  if(params->cacheDir == NULL) {
+    params->cacheDir = PASSTHRU_CACHE_DIR;
+  }
 }
 
 int main(int argc, char **argv) {
@@ -157,11 +177,8 @@ int main(int argc, char **argv) {
   params->logdir = NULL;
   params->iface = NULL;
   params->certDir = NULL;
+  params->cacheDir = NULL;
   parse_args(argc, argv, params);
-  if(params->thingName == NULL) {
-    params->thingName = malloc(sizeof(char) * 8);
-    strcpy(params->thingName, AWS_IOT_MY_THING_NAME);
-  }
 
   struct sigaction newSigAction;
   sigset_t newSigSet;

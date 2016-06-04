@@ -100,7 +100,7 @@ int passthru_shadow_connect(passthru_shadow *shadow);
 bool passthru_shadow_build_report_json(char *pJsonDocument, size_t maxSizeOfJsonDocument, const char *pReceivedDeltaData, uint32_t lengthDelta);
 int passthru_shadow_report_delta(passthru_shadow *shadow);
 void passthru_shadow_get(passthru_shadow *shadow);
-int passthru_shadow_update(passthru_shadow *shadow, char *message);
+int passthru_shadow_update(passthru_shadow *shadow, char *message, void *pContextData);
 int passthru_shadow_disconnect(passthru_shadow *shadow);
 
 #endif

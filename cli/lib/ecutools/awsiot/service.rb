@@ -142,7 +142,6 @@ module Ecutools::Awsiot
       File.write("#{certs_dir}/#{thing_name}.key.pem", keys_and_cert[:key_pair][:private_key])
       FileUtils.chmod 0600, "#{certs_dir}/#{thing_name}.key.pem"
       FileUtils.cp("#{Ecutools.home}/ecutools/awsiot/ca.crt", "#{certs_dir}/ca.crt") unless File.exist?("#{certs_dir}/ca.crt") 
-      FileUtils.chmod_R owner, group, certs_dir
     end
 
   end

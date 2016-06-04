@@ -104,12 +104,12 @@ unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
   snprintf(json, json_len, "{\"state\":{\"desired\":{\"j2534\":%i}}}", desired_state);
   json[json_len] = '\0';
 
-  if(awsiot_client_subscribe(client->awsiot, j2534_shadow_update_accepted_topic) != 0) {
+  if(awsiot_client_subscribe(client->awsiot, j2534_shadow_update_accepted_topic, NULL) != 0) {
     syslog(LOG_ERR, "j2534_publish_state: failed to subscribe to j2534_shadow_update_accepted_topic %s. rc=%d", j2534_shadow_update_accepted_topic, client->awsiot->rc);
     return ERR_DEVICE_NOT_CONNECTED;
   }
 
-  if(awsiot_client_subscribe(client->awsiot, J2534_ERROR_TOPIC) != 0) {
+  if(awsiot_client_subscribe(client->awsiot, J2534_ERROR_TOPIC, NULL) != 0) {
     syslog(LOG_ERR, "j2534_publish_state: failed to subscribe to J2534_ERROR_TOPIC %s. rc=%d", J2534_ERROR_TOPIC, client->awsiot->rc);
     return ERR_DEVICE_NOT_CONNECTED;
   }
