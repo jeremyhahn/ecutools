@@ -1,6 +1,8 @@
 # J2534 Integration Tests
 
-Tests that are sensitive to state have their own file due to the inability to unload a Shared Object file (libj2534.so).
+Tests are in their own file so libj2534.so gets loaded fresh with each test to ensure isolation. Otherwise, all tests will share the same libj2534 state.
 
-This way, senitive tests can be run in isolation without state from prior tests interfering.
+> Running these integration tests may incur AWS fees.
+
+	rspec spec/name_of_integration_spec.rb
 

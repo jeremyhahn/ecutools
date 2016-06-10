@@ -19,10 +19,24 @@ require 'spec_helper'
 
 describe Ecutools::J2534 do
   include_context 'J2534' do
-    context 'PassThruOpen' do
+    context 'PassThruSelect' do
 
-      it 'raises ERR_DEVICE_NOT_CONNECTED when no response received from PassThru device' do
-      	expect{j2534.PassThruOpen('foo', 1)}.to raise_error(Ecutools::J2534Error, /ERR_DEVICE_NOT_CONNECTED/)
+      it 'raises ERR_BUFFER_EMPTY when timeout is reached with 0 messages in the receive queue' do
+      	things.test_with_ecutuned {
+
+          expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
+
+          resource = Ecutools::J2534::Models::Resource.new
+          resource.Connector = Ecutools::J2534::J1962_CONNECTOR
+          expect(j2534.PassThruConnect(1, Ecutools::J2534::CAN, Ecutools::J2534::CAN_ID_BOTH, 500000, resource, 1)).to eq(true)
+
+          channelset = Ecutools::J2534::Models::ChannelSet.new
+          channelset.ChannelCount = 1
+          channelset.ChannelThreshold = 1
+          channelset.ChannelList = [1]
+
+          expect{j2534.PassThruSelect(channelset, 1, 1000)}.to raise_error Ecutools::J2534Error, /ERR_BUFFER_EMPTY/
+      }
       end
 
     end

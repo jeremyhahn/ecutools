@@ -167,17 +167,12 @@ void passthru_thing_init(passthru_thing_params *params) {
   thing->shadow->update_accepted_topic = MYSTRING_COPYF(PASSTHRU_SHADOW_GET_ACCEPTED_TOPIC, 255, thing->name);
 
   thing->j2534 = malloc(sizeof(passthru_j2534));
-  thing->j2534->awsiot = malloc(sizeof(awsiot_client));
-  thing->j2534->awsiot->certDir = params->certDir;
-  thing->j2534->error_topic = MYSTRING_COPYF(J2534_ERROR_TOPIC, 255, thing->name);
-  thing->j2534->canbus = NULL;
-  thing->j2534->state = NULL;
   thing->j2534->clients = malloc(sizeof(vector));
   vector_init(thing->j2534->clients);
 }
 
 int passthru_thing_run() {
-  
+
   thing->state = THING_STATE_INITIALIZING;
   passthru_shadow_state_sync(thing);
 
@@ -225,7 +220,7 @@ void passthru_thing_destroy() {
   free(thing->shadow->mqttClient);
   free(thing->shadow);
   vector_free(thing->j2534->clients);
-  free(thing->j2534->awsiot);
+  free(thing->j2534->clients);
   free(thing->j2534);
   free(thing);
 }

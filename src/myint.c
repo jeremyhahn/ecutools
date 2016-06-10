@@ -16,19 +16,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mystring.h"
+#include "myint.h"
+#include <syslog.h>
 
-char* MYSTRING_COPY(char *src, size_t len) {
-  char *str = malloc(sizeof(char) * (len+1));
-  memcpy(str, src, len);
-  str[len] = '\0';
-  return str;
+int MYINT_LEN(int *num) {
+  if(*num >= 100000000000000000000000) {
+    syslog(LOG_ERR, "MYINT_LEN: number greater than 25 digits! aborting!");
+    return 0;
+  }
+  char sDeviceId[25];
+  return snprintf(sDeviceId, 25, "%d", num);
 }
 
-char* MYSTRING_COPYF(char *src, size_t len, char *value) {
-  char *str = malloc(sizeof(char) * (len+1));
-  snprintf(str, len, src, value);
-  str[len] = '\0';
-  return str;
+int MYINT_DUP(int const *src) {
+  size_t len = MYINT_LEN(src);
+  char ssrc[len+1];
+  snprintf(ssrc, len+1, "%d", src);
+  return atoi(ssrc);
+/*
+  unsigned long * p = malloc(len * sizeof(unsigned long));
+  memcpy(p, src, len * sizeof(unsigned long));
+  return p;
+*/
 }
 

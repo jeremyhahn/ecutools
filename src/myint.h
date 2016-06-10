@@ -16,19 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mystring.h"
+#ifndef MYINT_H_
+#define MYINT_H_
 
-char* MYSTRING_COPY(char *src, size_t len) {
-  char *str = malloc(sizeof(char) * (len+1));
-  memcpy(str, src, len);
-  str[len] = '\0';
-  return str;
-}
+#include <stddef.h>
 
-char* MYSTRING_COPYF(char *src, size_t len, char *value) {
-  char *str = malloc(sizeof(char) * (len+1));
-  snprintf(str, len, src, value);
-  str[len] = '\0';
-  return str;
-}
+int MYINT_LEN(int *num);
+int MYINT_DUP(int const *src);
 
+#endif

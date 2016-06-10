@@ -58,6 +58,7 @@ unsigned int canbus_connect(canbus_client *canbus);
 bool canbus_isconnected(canbus_client *canbus);
 ssize_t canbus_read(canbus_client *canbus, struct can_frame *frame);
 unsigned int canbus_write(canbus_client *canbus, struct can_frame *frame);
+void canbus_shutdown(canbus_client *canbus, int how);
 void canbus_close(canbus_client *canbus);
 void canbus_framecpy(struct can_frame * frame, char *buf);
 unsigned int canbus_framecmp(struct can_frame *frame1, struct can_frame *frame2);

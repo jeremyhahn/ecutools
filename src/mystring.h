@@ -22,6 +22,6 @@
 #include <stddef.h>
 
 char* MYSTRING_COPY(char *src, size_t len);
-char *MYSTRING_COPYF(char *src, size_t len, char *value);
+char* MYSTRING_COPYF(char *src, size_t len, char *value);
 
 #endif

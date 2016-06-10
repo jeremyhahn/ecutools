@@ -18,7 +18,7 @@
 module Ecutools::J2534::Models
 
   class Device
-    attr_writer :DeviceName
+    attr_accessor :DeviceName
     attr_accessor :DeviceAvailable
     attr_accessor :DeviceDLLFWStatus
     attr_accessor :DeviceConnectMedia
@@ -31,6 +31,24 @@ module Ecutools::J2534::Models
     attr_accessor :Connector
     attr_accessor :NumOfResources
     attr_accessor :ResourceListPtr
+  end
+
+  class ChannelSet
+    attr_accessor :ChannelCount
+    attr_accessor :ChannelThreshold
+    attr_accessor :ChannelList
+  end
+
+  class Message
+    attr_accessor :ProtocolID
+    attr_accessor :MsgHandle
+    attr_accessor :RxStatus
+    attr_accessor :TxFlags
+    attr_accessor :Timestamp
+    attr_accessor :DataLength
+    attr_accessor :ExtraDataIndex
+    attr_accessor :DataBuffer
+    attr_accessor :DataBufferSize
   end
 
 end

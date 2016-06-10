@@ -33,4 +33,22 @@ module Ecutools::J2534::Structs
            :ResourceListPtr, :pointer
   end
 
+  class SCHANNELSET < FFI::Struct
+    layout :ChannelCount, :ulong,
+           :ChannelThreshold, :ulong,
+           :ChannelList, :pointer
+  end
+
+  class PASSTHRU_MSG < FFI::Struct
+    layout :ProtocolID, :ulong,
+           :MsgHandle, :ulong,
+           :RxStatus, :ulong,
+           :TxFlags, :ulong,
+           :Timestamp, :ulong,
+           :DataLength, :ulong,
+           :ExtraDataIndex, :ulong,
+           :DataBuffer, :pointer,
+           :DataBufferSize, :ulong
+  end
+
 end

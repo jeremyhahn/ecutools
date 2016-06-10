@@ -21,6 +21,7 @@
 
 #include <syslog.h>
 #include <string.h>
+#include "myint.h"
 #include "vector.h"
 #include "canbus.h"
 #include "j2534.h"

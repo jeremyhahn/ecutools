@@ -41,7 +41,7 @@ unsigned int awsiot_client_connect(awsiot_client *awsiot) {
   mqttInitParams.pRootCALocation = rootCA;
   mqttInitParams.pDeviceCertLocation = clientCRT;
   mqttInitParams.pDevicePrivateKeyLocation = clientKey;
-  mqttInitParams.mqttCommandTimeout_ms = 7000;
+  mqttInitParams.mqttCommandTimeout_ms = 5000;
   mqttInitParams.tlsHandshakeTimeout_ms = 5000;
   mqttInitParams.isSSLHostnameVerify = true;
   mqttInitParams.disconnectHandler = awsiot->ondisconnect;
@@ -87,10 +87,11 @@ bool awsiot_client_isconnected(awsiot_client *awsiot) {
   return (awsiot->rc == NETWORK_RECONNECTED || awsiot->rc == SUCCESS);
 }
 
-unsigned int awsiot_client_subscribe(awsiot_client *awsiot, const char *topic, void *pApplicationHandlerData) {
-  syslog(LOG_DEBUG, "awsiot_client_subscribe: subscribing to topic %s.", topic);
-  awsiot->rc = aws_iot_mqtt_subscribe(awsiot->client, topic, strlen(topic), QOS0, awsiot->onmessage, pApplicationHandlerData);
-  if (SUCCESS != awsiot->rc) {
+unsigned int awsiot_client_subscribe(awsiot_client *awsiot, const char *topic, void *pApplicationHandler, void *pApplicationHandlerData) {
+  syslog(LOG_DEBUG, "awsiot_client_subscribe: topic=%s.", topic);
+  void* callback = (pApplicationHandler == NULL) ? awsiot->onmessage : pApplicationHandler;
+  awsiot->rc = aws_iot_mqtt_subscribe(awsiot->client, topic, strlen(topic), QOS0, callback, pApplicationHandlerData);
+  if(SUCCESS != awsiot->rc) {
     char errmsg[255];
     sprintf(errmsg, "awsiot_client_subscribe: error subscribing to topic %s. IoT_Error_t: %d", topic, awsiot->rc);
     if(awsiot->onerror) awsiot->onerror(awsiot, errmsg);
@@ -99,9 +100,23 @@ unsigned int awsiot_client_subscribe(awsiot_client *awsiot, const char *topic, v
   return 0;
 }
 
-unsigned int awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char *payload) {
+unsigned int awsiot_client_unsubscribe(awsiot_client *awsiot, const char *topic) {
+  syslog(LOG_DEBUG, "awsiot_client_unsubscribe: topic=%s", topic);
+  awsiot->rc = aws_iot_mqtt_unsubscribe(awsiot->client, topic, strlen(topic));
+  if(SUCCESS != awsiot->rc) {
+    char errmsg[255];
+    sprintf(errmsg, "awsiot_client_unsubscribe: error unsubscribing from topic %s. IoT_Error_t: %d", topic, awsiot->rc);
+    if(awsiot->onerror) awsiot->onerror(awsiot, errmsg);
+    return 1;
+  }
+  return 0;
+}
 
-  int payload_len = strlen(payload) + 1;
+unsigned int awsiot_client_publish(awsiot_client *awsiot, const char *topic, char *payload) {
+
+  int payload_len = strlen(payload);// + 1;
+//  payload[payload_len] = '\0';
+
   syslog(LOG_DEBUG, "awsiot_client_publish: topic=%s, payload_len=%d, payload=%s", topic, payload_len, payload);
 
   IoT_Publish_Message_Params paramsQOS0;

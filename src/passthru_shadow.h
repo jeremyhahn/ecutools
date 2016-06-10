@@ -46,6 +46,8 @@ typedef struct {
 typedef struct {
   int *state;
   int *error;
+  int *deviceId;
+  char *data;
 } shadow_j2534;
 
 typedef struct {

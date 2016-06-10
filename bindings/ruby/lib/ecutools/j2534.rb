@@ -32,7 +32,7 @@ module Ecutools
    def PassThruScanForDevices
      pDeviceCount = FFI::MemoryPointer.new(:ulong, 1)
      response = Libj2534.PassThruScanForDevices(pDeviceCount)
-     raise Ecutools::J2534Error, Error[response] if response != 0
+     raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
      pDeviceCount.read_long
    end
 
@@ -41,7 +41,7 @@ module Ecutools
      sdevice = Ecutools::J2534::Structs::SDEVICE.new
      sdevice[:DeviceName].to_ptr.put_string(0, device.DeviceName) if device.DeviceName
      response = Libj2534.PassThruGetNextDevice(sdevice)
-     raise Ecutools::J2534Error, Error[response] if response != 0
+     raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
      map_sdevice_to_model(sdevice, device)
    end
 
@@ -49,13 +49,13 @@ module Ecutools
      pName = FFI::MemoryPointer.from_string(name)
      pDeviceId = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, deviceId)
      response = Libj2534.PassThruOpen(pName, pDeviceId)
-     raise Ecutools::J2534Error, Error[response] unless response == 0
+     raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
      true
    end
 
    def PassThruClose(deviceId)
      response = Libj2534.PassThruClose(deviceId)
-     raise Ecutools::J2534Error, Error[response] unless response == 0
+     raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
      true
    end
 
@@ -67,13 +67,31 @@ module Ecutools
      resourceStruct[:ResourceListPtr] = resource.ResourceListPtr || 0
      pChannelID = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, channelId)
      response = Libj2534.PassThruConnect(deviceId, protocolId, flags, baudRate, resourceStruct, pChannelID)
-     raise Ecutools::J2534Error, Error[response] unless response == 0
+     raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
      true
    end
 
    def PassThruDisconnect(channelId)
      response = Libj2534.PassThruDisconnect(channelId)
-     raise Ecutools::J2534Error, Error[response] unless response == 0
+     raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
+     true
+   end
+
+   def PassThruLogicalConnect(physicalChannelId, protocolId, flags, channelDescriptor, channelId)
+   end
+
+   def PassThruLogicalDisconnect(channelId)
+   end 
+
+   def PassThruSelect(channelSet, selectType, timeout)
+     channelset = Ecutools::J2534::Structs::SCHANNELSET.new
+     channelset[:ChannelCount] = channelSet.ChannelCount
+     channelset[:ChannelThreshold] = channelSet.ChannelThreshold
+     channelset[:ChannelList] = FFI::MemoryPointer.new(
+       :ulong, 8 * channelSet.ChannelList.length
+     ).put_array_of_ulong(0, channelSet.ChannelList)
+     response = Libj2534.PassThruSelect(channelset, selectType, timeout)
+     raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
      true
    end
 

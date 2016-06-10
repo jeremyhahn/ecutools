@@ -86,8 +86,18 @@ class Things
     rescue => e
       Stackit.logger.error e.message
       puts e.backtrace unless e.instance_of?(Ecutools::J2534Error)
+      exit(1)
     end
-    `killall -9 ecutuned`
+    begin
+      `pkill -9 ecutuned`
+      `rm -rf /var/ecutools/cache/state_log`
+    rescue Errno::ENOMEM => nomem
+      puts "Garbage collecting to free up room for cleanup..."
+      GC.start
+      sleep(5)
+      `pkill -9 ecutuned`
+      `rm -rf /var/ecutools/cache/state_log`
+    end
     delete!
   end
 

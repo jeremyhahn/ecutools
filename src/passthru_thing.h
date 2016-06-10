@@ -29,9 +29,8 @@ typedef struct passthru_thing passthru_thing;
 #include "vector.h"
 #include "passthru_shadow_parser.h"
 #include "passthru_shadow_router.h"
-#include "j2534.h"
 
-#define PASSTHRU_FIRMWARE_VERSION       "0.1.0"
+#define PASSTHRU_FIRMWARE_VERSION       "0.0.1"
 
 #define PASSTHRU_CONNECTTYPE_CONNECT    1
 #define PASSTHRU_CONNECTTYPE_DISCONNECT 2
@@ -61,11 +60,7 @@ typedef struct {
 } passthru_thing_params;
 
 typedef struct {
-  int *state;
-  awsiot_client *awsiot;
-  canbus_client *canbus;
   vector *clients;
-  char *error_topic;
 } passthru_j2534;
 
 typedef struct passthru_thing {

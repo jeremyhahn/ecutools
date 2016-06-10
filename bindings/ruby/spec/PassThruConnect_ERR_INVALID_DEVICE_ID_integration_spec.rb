@@ -29,6 +29,8 @@ describe Ecutools::J2534 do
           resource = Ecutools::J2534::Models::Resource.new
           resource.Connector = Ecutools::J2534::J1962_CONNECTOR
 
+         # expect(j2534.PassThruConnect(1, Ecutools::J2534::CAN, Ecutools::J2534::CAN_ID_BOTH, 500000, resource, 1)).to eq(true)
+
           expect {
             j2534.PassThruConnect(2, Ecutools::J2534::CAN, Ecutools::J2534::CAN_ID_BOTH, 500000, resource, 1)
           }.to raise_error Ecutools::J2534Error, /ERR_INVALID_DEVICE_ID/

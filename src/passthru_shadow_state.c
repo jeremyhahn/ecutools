@@ -43,9 +43,21 @@ void passthru_shadow_state_read_awsiot_state_handler(AWS_IoT_Client *pClient, ch
   passthru_shadow_state_write(json);
 
   shadow_message *message = passthru_shadow_parser_parse_state(json);
+
   // clear connection=2 to prevent connection handler from disconnecting
   if(message->state->reported->connection) message->state->reported->connection = NULL;
+
   passthru_shadow_state_restore(thing, message);
+
+  /*
+  // clear j2534 state
+  if(message->state->desired->j2534->state) {
+    const char json = "{\"state\":{\"desired\":{\"j2534\":null}},{\"reported\":{\"j2534\":null}}}";
+    if(awsiot_client_publish(thing->awsiot, thing->shadow->update_topic, json) != 0) {
+      syslog(LOG_DEBUG, "passthru_shadow_state_read_awsiot_state_handler: unable to clear j2534 state. rc=%d", thing->awsiot->rc);
+    }
+  }*/
+
   passthru_shadow_parser_free_message(message);
 
   passthru_shadow_state_awsiot_syncing = false;
@@ -54,14 +66,13 @@ void passthru_shadow_state_read_awsiot_state_handler(AWS_IoT_Client *pClient, ch
 void passthru_shadow_state_sync_awsiot_state(passthru_thing *thing) {
   thing->awsiot = malloc(sizeof(awsiot_client));
   thing->awsiot->client = malloc(sizeof(AWS_IoT_Client));
-  thing->awsiot->onmessage = &passthru_shadow_state_read_awsiot_state_handler;
   thing->awsiot->onopen = NULL;
   thing->awsiot->onerror = NULL;
   thing->awsiot->onclose = NULL;
   thing->awsiot->ondisconnect = NULL;
   thing->awsiot->certDir = thing->params->certDir;
   awsiot_client_connect(thing->awsiot);
-  awsiot_client_subscribe(thing->awsiot, thing->shadow->get_accepted_topic, thing);
+  awsiot_client_subscribe(thing->awsiot, thing->shadow->get_accepted_topic, passthru_shadow_state_read_awsiot_state_handler, thing);
   unsigned int i = 0;
   while(passthru_shadow_state_awsiot_syncing) {
 

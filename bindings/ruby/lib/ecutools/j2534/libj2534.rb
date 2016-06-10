@@ -41,4 +41,17 @@ module Ecutools::J2534::Libj2534
   attach_function :PassThruClose, [ :ulong ], :long
   attach_function :PassThruConnect, [:ulong, :ulong, :ulong, :ulong, Ecutools::J2534::Structs::RESOURCE_STRUCT.by_value, :pointer ], :long
   attach_function :PassThruDisconnect, [:ulong ], :long
+  attach_function :PassThruLogicalConnect, [ :ulong, :ulong, :ulong, :pointer, :pointer ], :long
+  attach_function :PassThruLogicalDisconnect, [ :ulong ], :long
+  attach_function :PassThruSelect, [ Ecutools::J2534::Structs::SCHANNELSET.by_ref, :ulong, :ulong ], :long
+  attach_function :PassThruReadMsgs, [ :ulong, Ecutools::J2534::Structs::PASSTHRU_MSG.by_ref, :pointer, :ulong ], :long
+  attach_function :PassThruQueueMsgs, [ :ulong, Ecutools::J2534::Structs::PASSTHRU_MSG.by_ref, :pointer ], :long
+  attach_function :PassThruStartPeriodicMsg, [ :ulong, Ecutools::J2534::Structs::PASSTHRU_MSG.by_ref, :pointer, :ulong ], :long
+  attach_function :PassThruStopPeriodicMsg, [ :ulong, :ulong ], :long
+  attach_function :PassThruStartMsgFilter, [ :ulong, :ulong, Ecutools::J2534::Structs::PASSTHRU_MSG.by_ref, Ecutools::J2534::Structs::PASSTHRU_MSG.by_ref, :pointer ], :long
+  attach_function :PassThruStopMsgFilter, [ :ulong, :ulong ], :long
+  attach_function :PassThruSetProgrammingVoltage, [ :ulong, Ecutools::J2534::Structs::RESOURCE_STRUCT.by_value, :ulong ], :long
+  attach_function :PassThruReadVersion, [ :ulong, :pointer, :pointer, :pointer ], :long
+  attach_function :PassThruGetLastError, [ :pointer ], :long
+  attach_function :PassThruIoctl, [ :ulong, :ulong, :pointer, :pointer ], :long
 end

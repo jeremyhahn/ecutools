@@ -36,6 +36,8 @@ shadow_message* passthru_shadow_parser_parse_state(const char *json) {
   message->state->reported->j2534 = malloc(sizeof(shadow_j2534));
   message->state->reported->j2534->state = 0;
   message->state->reported->j2534->error = 0;
+  message->state->reported->j2534->data = NULL;
+  message->state->reported->j2534->deviceId = NULL;
   message->state->reported->connection = NULL;
 
   message->state->desired = malloc(sizeof(shadow_desired));
@@ -45,6 +47,8 @@ shadow_message* passthru_shadow_parser_parse_state(const char *json) {
   message->state->desired->j2534 = malloc(sizeof(shadow_j2534));
   message->state->desired->j2534->state = 0;
   message->state->desired->j2534->error = 0;
+  message->state->desired->j2534->data = NULL;
+  message->state->desired->j2534->deviceId = NULL;
   message->state->desired->connection = NULL;
 
   root = json_loads(json, 0, &error);
@@ -80,8 +84,6 @@ shadow_message* passthru_shadow_parser_parse_state(const char *json) {
 }
 
 shadow_desired* passthru_shadow_parser_parse_delta(const char *json) {
- 
-  syslog(LOG_DEBUG, "passthru_shadow_parser_parse_delta: json=%s", json);
 
   json_t *root;
   json_error_t error;
@@ -91,8 +93,10 @@ shadow_desired* passthru_shadow_parser_parse_delta(const char *json) {
   desired->log->type = NULL;
   desired->log->file = NULL;
   desired->j2534 = malloc(sizeof(shadow_j2534));
+  desired->j2534->deviceId = NULL;
   desired->j2534->state = NULL;
   desired->j2534->error = NULL;
+  desired->j2534->data = NULL;
   desired->connection = NULL;
 
   root = json_loads(json, 0, &error);
@@ -120,8 +124,12 @@ shadow_desired* passthru_shadow_parser_parse_delta(const char *json) {
   if(json_is_object(j2534)) {
     json_t *state = json_object_get(j2534, "state");
     json_t *error = json_object_get(j2534, "error");
+    json_t *data = json_object_get(j2534, "data");
+    json_t *deviceId = json_object_get(j2534, "deviceId");
     desired->j2534->state = json_integer_value(state);
     desired->j2534->error = json_string_value(error);
+    desired->j2534->data = json_string_value(data);
+    desired->j2534->deviceId = json_integer_value(deviceId);
   }
 
   return desired;
@@ -144,18 +152,22 @@ void passthru_shadow_parser_parse_reported(json_t *obj, shadow_message *message)
       message->state->reported->connection = json_integer_value(value);
     }
 
-    if(strncmp(key, "j2534", strlen(key)) == 0) {
-      json_t *state = json_object_get(value, "state");
-      json_t *error = json_object_get(value, "error");
-      message->state->reported->j2534->state = json_integer_value(state);
-      message->state->reported->j2534->error = json_integer_value(error);
-    }
-
     if(strncmp(key, "log", strlen(key)) == 0) {
       json_t *type = json_object_get(value, "type");
       json_t *file = json_object_get(value, "file");
       message->state->reported->log->type = json_integer_value(type);
       message->state->reported->log->file = json_integer_value(file);
+    }
+
+    if(strncmp(key, "j2534", strlen(key)) == 0) {
+      json_t *state = json_object_get(value, "state");
+      json_t *error = json_object_get(value, "error");
+      json_t *data = json_object_get(value, "data");
+      json_t *deviceId = json_object_get(value, "deviceId");
+      message->state->reported->j2534->state = json_integer_value(state);
+      message->state->reported->j2534->error = json_integer_value(error);
+      message->state->reported->j2534->data = json_string_value(data);
+      message->state->reported->j2534->deviceId = json_integer_value(deviceId);
     }
 
   }
@@ -178,21 +190,24 @@ void passthru_shadow_parser_parse_desired(json_t *obj, shadow_message *message) 
       message->state->desired->connection = json_integer_value(value);
     }
 
-    if(strncmp(key, "j2534", strlen(key)) == 0) {
-      json_t *state = json_object_get(value, "state");
-      json_t *error = json_object_get(value, "error");
-      message->state->desired->j2534 = malloc(sizeof(shadow_j2534));
-      message->state->desired->j2534->state = json_integer_value(state);
-      message->state->desired->j2534->error = json_integer_value(error);
-    }
-
     if(strncmp(key, "log", strlen(key)) == 0) {
       json_t *type = json_object_get(value, "type");
       json_t *file = json_object_get(value, "file");
-      message->state->desired->log = malloc(sizeof(shadow_log));
       message->state->desired->log->type = json_integer_value(type);
       message->state->desired->log->file = json_integer_value(file);
     }
+
+    if(strncmp(key, "j2534", strlen(key)) == 0) {
+      json_t *state = json_object_get(value, "state");
+      json_t *error = json_object_get(value, "error");
+      json_t *data = json_object_get(value, "data");
+      json_t *deviceId = json_object_get(value, "deviceId");
+      message->state->desired->j2534->state = json_integer_value(state);
+      message->state->desired->j2534->error = json_integer_value(error);
+      message->state->desired->j2534->data = json_string_value(data);
+      message->state->desired->j2534->deviceId = json_integer_value(deviceId);
+    }
+
   }
 }
 

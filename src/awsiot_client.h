@@ -47,8 +47,8 @@ typedef struct _awsiot_client {
 
 unsigned int awsiot_client_connect(awsiot_client *awsiot);
 bool awsiot_client_isconnected();
-unsigned int awsiot_client_subscribe(awsiot_client *awsiot, const char *topic, void *pApplicationHandlerData);
-unsigned int awsiot_client_publish(awsiot_client *awsiot, const char *topic, const char *payload);
+unsigned int awsiot_client_subscribe(awsiot_client *awsiot, const char *topic, void *pApplicationHandler, void *pApplicationHandlerData);
+unsigned int awsiot_client_publish(awsiot_client *awsiot, const char *topic, char *payload);
 void awsiot_client_close(awsiot_client *awsiot);
 bool awsiot_client_build_desired_json(char *pJsonDocument, size_t maxSizeOfJsonDocument, const char *pData, uint32_t pDataLen);
 

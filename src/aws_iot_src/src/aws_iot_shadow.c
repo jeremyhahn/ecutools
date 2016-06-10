@@ -63,7 +63,7 @@ IoT_Error_t aws_iot_shadow_init(AWS_IoT_Client *pClient, ShadowInitParameters_t 
 	mqttInitParams.pRootCALocation = pParams->pRootCA;
 	mqttInitParams.pDeviceCertLocation = pParams->pClientCRT;
 	mqttInitParams.pDevicePrivateKeyLocation = pParams->pClientKey;
-	mqttInitParams.mqttCommandTimeout_ms = 7000;
+	mqttInitParams.mqttCommandTimeout_ms = 5000;
 	mqttInitParams.tlsHandshakeTimeout_ms = 10000;
 	mqttInitParams.isSSLHostnameVerify = true;
 	mqttInitParams.disconnectHandler = pParams->disconnectHandler;

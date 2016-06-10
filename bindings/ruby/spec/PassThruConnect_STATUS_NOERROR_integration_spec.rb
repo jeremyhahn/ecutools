@@ -23,7 +23,7 @@ describe Ecutools::J2534 do
 
       it 'returns STATUS_NOERROR when connected' do
         things.test_with_ecutuned {
-          #PassThruConnect(deviceId, protocolId, flags, baudRate, resource, channelId)
+          expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
           resource = Ecutools::J2534::Models::Resource.new
           resource.Connector = Ecutools::J2534::J1962_CONNECTOR
           expect(j2534.PassThruConnect(1, Ecutools::J2534::CAN, Ecutools::J2534::CAN_ID_BOTH, 500000, resource, 1)).to eq(true)

@@ -21,6 +21,8 @@
 
 #include <stdbool.h>
 #include <syslog.h>
+#include <sys/time.h>
+#include "vector.h"
 #include "passthru_thing.h"
 #include "passthru_shadow_parser.h"
 #include "awsiot_client.h"
@@ -299,8 +301,11 @@ long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *Inp
 // non-J2534 spec (implementation specific)
 #define J2534_API_VERSION                   "0.5.0"
 #define J2534_DLL_VERSION                   "0.1.0"
-#define J2534_ERROR_TOPIC                   "ecutools/j2534/%s/error"
-
+#define J2534_ERROR_TOPIC                   "$aws/things/%s/shadow/update/rejected"
+#define J2534_MSG_RX_TOPIC                  "ecutools/j2534/%s/rx"
+#define J2534_MSG_TX_TOPIC                  "ecutools/j2534/%s/tx"
+#define J2534_MSG_BUFFER_SIZE               1000
+#define J2534_TIMEOUT_MILLIS                30000
 #define J2534_PassThruScanForDevices        1
 #define J2534_PassThruGetNextDevice         2
 #define J2534_PassThruOpen                  3
@@ -323,11 +328,21 @@ long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *Inp
 
 typedef struct {
   char *name;
-  unsigned int deviceId;
-  unsigned int channelId;
   int *state;
+  unsigned long deviceId;
+  unsigned long channelId;
+  bool opened;
+  char *shadow_update_topic;
+  char *shadow_update_accepted_topic;
+  char *shadow_error_topic;
+  char *msg_rx_topic;
+  char *msg_tx_topic;
   SDEVICE *device;
   awsiot_client *awsiot;
+  vector *rxQueue;
+  vector *txQueue;
+  SCHANNELSET *channelSet;
+  canbus_client *canbus;
 } j2534_client;
 
 void j2534_send_error(awsiot_client *awsiot, unsigned int error);

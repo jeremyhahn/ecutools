@@ -140,8 +140,12 @@ module Ecutools::Awsiot
       Dir.mkdir certs_dir unless File.exist?(certs_dir)
       File.write("#{certs_dir}/#{thing_name}.crt.pem", keys_and_cert[:certificate_pem])
       File.write("#{certs_dir}/#{thing_name}.key.pem", keys_and_cert[:key_pair][:private_key])
-      FileUtils.chmod 0600, "#{certs_dir}/#{thing_name}.key.pem"
       FileUtils.cp("#{Ecutools.home}/ecutools/awsiot/ca.crt", "#{certs_dir}/ca.crt") unless File.exist?("#{certs_dir}/ca.crt") 
+      begin
+        FileUtils.chmod 0600, "#{certs_dir}/#{thing_name}.key.pem"
+      rescue Errno::EPERM => e
+        puts "Failed to chmod key! Permission error."
+      end
     end
 
   end

@@ -176,6 +176,14 @@ unsigned int canbus_write(canbus_client *canbus, struct can_frame *frame) {
   return bytes;
 }
 
+void canbus_shutdown(canbus_client *canbus, int how) {
+  if(canbus->socket != NULL) {
+    if(shutdown(canbus->socket, SHUT_RD) != 0) {
+      syslog(LOG_ERR, "canbus_shutdown: unable to shutdown socket");
+    }
+  }
+}
+
 void canbus_close(canbus_client *canbus) {
 
   pthread_mutex_lock(&canbus->lock);
@@ -183,6 +191,7 @@ void canbus_close(canbus_client *canbus) {
   pthread_mutex_unlock(&canbus->lock);
 
   if(canbus->socket > 0) {
+    canbus_shutdown(canbus, SHUT_RD);
     if(close(canbus->socket) == -1) {
       syslog(LOG_ERR, "canbus_close: error closing socket: %s", strerror(errno));
     }
