@@ -19,27 +19,35 @@ require 'spec_helper'
 
 describe Ecutools::J2534 do
   include_context 'J2534' do
-    context 'PassThruDisconnect' do
+    context 'PassThruSelect' do
 
-      it 'returns STATUS_NOERROR when disconnected' do
-        things.test_with_ecutuned {
+      it 'returns ERR_FILTER_TYPE_NOT_SUPPORTED when an invalid filter is specified' do
+      	things.test_with_ecutuned {
 
-          expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(Ecutools::J2534::Error::STATUS_NOERROR)
-          
+          expect(j2534.PassThruOpen(things[0][:name], 1)).to eq(true)
+
           resource = Ecutools::J2534::Models::Resource.new
           resource.Connector = Ecutools::J2534::J1962_CONNECTOR
-          expect(j2534.PassThruConnect(
-            1,
-            Ecutools::J2534::CAN,
-            Ecutools::J2534::CAN_ID_BOTH, 500000,
-            resource,
-            1
-          )).to eq(Ecutools::J2534::Error::STATUS_NOERROR)
+          expect(j2534.PassThruConnect(1, Ecutools::J2534::CAN, Ecutools::J2534::CAN_ID_BOTH, 500000, resource, 1)).to eq(true)
 
-          expect(j2534.PassThruDisconnect(1)).to eq(Ecutools::J2534::Error::STATUS_NOERROR)
-        }
+          maskMsg = Ecutools::J2534::Models::Message.new
+          maskMsg.ProtocolID = Ecutools::J2534::CAN
+          maskMsg.MsgHandle = 1
+          maskMsg.DataBuffer = 0x7FF
+          maskMsg.DataLength = 11
+
+          patternMsg = Ecutools::J2534::Models::Message.new
+          patternMsg.ProtocolID = Ecutools::J2534::CAN
+          patternMsg.MsgHandle = 2
+          patternMsg.DataBuffer = 0x7DF
+          patternMsg.DataLength = 11
+
+          expect{j2534.PassThruStartMsgFilter(1, 1, maskMsg, patternMsg, 1)}.to raise_error /ERR_FILTER_TYPE_NOT_SUPPORTED/
+      }
       end
 
     end
+
   end
+
 end

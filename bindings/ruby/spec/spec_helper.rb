@@ -94,7 +94,7 @@ class Things
     rescue Errno::ENOMEM => nomem
       puts "Garbage collecting to free up room for cleanup..."
       GC.start
-      sleep(5)
+      sleep(7)
       `pkill -9 ecutuned`
       `rm -rf /var/ecutools/cache/state_log`
     end

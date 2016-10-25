@@ -21,7 +21,7 @@
 // not j2534 spec
 static bool j2534_initialized = false;
 static bool j2534_opened = false;
-static unsigned int j2534_current_api_call = 0;
+static unsigned long j2534_current_api_call = 0;
 static long j2534_device_count = 0;
 static char j2534_last_error[80] = {0};
 static int *j2534_awsiot_error = NULL;
@@ -30,7 +30,7 @@ static SDEVICE j2534_device_list[25] = {0};
 static vector j2534_client_vector;
 static vector j2534_selected_channels;
 
-unsigned long unless_concurrent_call(unsigned long status, unsigned int api_call) {
+unsigned long unless_concurrent_call(unsigned long status, unsigned long api_call) {
   syslog(LOG_DEBUG, "unless_concurrent_call: status=%x, api_call=%d", status, api_call);
   if(j2534_current_api_call != api_call) {
     strcpy(j2534_last_error, "ERR_CONCURRENT_API_CALL");
@@ -107,6 +107,45 @@ void j2534_onmessage(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNam
 
 void j2534_onerror(awsiot_client *awsiot, const char *message) {
   syslog(LOG_ERR, "j2534_onerror: message=%s", message);
+}
+
+char *filter_json(j2534_client *client) {
+
+syslog(LOG_DEBUG, "filter_json: client->filters->count=%d", client->filters->count);
+
+  unsigned int json_len = client->filters->count * 27;
+  j2534_canfilter *canfilter = NULL;
+  char *json = malloc(sizeof(char) * json_len);
+  memset(json, '\0', sizeof(char) * json_len);
+  strcpy(json, "[");
+
+  int i;
+  for(i=0; i<client->filters->count; i++) {
+
+    char tmp_format[json_len];
+    char tmp[json_len];
+
+    canfilter = (j2534_canfilter *)vector_get(client->filters, i);
+
+    strcpy(tmp_format, "{\"id\":\"");
+    strcat(tmp_format, "%x");
+    strcat(tmp_format, "\",");
+    strcat(tmp_format, "\"mask\":\"");
+    strcat(tmp_format, "%x");
+    strcat(tmp_format, "\"}");
+
+    snprintf(tmp, json_len, tmp_format, canfilter->can_id, canfilter->can_mask);
+    strcat(json, tmp);
+
+    if(i < client->filters->count-1) {
+      strcat(json, ",");
+    }
+  }
+  strcat(json, "]");
+
+syslog(LOG_DEBUG, "filter_json: json=%s", json);
+
+  return json;
 }
 
 unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
@@ -434,6 +473,7 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
 
   client->device = malloc(sizeof(SDEVICE));
   client->deviceId = *pDeviceID;
+  client->protocolId = 0;
   client->state = NULL;
 
   client->awsiot = malloc(sizeof(awsiot_client));
@@ -449,6 +489,9 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
   client->txQueue = malloc(sizeof(vector));
   vector_init(client->rxQueue);
   vector_init(client->txQueue);
+
+  client->filters = malloc(sizeof(vector));
+  vector_init(client->filters);
 
   client->channelSet = malloc(sizeof(SCHANNELSET));
   client->channelSet->ChannelCount = 0;
@@ -549,6 +592,7 @@ long PassThruClose(unsigned long DeviceID) {
   free(client->channelSet);
   free(client->txQueue);
   free(client->rxQueue);
+  free(client->filters);
   free(client->name);
   free(client->device);
   free(client->awsiot);
@@ -657,6 +701,8 @@ long PassThruConnect(unsigned long DeviceID, unsigned long ProtocolID, unsigned 
   if(client == NULL) {
     return unless_concurrent_call(ERR_INVALID_DEVICE_ID, J2534_PassThruConnect);
   }
+
+  client->protocolId = ProtocolID;
 
   /*
   if(ProtocolID != J1850VPW && ProtocolID != J1850PWM && ProtocolID != ISO9141 &&
@@ -1432,7 +1478,56 @@ long PassThruStopPeriodicMsg(unsigned long ChannelID, unsigned long MsgID) {
  *   STATUS_NOERROR                    Function call was successful
  */
 long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, PASSTHRU_MSG *pMaskMsg, PASSTHRU_MSG *pPatternMsg, unsigned long *pFilterID) {
-	return ERR_NOT_SUPPORTED;
+
+  j2534_current_api_call = J2534_PassThruStartMsgFilter;
+
+  if(pMaskMsg == NULL || pPatternMsg == NULL || pFilterID == NULL) {
+    return unless_concurrent_call(ERR_NULL_PARAMETER, J2534_PassThruStartMsgFilter);
+  }
+
+  if(!j2534_opened) {
+    return unless_concurrent_call(ERR_DEVICE_NOT_OPEN, J2534_PassThruStartMsgFilter);
+  }
+
+  j2534_client *client = j2534_client_by_channel_id(ChannelID);
+  if(client == NULL) {
+    return unless_concurrent_call(ERR_INVALID_DEVICE_ID, J2534_PassThruStartMsgFilter);
+  }
+
+  if(FilterType != PASS_FILTER && FilterType != BLOCK_FILTER) {
+    return unless_concurrent_call(ERR_FILTER_TYPE_NOT_SUPPORTED, J2534_PassThruStartMsgFilter);
+  }
+
+  if(pMaskMsg->ProtocolID != client->protocolId || pPatternMsg->ProtocolID != client->protocolId) {
+    return unless_concurrent_call(ERR_MSG_PROTOCOL_ID, J2534_PassThruStartMsgFilter);
+  }
+
+  if(pMaskMsg->DataLength < 1 || pMaskMsg->DataLength > 12) {
+    return unless_concurrent_call(ERR_INVALID_MSG, J2534_PassThruStartMsgFilter);
+  }
+
+  if(pPatternMsg->DataLength < 1 || pPatternMsg->DataLength > 12) {
+    return unless_concurrent_call(ERR_INVALID_MSG, J2534_PassThruStartMsgFilter);
+  }
+
+  if(client->filters->size >= 10) {
+    return unless_concurrent_call(ERR_EXCEEDED_LIMIT, J2534_PassThruStartMsgFilter); 
+  }
+
+  j2534_canfilter *filter = malloc(sizeof(j2534_canfilter));
+  filter->id = pFilterID;
+  filter->can_id = pPatternMsg->DataBuffer;
+  filter->can_mask = pMaskMsg->DataBuffer;
+  vector_add(client->filters, filter);
+
+filter_json(client);
+
+return STATUS_NOERROR;
+
+  return unless_concurrent_call(
+    j2534_publish_state(client, J2534_PassThruStartMsgFilter),
+    J2534_PassThruStartMsgFilter
+  );
 }
 
 /**

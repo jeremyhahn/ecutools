@@ -88,9 +88,7 @@ module Ecutools::Awsiot
       Ecutools.aws.iot.list_things({
         max_results: 100,
         attribute_name: "type",
-        attribute_value: "j2534",
-        attribute_name: "acct",
-        attribute_value: acct,
+        attribute_value: "j2534"
       })[:things].map { |thing| 
       	thing[:thing_name] 
       }

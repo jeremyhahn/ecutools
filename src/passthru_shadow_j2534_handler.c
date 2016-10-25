@@ -96,6 +96,7 @@ syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_desired_open: j2534->deviceId=%
   client = malloc(sizeof(j2534_client));
   client->state = J2534_PassThruOpen;
   client->deviceId = MYINT_DUP(j2534->deviceId);
+  client->opened = true;
 
   unsigned int shadow_update_topic_len = PASSTHRU_SHADOW_UPDATE_TOPIC + strlen(client->name) + 1;
   unsigned int shadow_update_accepted_topic_len = PASSTHRU_SHADOW_UPDATE_ACCEPTED_TOPIC + strlen(client->name) + 1;
@@ -211,46 +212,32 @@ void passthru_shadow_j2534_handler_desired_select(passthru_thing *thing, shadow_
 
 void passthru_shadow_j2534_handler_desired_startMsgFilter(passthru_thing *thing, shadow_j2534 *j2534) {
 
-  struct timeval start, stop;
-  float milliseconds = 0;
-
-  int can_frame_len = sizeof(struct can_frame);
-  struct can_frame frame;
-  memset(&frame, 0, can_frame_len);
-
-  int data_len = can_frame_len + 25;
-  char data[data_len];
-  memset(data, 0, data_len);
+  int i;
 
   j2534_client *client = passthru_shadow_j2534_handler_get_client(thing, j2534->deviceId);
 
   if(client == NULL) {
-    syslog(LOG_ERR, "passthru_shadow_j2534_handler_desired_startMsgFilter: unable to locate client: %s", j2534->deviceId);
     return passthru_shadow_j2534_handler_send_error(thing, J2534_PassThruSelect, ERR_DEVICE_NOT_CONNECTED);
   }
 
-  client->state = J2534_PassThruStartMsgFilter;
-  passthru_shadow_j2534_handler_send_report(J2534_PassThruStartMsgFilter);
-
-  gettimeofday(&start, NULL);
-  while(client->state == J2534_PassThruStartMsgFilter && milliseconds < J2534_TIMEOUT_MILLIS && 
-    canbus_isconnected(client->canbus) && canbus_read(client->canbus, &frame) > 0) {
-
-    canbus_framecpy(&frame, data);
-    if(frame.can_id & CAN_ERR_FLAG) {
-      syslog(LOG_ERR, "passthru_shadow_j2534_handler_desired_select: CAN ERROR: %s", data);
-      continue;
-    }
-
-    gettimeofday(&stop, NULL);
-    milliseconds = (stop.tv_sec - start.tv_sec) * 1000.0f + (stop.tv_usec - start.tv_usec) / 1000.0f;
-    syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_desired_select: milliseconds=%f", milliseconds);
-
-    if(awsiot_client_publish(client->awsiot, client->msg_rx_topic, data) != 0) {
-      syslog(LOG_ERR, "passthru_shadow_j2534_handler_desired_select: failed to publish. topic=%s, rc=%d", client->msg_rx_topic, client->awsiot->rc);
-      return passthru_shadow_j2534_handler_send_error(thing, J2534_PassThruSelect, client->awsiot->rc);
-    }
+  if(!client->opened) {
+    return passthru_shadow_j2534_handler_send_error(thing, J2534_PassThruStartMsgFilter, ERR_DEVICE_NOT_OPEN);
   }
+
+  client->state = J2534_PassThruStartMsgFilter;
+
+  struct can_filter *filters = malloc(sizeof(struct can_filter) * client->filters->size);
+
+  for(i=0; i<client->filters->count; i++) {
+
+    j2534_canfilter *canfilter = (j2534_canfilter *)vector_get(client->filters, i);
+    filters[i].can_id = canfilter->can_id;
+    filters[i].can_mask = canfilter->can_mask;
+  }
+
+  canbus_filter(client->canbus, filters, client->filters->size);
+
+  passthru_shadow_j2534_handler_send_report(J2534_PassThruStartMsgFilter);
 }
 
 void passthru_shadow_j2534_handler_handle_desired_state(passthru_thing *thing, shadow_j2534 *j2534) {
@@ -277,6 +264,10 @@ void passthru_shadow_j2534_handler_handle_desired_state(passthru_thing *thing, s
 
   if(j2534->state == J2534_PassThruSelect) {
     return passthru_shadow_j2534_handler_desired_select(thing, j2534);
+  }
+
+  if(j2534->state == J2534_PassThruStartMsgFilter) {
+    return passthru_shadow_j2534_handler_desired_startMsgFilter(thing, j2534);
   }
 
   syslog(LOG_ERR, "passthru_shadow_j2534_handler_handle_desired_state: invalid state: %d", j2534->state);

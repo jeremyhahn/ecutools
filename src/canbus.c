@@ -176,6 +176,19 @@ unsigned int canbus_write(canbus_client *canbus, struct can_frame *frame) {
   return bytes;
 }
 
+int canbus_filter(canbus_client *canbus, struct can_filter *filters, unsigned int filter_len) {
+  if((canbus->state & CANBUS_STATE_CONNECTED) == 0) {
+    syslog(LOG_ERR, "canbus_write: CAN socket not connected");
+    return 1;
+  }
+  syslog(LOG_DEBUG, "canbus_filter: applying filters");
+  int i;
+  for(i=0; i<filter_len; i++) {
+    syslog(LOG_DEBUG, "canbus_filter: can_id=%x, can_mask=%x", filters[i].can_id, filters[i].can_mask);
+  }
+  return setsockopt(canbus->socket, SOL_CAN_RAW, CAN_RAW_FILTER, filters, sizeof(struct can_filter) * filter_len);
+}
+
 void canbus_shutdown(canbus_client *canbus, int how) {
   if(canbus->socket != NULL) {
     if(shutdown(canbus->socket, SHUT_RD) != 0) {

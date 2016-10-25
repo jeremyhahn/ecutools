@@ -36,7 +36,6 @@
 #define PASSTHRU_SHADOW_GET_ACCEPTED_TOPIC    "$aws/things/%s/shadow/get/accepted"
 
 char DELTA_REPORT[SHADOW_MAX_SIZE_OF_RX_BUFFER];
-//bool messageArrivedOnDelta;
 
 typedef struct {
   int *type;

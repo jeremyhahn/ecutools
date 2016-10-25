@@ -55,11 +55,11 @@ Dynamic libraries (not included):
 
 To install,
 
-        ./autogen.sh
-        ./configure
+	./autogen.sh
+	./configure
 	make mbedtls
-        make
-        sudo make install
+	make
+	sudo make install
 
 ## Development
 

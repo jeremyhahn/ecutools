@@ -22,6 +22,7 @@
 #include <stdbool.h>
 #include <syslog.h>
 #include <sys/time.h>
+#include <linux/can.h>
 #include "vector.h"
 #include "passthru_thing.h"
 #include "passthru_shadow_parser.h"
@@ -327,10 +328,17 @@ long PassThruIoctl(unsigned long ControlTarget, unsigned long IoctlID, void *Inp
 #define J2534_PassThruIoctl                 19
 
 typedef struct {
+  unsigned long *id;
+  canid_t can_id;
+  canid_t can_mask;
+} j2534_canfilter;
+
+typedef struct {
   char *name;
   int *state;
   unsigned long deviceId;
   unsigned long channelId;
+  unsigned long protocolId;
   bool opened;
   char *shadow_update_topic;
   char *shadow_update_accepted_topic;
@@ -338,11 +346,12 @@ typedef struct {
   char *msg_rx_topic;
   char *msg_tx_topic;
   SDEVICE *device;
+  SCHANNELSET *channelSet;
   awsiot_client *awsiot;
+  canbus_client *canbus;
   vector *rxQueue;
   vector *txQueue;
-  SCHANNELSET *channelSet;
-  canbus_client *canbus;
+  vector *filters;
 } j2534_client;
 
 void j2534_send_error(awsiot_client *awsiot, unsigned int error);

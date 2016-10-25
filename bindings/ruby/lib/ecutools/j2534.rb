@@ -50,13 +50,13 @@ module Ecutools
      pDeviceId = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, deviceId)
      response = Libj2534.PassThruOpen(pName, pDeviceId)
      raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
-     true
+     response
    end
 
    def PassThruClose(deviceId)
      response = Libj2534.PassThruClose(deviceId)
      raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
-     true
+     response
    end
 
    def PassThruConnect(deviceId, protocolId, flags, baudRate, resource, channelId)
@@ -68,13 +68,13 @@ module Ecutools
      pChannelID = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, channelId)
      response = Libj2534.PassThruConnect(deviceId, protocolId, flags, baudRate, resourceStruct, pChannelID)
      raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
-     true
+     response
    end
 
    def PassThruDisconnect(channelId)
      response = Libj2534.PassThruDisconnect(channelId)
      raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
-     true
+     response
    end
 
    def PassThruLogicalConnect(physicalChannelId, protocolId, flags, channelDescriptor, channelId)
@@ -92,7 +92,47 @@ module Ecutools
      ).put_array_of_ulong(0, channelSet.ChannelList)
      response = Libj2534.PassThruSelect(channelset, selectType, timeout)
      raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
-     true
+     response
+   end
+
+   def PassThruReadMsgs(channelId, message, numMsgs, timeout)
+   end
+
+   def PassThruQueueMsgs(channelId, message, numMsgs)
+   end
+
+   def PassThruStartPeriodicMsg(channelId, message, messageId, timeInterval)
+   end
+
+   def PassThruStopPeriodicMsg(channelId, messageId)
+   end
+  
+   # long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, PASSTHRU_MSG *pMaskMsg, PASSTHRU_MSG *pPatternMsg, unsigned long *pFilterID);
+
+   # attach_function :PassThruStartMsgFilter, [ :ulong, :ulong, Ecutools::J2534::Structs::PASSTHRU_MSG.by_ref, Ecutools::J2534::Structs::PASSTHRU_MSG.by_ref, :pointer ], :long
+
+   def PassThruStartMsgFilter(channelId, filterType, maskMsg, patternMsg, filterId)
+     pMaskMsg = map_model_to_passthru_msg(maskMsg, Ecutools::J2534::Structs::PASSTHRU_MSG.new)
+     pPatternMsg = map_model_to_passthru_msg(patternMsg, Ecutools::J2534::Structs::PASSTHRU_MSG.new)
+     pFilterID = FFI::MemoryPointer.new(:ulong, 8).put_ulong(0, filterId)
+     response = Libj2534.PassThruStartMsgFilter(channelId, filterType, pMaskMsg, pPatternMsg, pFilterID)
+     raise Ecutools::J2534Error, Error[response] unless response === STATUS_NOERROR
+     response
+   end
+
+   def PassThruStopMsgFilter(channelId, filterId)
+   end
+
+   def PassThruSetProgrammingVoltage(deviceId, resourceStruct, voltage)
+   end
+
+   def PassThruReadVersion(deviceId)
+   end
+
+   def PassThruGetLastError
+   end
+
+   def PassThruIoctl(controlTarget, ioctlId)
    end
 
   private
@@ -106,6 +146,19 @@ module Ecutools
       device.DirectSignalQuality = sdevice[:DirectSignalQuality]
       device.DirectSignalStrength = sdevice[:DirectSignalStrength]
       device
+    end
+
+    def map_model_to_passthru_msg(model, passthru_msg)
+      passthru_msg[:ProtocolID] = model.ProtocolID || 0
+      passthru_msg[:MsgHandle] = model.MsgHandle
+      passthru_msg[:RxStatus] = model.RxStatus || 0
+      passthru_msg[:TxFlags] = model.TxFlags || 0
+      passthru_msg[:Timestamp] = model.Timestamp || 0
+      passthru_msg[:DataLength] = model.DataLength
+      passthru_msg[:ExtraDataIndex] = model.ExtraDataIndex || 0
+      passthru_msg[:DataBuffer] = model.DataBuffer
+      passthru_msg[:DataBufferSize] = model.DataBufferSize || 0
+      passthru_msg
     end
 
   end

@@ -41,7 +41,7 @@ unsigned int awsiot_client_connect(awsiot_client *awsiot) {
   mqttInitParams.pRootCALocation = rootCA;
   mqttInitParams.pDeviceCertLocation = clientCRT;
   mqttInitParams.pDevicePrivateKeyLocation = clientKey;
-  mqttInitParams.mqttCommandTimeout_ms = 5000;
+  mqttInitParams.mqttCommandTimeout_ms = 7000;
   mqttInitParams.tlsHandshakeTimeout_ms = 5000;
   mqttInitParams.isSSLHostnameVerify = true;
   mqttInitParams.disconnectHandler = awsiot->ondisconnect;
@@ -114,9 +114,7 @@ unsigned int awsiot_client_unsubscribe(awsiot_client *awsiot, const char *topic)
 
 unsigned int awsiot_client_publish(awsiot_client *awsiot, const char *topic, char *payload) {
 
-  int payload_len = strlen(payload);// + 1;
-//  payload[payload_len] = '\0';
-
+  int payload_len = strlen(payload);
   syslog(LOG_DEBUG, "awsiot_client_publish: topic=%s, payload_len=%d, payload=%s", topic, payload_len, payload);
 
   IoT_Publish_Message_Params paramsQOS0;
