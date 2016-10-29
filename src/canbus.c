@@ -181,7 +181,6 @@ int canbus_filter(canbus_client *canbus, struct can_filter *filters, unsigned in
     syslog(LOG_ERR, "canbus_write: CAN socket not connected");
     return 1;
   }
-  syslog(LOG_DEBUG, "canbus_filter: applying filters");
   int i;
   for(i=0; i<filter_len; i++) {
     syslog(LOG_DEBUG, "canbus_filter: can_id=%x, can_mask=%x", filters[i].can_id, filters[i].can_mask);

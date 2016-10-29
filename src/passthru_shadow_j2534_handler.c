@@ -226,16 +226,19 @@ void passthru_shadow_j2534_handler_desired_startMsgFilter(passthru_thing *thing,
 
   client->state = J2534_PassThruStartMsgFilter;
 
-  struct can_filter *filters = malloc(sizeof(struct can_filter) * client->filters->size);
+  syslog(LOG_DEBUG, "passthru_shadow_j2534_handler_desired_startMsgFilter: j2534->filters->count=%i", j2534->filters->count);
 
-  for(i=0; i<client->filters->count; i++) {
+  struct can_filter *filters = malloc(sizeof(struct can_filter) * j2534->filters->count);
+  for(i=0; i<j2534->filters->count; i++) {
 
-    j2534_canfilter *canfilter = (j2534_canfilter *)vector_get(client->filters, i);
-    filters[i].can_id = canfilter->can_id;
-    filters[i].can_mask = canfilter->can_mask;
+    shadow_j2534_filter *shadow_filter = vector_get(j2534->filters, i);
+    filters[i].can_id = shadow_filter->can_id;
+    filters[i].can_mask = shadow_filter->can_mask;
   }
 
-  canbus_filter(client->canbus, filters, client->filters->size);
+  if(j2534->filters->count) {
+    canbus_filter(client->canbus, filters, j2534->filters->count);
+  }
 
   passthru_shadow_j2534_handler_send_report(J2534_PassThruStartMsgFilter);
 }

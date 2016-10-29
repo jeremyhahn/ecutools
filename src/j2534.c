@@ -111,8 +111,6 @@ void j2534_onerror(awsiot_client *awsiot, const char *message) {
 
 char *filter_json(j2534_client *client) {
 
-syslog(LOG_DEBUG, "filter_json: client->filters->count=%d", client->filters->count);
-
   unsigned int json_len = client->filters->count * 27;
   j2534_canfilter *canfilter = NULL;
   char *json = malloc(sizeof(char) * json_len);
@@ -143,20 +141,21 @@ syslog(LOG_DEBUG, "filter_json: client->filters->count=%d", client->filters->cou
   }
   strcat(json, "]");
 
-syslog(LOG_DEBUG, "filter_json: json=%s", json);
-
   return json;
 }
 
 unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
 
-  char json_format[255] = "{\"state\":{\"desired\":{\"j2534\":{\"deviceId\":%i,\"state\":%i}}}}";
+  char *msgfilters = filter_json(client);
+
+  char json_format[255] = "{\"state\":{\"desired\":{\"j2534\":{\"deviceId\":%i,\"state\":%i,\"filters\":%s}}}}";
   unsigned int json_format_len = strlen(json_format) - 4;
-  unsigned int json_len = json_format_len + MYINT_LEN(desired_state) + MYINT_LEN(client->deviceId);
+  unsigned int json_len = json_format_len + MYINT_LEN(desired_state) + MYINT_LEN(client->deviceId) + strlen(msgfilters);
 
   char json[json_len+1];
-  snprintf(json, json_len+1, json_format, client->deviceId, desired_state);
+  snprintf(json, json_len+1, json_format, client->deviceId, desired_state, msgfilters);
   json[json_len+1] = '\0';
+  free(msgfilters);
 
   if(awsiot_client_publish(client->awsiot, client->shadow_update_topic, (const char *)json) != 0) {
     syslog(LOG_ERR, "j2534_publish_state: failed to publish. topic=%s, rc=%d", client->shadow_update_topic, client->awsiot->rc);
@@ -1519,10 +1518,6 @@ long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, P
   filter->can_id = pPatternMsg->DataBuffer;
   filter->can_mask = pMaskMsg->DataBuffer;
   vector_add(client->filters, filter);
-
-filter_json(client);
-
-return STATUS_NOERROR;
 
   return unless_concurrent_call(
     j2534_publish_state(client, J2534_PassThruStartMsgFilter),

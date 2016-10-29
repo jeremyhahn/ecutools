@@ -24,6 +24,9 @@
 #include <syslog.h>
 #include <pthread.h>
 #include <errno.h>
+#include <linux/can.h>
+#include <linux/can/raw.h>
+#include "vector.h"
 #include "aws_iot_src/include/aws_iot_log.h"
 #include "aws_iot_src/include/aws_iot_version.h"
 #include "aws_iot_src/include/aws_iot_mqtt_client_interface.h"
@@ -43,10 +46,16 @@ typedef struct {
 } shadow_log;
 
 typedef struct {
+  canid_t can_id;
+  canid_t can_mask;
+} shadow_j2534_filter;
+
+typedef struct {
+  int *deviceId;
   int *state;
   int *error;
-  int *deviceId;
   char *data;
+  vector *filters;
 } shadow_j2534;
 
 typedef struct {

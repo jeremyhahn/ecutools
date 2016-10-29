@@ -49,6 +49,8 @@ shadow_message* passthru_shadow_parser_parse_state(const char *json) {
   message->state->desired->j2534->error = 0;
   message->state->desired->j2534->data = NULL;
   message->state->desired->j2534->deviceId = NULL;
+  message->state->desired->j2534->filters = malloc(sizeof(vector));
+  vector_init(message->state->desired->j2534->filters);
   message->state->desired->connection = NULL;
 
   root = json_loads(json, 0, &error);
@@ -85,6 +87,8 @@ shadow_message* passthru_shadow_parser_parse_state(const char *json) {
 
 shadow_desired* passthru_shadow_parser_parse_delta(const char *json) {
 
+  syslog(LOG_DEBUG, "passthru_shadow_parser_parse_delta: json=%s", json);
+
   json_t *root;
   json_error_t error;
 
@@ -97,6 +101,8 @@ shadow_desired* passthru_shadow_parser_parse_delta(const char *json) {
   desired->j2534->state = NULL;
   desired->j2534->error = NULL;
   desired->j2534->data = NULL;
+  desired->j2534->filters = malloc(sizeof(vector));
+  vector_init(desired->j2534->filters);
   desired->connection = NULL;
 
   root = json_loads(json, 0, &error);
@@ -122,14 +128,52 @@ shadow_desired* passthru_shadow_parser_parse_delta(const char *json) {
 
   json_t *j2534 = json_object_get(root, "j2534");
   if(json_is_object(j2534)) {
+
     json_t *state = json_object_get(j2534, "state");
     json_t *error = json_object_get(j2534, "error");
     json_t *data = json_object_get(j2534, "data");
     json_t *deviceId = json_object_get(j2534, "deviceId");
+    json_t *filters = json_object_get(j2534, "filters");
     desired->j2534->state = json_integer_value(state);
     desired->j2534->error = json_string_value(error);
     desired->j2534->data = json_string_value(data);
     desired->j2534->deviceId = json_integer_value(deviceId);
+
+    if(!json_is_array(filters)) {
+      syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: J2534 filters is not an array");
+      return desired;
+    }
+
+    long j2534_filter_count = (unsigned long) json_array_size(filters);
+
+    int i;
+    for(i=0; i<j2534_filter_count; i++) {
+
+      json_t *filter, *filterId, *filterMask;
+      filter = json_array_get(filters, i);
+
+      if(!json_is_object(filter)) {
+        syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: J2534 filter element is not an object");
+        return desired;
+      }
+
+      filterId = json_object_get(filter, "id");
+      if(!json_is_string(filterId)) {
+        syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: filter id is not a string");
+        return desired;
+      }
+
+      filterMask = json_object_get(filter, "mask");
+      if(!json_is_string(filterMask)) {
+        syslog(LOG_ERR, "passthru_shadow_parser_parse_delta: filter mask is not a string");
+        return desired;
+      }
+
+      shadow_j2534_filter *j2534_filter = malloc(sizeof(shadow_j2534_filter));
+      j2534_filter->can_id = strtoul(json_string_value(filterId), NULL, 16);
+      j2534_filter->can_mask = strtoul(json_string_value(filterMask), NULL, 16);
+      vector_add(desired->j2534->filters, j2534_filter);
+    }
   }
 
   return desired;
@@ -207,7 +251,6 @@ void passthru_shadow_parser_parse_desired(json_t *obj, shadow_message *message) 
       message->state->desired->j2534->data = json_string_value(data);
       message->state->desired->j2534->deviceId = json_integer_value(deviceId);
     }
-
   }
 }
 
@@ -218,6 +261,14 @@ void passthru_shadow_parser_free_desired(shadow_desired *desired) {
     desired->log = NULL;
   }
   if(desired->j2534 != NULL) {
+    if(desired->j2534->filters != NULL) {
+      int i;
+      for(i=0; i<desired->j2534->filters->count; i++) {
+        free(vector_get(desired->j2534->filters, i));
+      }
+      vector_free(desired->j2534->filters);
+      desired->j2534->filters = NULL;
+    }
     free(desired->j2534);
     desired->j2534 = NULL;
   }

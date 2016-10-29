@@ -108,9 +108,7 @@ module Ecutools
    end
   
    # long PassThruStartMsgFilter(unsigned long ChannelID, unsigned long FilterType, PASSTHRU_MSG *pMaskMsg, PASSTHRU_MSG *pPatternMsg, unsigned long *pFilterID);
-
    # attach_function :PassThruStartMsgFilter, [ :ulong, :ulong, Ecutools::J2534::Structs::PASSTHRU_MSG.by_ref, Ecutools::J2534::Structs::PASSTHRU_MSG.by_ref, :pointer ], :long
-
    def PassThruStartMsgFilter(channelId, filterType, maskMsg, patternMsg, filterId)
      pMaskMsg = map_model_to_passthru_msg(maskMsg, Ecutools::J2534::Structs::PASSTHRU_MSG.new)
      pPatternMsg = map_model_to_passthru_msg(patternMsg, Ecutools::J2534::Structs::PASSTHRU_MSG.new)

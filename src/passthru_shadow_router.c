@@ -19,7 +19,8 @@
 #include "passthru_shadow_router.h"
 
 void passthru_shadow_router_print_desired(shadow_desired *desired) {
-  syslog(LOG_DEBUG, "passthru_shadow_router_print_desired: j2534->deviceId=%d, j2534->state=%d, j2534->error=%x", desired->j2534->deviceId, desired->j2534->state, desired->j2534->error);
+  syslog(LOG_DEBUG, "passthru_shadow_router_print_desired: j2534->deviceId=%d, j2534->state=%d, j2534->error=%x, j2534->filters->count=%i", 
+    desired->j2534->deviceId, desired->j2534->state, desired->j2534->error, desired->j2534->filters->count);
   syslog(LOG_DEBUG, "passthru_shadow_router_print_desired: log->type=%d, log->file=%s",  desired->log->type, desired->log->file);
 }
 
