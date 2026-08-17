@@ -105,7 +105,7 @@ unsigned int canbus_connect(canbus_client *canbus) {
   addr.can_family = AF_CAN;
   addr.can_ifindex = ifr.ifr_ifindex;
 
-  if(bind(canbus->socket, (struct sockaddr *)&addr, sizeof(addr)) < -1) {
+  if(bind(canbus->socket, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
     syslog(LOG_ERR, "canbus_connect: error in socket bind");
     return 6;
   }
