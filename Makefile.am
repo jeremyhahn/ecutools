@@ -74,10 +74,14 @@ ecutuned_SOURCES = $(SRC_FILES) src/ecutuned.c
 ecutuned_CFLAGS = -DUSESSL -DTHREADED $(INCLUDE_ALL_DIRS) $(COMPILER_FLAGS) $(LOG_FLAGS)
 ecutuned_LDFLAGS = $(LD_FLAG) $(EXTERNAL_LIBS)
 
-TESTS = check_j2534
-check_PROGRAMS = check_j2534
+TESTS = check_j2534 check_canbus_shutdown
+check_PROGRAMS = check_j2534 check_canbus_shutdown
 check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
 check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
+
+check_canbus_shutdown_SOURCES = tests/check_canbus_shutdown.c src/canbus.c
+check_canbus_shutdown_LDFLAGS = -Wl,--wrap=shutdown
+check_canbus_shutdown_LDADD = -lcheck -lsubunit
 
 bundle-install:
 	cd bindings/ruby && bundle install && cd -

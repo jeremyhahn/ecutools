@@ -190,7 +190,7 @@ int canbus_filter(canbus_client *canbus, struct can_filter *filters, unsigned in
 
 void canbus_shutdown(canbus_client *canbus, int how) {
   if(canbus->socket != NULL) {
-    if(shutdown(canbus->socket, SHUT_RD) != 0) {
+    if(shutdown(canbus->socket, how) != 0) {
       syslog(LOG_ERR, "canbus_shutdown: unable to shutdown socket");
     }
   }
