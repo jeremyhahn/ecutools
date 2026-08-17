@@ -220,7 +220,7 @@ void canbus_close(canbus_client *canbus) {
 void canbus_free(canbus_client *canbus) {
   if(canbus->iface != NULL) {
     free(canbus->iface);
-    canbus->iface == NULL;
+    canbus->iface = NULL;
   }
   syslog(LOG_DEBUG, "canbus_free: freed");
 }
