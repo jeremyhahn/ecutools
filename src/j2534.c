@@ -74,6 +74,60 @@ bool j2534_is_valid_device_id(unsigned long DeviceID) {
   return j2534_client_by_device_id(DeviceID) != NULL;
 }
 
+static void j2534_remove_client(j2534_client *client) {
+  int i;
+
+  for(i=0; i<vector_count(&j2534_client_vector); i++) {
+    if(vector_get(&j2534_client_vector, i) == client) {
+      vector_delete(&j2534_client_vector, i);
+      return;
+    }
+  }
+}
+
+static void j2534_free_client(j2534_client *client) {
+  int i;
+
+  if(client == NULL) return;
+
+  if(client->filters != NULL) {
+    for(i=0; i<vector_count(client->filters); i++)
+      free(vector_get(client->filters, i));
+    vector_free(client->filters);
+    free(client->filters);
+  }
+
+  if(client->txQueue != NULL) {
+    vector_free(client->txQueue);
+    free(client->txQueue);
+  }
+
+  if(client->rxQueue != NULL) {
+    vector_free(client->rxQueue);
+    free(client->rxQueue);
+  }
+
+  if(client->channelSet != NULL) {
+    free(client->channelSet->ChannelList);
+    free(client->channelSet);
+  }
+
+  free(client->shadow_update_topic);
+  free(client->shadow_update_accepted_topic);
+  free(client->shadow_error_topic);
+  free(client->msg_tx_topic);
+  free(client->msg_rx_topic);
+  free(client->name);
+  free(client->device);
+
+  if(client->awsiot != NULL) {
+    free(client->awsiot->client);
+    free(client->awsiot);
+  }
+
+  free(client);
+}
+
 void j2534_onmessage(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen, IoT_Publish_Message_Params *params, void *pData) {
 
   syslog(LOG_DEBUG, "j2534_onmessage: topicName=%s, topicNameLen=%u, payload=%s, payload_len=%i", 
@@ -81,7 +135,7 @@ void j2534_onmessage(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNam
 
   j2534_client *client = (j2534_client *)pData;
 
-  char json[params->payloadLen];
+  char json[params->payloadLen + 1];
   memcpy(json, params->payload, params->payloadLen);
   json[params->payloadLen] = '\0';
 
@@ -110,36 +164,30 @@ void j2534_onerror(awsiot_client *awsiot, const char *message) {
 }
 
 char *filter_json(j2534_client *client) {
-
-  unsigned int json_len = client->filters->count * 27;
-  j2534_canfilter *canfilter = NULL;
-  char *json = malloc(sizeof(char) * json_len);
-  memset(json, '\0', sizeof(char) * json_len);
-  strcpy(json, "[");
-
+  const char *filter_format = "{\"id\":\"%x\",\"mask\":\"%x\"}";
+  size_t json_len = 3;
   int i;
+
   for(i=0; i<client->filters->count; i++) {
-
-    char tmp_format[json_len];
-    char tmp[json_len];
-
-    canfilter = (j2534_canfilter *)vector_get(client->filters, i);
-
-    strcpy(tmp_format, "{\"id\":\"");
-    strcat(tmp_format, "%x");
-    strcat(tmp_format, "\",");
-    strcat(tmp_format, "\"mask\":\"");
-    strcat(tmp_format, "%x");
-    strcat(tmp_format, "\"}");
-
-    snprintf(tmp, json_len, tmp_format, canfilter->can_id, canfilter->can_mask);
-    strcat(json, tmp);
-
-    if(i < client->filters->count-1) {
-      strcat(json, ",");
-    }
+    j2534_canfilter *filter = vector_get(client->filters, i);
+    json_len += snprintf(NULL, 0, filter_format,
+                         filter->can_id, filter->can_mask);
+    if(i > 0) json_len++;
   }
-  strcat(json, "]");
+
+  char *json = malloc(json_len);
+  if(json == NULL) return NULL;
+
+  size_t offset = 0;
+  json[offset++] = '[';
+  for(i=0; i<client->filters->count; i++) {
+    j2534_canfilter *filter = vector_get(client->filters, i);
+    if(i > 0) json[offset++] = ',';
+    offset += snprintf(json + offset, json_len - offset, filter_format,
+                       filter->can_id, filter->can_mask);
+  }
+  json[offset++] = ']';
+  json[offset] = '\0';
 
   return json;
 }
@@ -147,17 +195,17 @@ char *filter_json(j2534_client *client) {
 unsigned int j2534_publish_state(j2534_client *client, int desired_state) {
 
   char *msgfilters = filter_json(client);
+  if(msgfilters == NULL) return ERR_FAILED;
 
-  char json_format[255] = "{\"state\":{\"desired\":{\"j2534\":{\"deviceId\":%i,\"state\":%i,\"filters\":%s}}}}";
-  unsigned int json_format_len = strlen(json_format) - 4;
-  unsigned int json_len = json_format_len + MYINT_LEN(desired_state) + MYINT_LEN(client->deviceId) + strlen(msgfilters);
+  const char *json_format = "{\"state\":{\"desired\":{\"j2534\":{\"deviceId\":%lu,\"state\":%i,\"filters\":%s}}}}";
+  int json_len = snprintf(NULL, 0, json_format,
+                          client->deviceId, desired_state, msgfilters);
 
   char json[json_len+1];
   snprintf(json, json_len+1, json_format, client->deviceId, desired_state, msgfilters);
-  json[json_len+1] = '\0';
   free(msgfilters);
 
-  if(awsiot_client_publish(client->awsiot, client->shadow_update_topic, (const char *)json) != 0) {
+  if(awsiot_client_publish(client->awsiot, client->shadow_update_topic, json) != 0) {
     syslog(LOG_ERR, "j2534_publish_state: failed to publish. topic=%s, rc=%d", client->shadow_update_topic, client->awsiot->rc);
     return ERR_DEVICE_NOT_CONNECTED;
   }
@@ -432,11 +480,11 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
 
   j2534_current_api_call = J2534_PassThruOpen;
 
-  unsigned int shadow_update_topic_len = PASSTHRU_SHADOW_UPDATE_TOPIC + strlen(pName) + 1;
-  unsigned int shadow_update_accepted_topic_len = PASSTHRU_SHADOW_UPDATE_ACCEPTED_TOPIC + strlen(pName) + 1;
-  unsigned int shadow_error_topic_len = J2534_ERROR_TOPIC + strlen(pName) + 1;
-  unsigned int msg_rx_topic_len = J2534_MSG_RX_TOPIC + strlen(pName) + 1;
-  unsigned int msg_tx_topic_len = J2534_MSG_TX_TOPIC + strlen(pName) + 1;
+  int shadow_update_topic_len = snprintf(NULL, 0, PASSTHRU_SHADOW_UPDATE_TOPIC, pName) + 1;
+  int shadow_update_accepted_topic_len = snprintf(NULL, 0, PASSTHRU_SHADOW_UPDATE_ACCEPTED_TOPIC, pName) + 1;
+  int shadow_error_topic_len = snprintf(NULL, 0, J2534_ERROR_TOPIC, pName) + 1;
+  int msg_rx_topic_len = snprintf(NULL, 0, J2534_MSG_RX_TOPIC, pName) + 1;
+  int msg_tx_topic_len = snprintf(NULL, 0, J2534_MSG_TX_TOPIC, pName) + 1;
 
   if(pName == NULL || pDeviceID == NULL) {
     return unless_concurrent_call(ERR_NULL_PARAMETER, J2534_PassThruOpen);
@@ -497,31 +545,39 @@ long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
   client->channelSet->ChannelThreshold = 0;
   client->channelSet->ChannelList = NULL;
 
-  vector_add(&j2534_client_vector, client);
-
   // TODO: Check for ERR_OPEN_FAILED conditions: firmware/DLL mismatch, API Designation not supported, etc
   // TODO: Set all pins to default state, disconnect physical and logical channels
   // TODO: Detect and report disconnects
 
   if(awsiot_client_connect(client->awsiot) != 0) {
     syslog(LOG_ERR, "PassThruOpen: failed to awsiot_client_connect. rc=%d", client->awsiot->rc);
+    j2534_free_client(client);
     return unless_concurrent_call(ERR_DEVICE_NOT_CONNECTED, J2534_PassThruOpen);
   }
 
   if(awsiot_client_subscribe(client->awsiot, client->shadow_update_accepted_topic, j2534_onmessage, client) != 0) {
     syslog(LOG_ERR, "j2534_publish_state: failed to subscribe. topic=%s, rc=%d", client->shadow_update_accepted_topic, client->awsiot->rc);
+    awsiot_client_close(client->awsiot);
+    j2534_free_client(client);
     return unless_concurrent_call(ERR_DEVICE_NOT_CONNECTED, J2534_PassThruOpen);
   }
 
   if(awsiot_client_subscribe(client->awsiot, client->shadow_error_topic, j2534_onmessage, client) != 0) {
     syslog(LOG_ERR, "j2534_publish_state: failed to subscribe. topic=%s, rc=%d", client->shadow_error_topic, client->awsiot->rc);
+    awsiot_client_close(client->awsiot);
+    j2534_free_client(client);
     return unless_concurrent_call(ERR_DEVICE_NOT_CONNECTED, J2534_PassThruOpen);
   }
 
-  return unless_concurrent_call(
-    j2534_publish_state(client, J2534_PassThruOpen),
-    J2534_PassThruOpen
-  );
+  unsigned long response = j2534_publish_state(client, J2534_PassThruOpen);
+  if(response != STATUS_NOERROR) {
+    awsiot_client_close(client->awsiot);
+    j2534_free_client(client);
+    return unless_concurrent_call(response, J2534_PassThruOpen);
+  }
+
+  vector_add(&j2534_client_vector, client);
+  return unless_concurrent_call(response, J2534_PassThruOpen);
 }
 
 /**
@@ -571,33 +627,26 @@ long PassThruClose(unsigned long DeviceID) {
     return unless_concurrent_call(ERR_INVALID_DEVICE_ID, J2534_PassThruClose);
   }
 
-  unsigned long publish_state = j2534_publish_state(client, J2534_PassThruClose);
+  unsigned long response = j2534_publish_state(client, J2534_PassThruClose);
+  if(response != STATUS_NOERROR) {
+    return unless_concurrent_call(response, J2534_PassThruClose);
+  }
 
   if(awsiot_client_unsubscribe(client->awsiot, client->shadow_update_accepted_topic) != 0) {
     syslog(LOG_ERR, "PassThruClose: failed to unsubscribe. topic=%s, rc=%d", client->shadow_update_accepted_topic, client->awsiot->rc);
-    return ERR_DEVICE_NOT_CONNECTED;
+    response = ERR_DEVICE_NOT_CONNECTED;
   }
 
   if(awsiot_client_unsubscribe(client->awsiot, client->shadow_error_topic) != 0) {
     syslog(LOG_ERR, "PassThruClose: failed to unsubscribe. topic=%s, rc=%d", client->shadow_error_topic, client->awsiot->rc);
-    return ERR_DEVICE_NOT_CONNECTED;
+    response = ERR_DEVICE_NOT_CONNECTED;
   }
 
-  unsigned long response = unless_concurrent_call(
-    j2534_publish_state(client, J2534_PassThruClose),
-    J2534_PassThruClose
-  );
+  awsiot_client_close(client->awsiot);
+  j2534_remove_client(client);
+  j2534_free_client(client);
 
-  free(client->channelSet);
-  free(client->txQueue);
-  free(client->rxQueue);
-  free(client->filters);
-  free(client->name);
-  free(client->device);
-  free(client->awsiot);
-  free(client);
-
-  return response;
+  return unless_concurrent_call(response, J2534_PassThruClose);
 }
 
 /**

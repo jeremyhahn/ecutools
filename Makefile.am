@@ -74,10 +74,15 @@ ecutuned_SOURCES = $(SRC_FILES) src/ecutuned.c
 ecutuned_CFLAGS = -DUSESSL -DTHREADED $(INCLUDE_ALL_DIRS) $(COMPILER_FLAGS) $(LOG_FLAGS)
 ecutuned_LDFLAGS = $(LD_FLAG) $(EXTERNAL_LIBS)
 
-TESTS = check_j2534
-check_PROGRAMS = check_j2534
+TESTS = check_j2534 check_j2534_lifecycle
+check_PROGRAMS = check_j2534 check_j2534_lifecycle
 check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
 check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
+
+check_j2534_lifecycle_SOURCES = tests/check_j2534_lifecycle.c src/j2534.c src/vector.c
+check_j2534_lifecycle_CFLAGS = $(AM_CFLAGS) -ffunction-sections -fdata-sections
+check_j2534_lifecycle_LDFLAGS = -Wl,--gc-sections -Wl,--wrap=malloc -Wl,--wrap=free
+check_j2534_lifecycle_LDADD = -lcheck -lsubunit
 
 bundle-install:
 	cd bindings/ruby && bundle install && cd -
