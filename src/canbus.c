@@ -47,9 +47,17 @@ void canbus_framecpy(struct can_frame * frame, char *buf) {
   }
 }
 
-unsigned int canbus_framecmp(struct can_frame *frame1, struct can_frame *frame2) {
-  if(frame1->can_id != frame2->can_id) return 1;
-  return strcmp((const char *)frame1->data, (const char *)frame2->data) == 0;
+unsigned int canbus_framecmp(struct can_frame *frame1,
+                             struct can_frame *frame2) {
+  if(frame1->can_id != frame2->can_id)
+    return 1;
+
+  if(frame1->can_dlc != frame2->can_dlc)
+    return 1;
+
+  return memcmp(frame1->data,
+                frame2->data,
+                frame1->can_dlc) != 0;
 }
 
 void canbus_init(canbus_client *canbus) {

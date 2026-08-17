@@ -11,6 +11,8 @@ ECUTOOLS_SRC_FILES += src/canbus_logger.c src/canbus_log.c src/canbus_filelogger
 J2534_SRC_FILES = src/awsiot_client.c src/passthru_shadow_parser.c src/j2534.c src/j2534/apigateway.c src/vector.c src/myint.c
 
 ECUTOOLS_TEST_FILES = tests/check_j2534.c
+ECUTOOLS_CANBUS_TEST_FILES = tests/check_canbus.c
+
 
 # AWS IoT client directory
 IOT_CLIENT_DIR = src/aws_iot_src
@@ -74,10 +76,14 @@ ecutuned_SOURCES = $(SRC_FILES) src/ecutuned.c
 ecutuned_CFLAGS = -DUSESSL -DTHREADED $(INCLUDE_ALL_DIRS) $(COMPILER_FLAGS) $(LOG_FLAGS)
 ecutuned_LDFLAGS = $(LD_FLAG) $(EXTERNAL_LIBS)
 
-TESTS = check_j2534
-check_PROGRAMS = check_j2534
+TESTS = check_j2534 check_canbus
+check_PROGRAMS = check_j2534 check_canbus
+
 check_j2534_SOURCES = $(ECUTOOLS_TEST_FILES)
 check_j2534_LDFLAGS = $(LD_FLAG) -lcheck -lj2534
+
+check_canbus_SOURCES = $(ECUTOOLS_CANBUS_TEST_FILES) src/canbus.c
+check_canbus_LDADD = -lcheck -lpthread -lrt -lm -lsubunit
 
 bundle-install:
 	cd bindings/ruby && bundle install && cd -
