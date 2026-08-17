@@ -427,20 +427,19 @@ long PassThruGetNextDevice(SDEVICE *psDevice) {
  *     STATUS_NOERROR                 Function call was successful
  */
 long PassThruOpen(const char *pName, unsigned long *pDeviceID) {
+  j2534_current_api_call = J2534_PassThruOpen;
+
+  if(pName == NULL || pDeviceID == NULL) {
+    return unless_concurrent_call(ERR_NULL_PARAMETER, J2534_PassThruOpen);
+  }
 
   syslog(LOG_ERR, "PassThruOpen: pName=%s, pDeviceID=%d", pName, *pDeviceID);
-
-  j2534_current_api_call = J2534_PassThruOpen;
 
   unsigned int shadow_update_topic_len = PASSTHRU_SHADOW_UPDATE_TOPIC + strlen(pName) + 1;
   unsigned int shadow_update_accepted_topic_len = PASSTHRU_SHADOW_UPDATE_ACCEPTED_TOPIC + strlen(pName) + 1;
   unsigned int shadow_error_topic_len = J2534_ERROR_TOPIC + strlen(pName) + 1;
   unsigned int msg_rx_topic_len = J2534_MSG_RX_TOPIC + strlen(pName) + 1;
   unsigned int msg_tx_topic_len = J2534_MSG_TX_TOPIC + strlen(pName) + 1;
-
-  if(pName == NULL || pDeviceID == NULL) {
-    return unless_concurrent_call(ERR_NULL_PARAMETER, J2534_PassThruOpen);
-  }
 
   if(!j2534_initialized) {
     vector_init(&j2534_client_vector);
